@@ -1,15 +1,5 @@
 import { serve } from "@hono/node-server";
-import { Hono } from "hono";
-import { Inngest } from "inngest";
-import { serve as inngestServe } from "inngest/hono";
-
-const inngest = new Inngest({ id: "bgreen-api" });
-
-const app = new Hono();
-
-app.get("/health", (c) => c.json({ status: "ok", service: "api" }));
-
-app.on(["GET", "POST", "PUT"], "/api/inngest", inngestServe({ client: inngest, functions: [] }));
+import { app } from "./app.js";
 
 const port = Number(process.env.PORT ?? 8787);
 
