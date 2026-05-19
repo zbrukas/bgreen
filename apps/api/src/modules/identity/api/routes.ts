@@ -1,5 +1,6 @@
 import { Hono } from "hono";
+import type { AppEnv } from "../../../context.js";
 
-export const identityRoutes = new Hono().get("/me", (c) =>
-  c.json({ error: "not_implemented", reason: "WorkOS integration ships in V2.2" }, 501),
-);
+export const identityRoutes = new Hono<AppEnv>().get("/me", (c) => {
+  return c.json(c.var.user);
+});

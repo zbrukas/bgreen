@@ -1,2 +1,5 @@
-// Placeholder. WorkOS AuthKit helpers (V2) + FGA `can()` wrapper (V5) land here.
-export {};
+export {
+  JoseWorkosJwtVerifier,
+  type WorkosJwtClaims,
+  type WorkosJwtVerifier,
+} from "./jwt-verifier";

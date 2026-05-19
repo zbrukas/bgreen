@@ -1,3 +1,5 @@
+import "./setup.js"; // loads .env from repo root before anything else runs
+
 import { serve } from "@hono/node-server";
 import { app } from "./app.js";
 
