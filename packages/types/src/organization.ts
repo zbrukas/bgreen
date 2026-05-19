@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { LegalFormSchema } from "./legal-form.js";
+import { LegalFormSchema } from "./legal-form";
 
 export const OrganizationSchema = z.object({
   id: z.string().uuid(),

@@ -1,8 +1,8 @@
 import { JoseWorkosJwtVerifier, type WorkosJwtVerifier } from "@bgreen/auth";
 import { WorkOS } from "@workos-inc/node";
 import { createMiddleware } from "hono/factory";
-import type { AppEnv } from "../context.js";
-import { userService } from "../services.js";
+import { ACTIVE_ORGANIZATION_HEADER, type AppEnv } from "../context.js";
+import { repositories, userService } from "../services.js";
 
 let _verifier: WorkosJwtVerifier | null = null;
 let _workos: WorkOS | null = null;
@@ -43,7 +43,7 @@ export const authMiddleware = createMiddleware<AppEnv>(async (c, next) => {
 
   let user = await userService.getByWorkosUserId(workosUserId);
   if (!user) {
-    // First sign-in for this WorkOS user — fetch profile + upsert bGreen User row.
+    // First sign-in — fetch profile + upsert bGreen User row.
     const workosUser = await getWorkos().userManagement.getUser(workosUserId);
     user = await userService.syncFromWorkos({
       workosUserId,
@@ -55,6 +55,20 @@ export const authMiddleware = createMiddleware<AppEnv>(async (c, next) => {
 
   c.set("user", user);
   c.set("workosUserId", workosUserId);
+
+  // Optional active-org context. Header present + valid membership → set scope.
+  // Header present + no membership → 403. Header absent → leave undefined.
+  const orgIdHeader = c.req.header(ACTIVE_ORGANIZATION_HEADER);
+  if (orgIdHeader) {
+    const memberships = await repositories.memberships.listForUser(user.id);
+    const match = memberships.find((m) => m.organizationId === orgIdHeader);
+    if (!match) {
+      return c.json({ error: "forbidden", reason: "not a member of this organization" }, 403);
+    }
+    c.set("organizationId", match.organizationId);
+    c.set("membershipRole", match.role);
+  }
+
   await next();
   return;
 });
