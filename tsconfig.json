@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "files": [],
+  "references": [
+    { "path": "./apps/web" },
+    { "path": "./apps/api" },
+    { "path": "./apps/pdf" },
+    { "path": "./packages/db" },
+    { "path": "./packages/types" },
+    { "path": "./packages/ai" },
+    { "path": "./packages/auth" },
+    { "path": "./packages/pt-data" },
+    { "path": "./packages/form-engine" },
+    { "path": "./packages/emails" }
+  ]
+}

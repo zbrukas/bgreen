@@ -1,0 +1,26 @@
+{
+  "name": "bgreen",
+  "private": true,
+  "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "concurrently -n turbo,inngest -c blue,magenta \"turbo run dev\" \"inngest-cli dev -u http://localhost:8787/api/inngest\"",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "db:generate": "pnpm --filter @bgreen/db generate",
+    "db:push": "pnpm --filter @bgreen/db push",
+    "db:studio": "pnpm --filter @bgreen/db studio"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "concurrently": "^9.1.0",
+    "inngest-cli": "^1.4.6",
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.2"
+  }
+}

@@ -1,0 +1,31 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: bgreen-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: bgreen
+      POSTGRES_PASSWORD: bgreen_dev
+      POSTGRES_DB: bgreen
+    volumes:
+      - bgreen-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "bgreen"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    container_name: bgreen-gotenberg
+    ports:
+      - "3001:3000"
+    command:
+      - "gotenberg"
+      - "--api-port=3000"
+      - "--chromium-disable-javascript=true"
+      - "--api-timeout=60s"
+
+volumes:
+  bgreen-postgres-data:
