@@ -1,9 +1,14 @@
 "use server";
 
 import { setActiveOrgId } from "@/lib/active-org";
-import { createOrganization, fetchMyOrganizations } from "@/lib/api-client";
-import type { LegalForm } from "@bgreen/types";
-import { LegalFormSchema } from "@bgreen/types";
+import {
+  acceptInvite,
+  createInvite,
+  createOrganization,
+  fetchMyOrganizations,
+} from "@/lib/api-client";
+import type { LegalForm, MembershipRole } from "@bgreen/types";
+import { LegalFormSchema, MembershipRoleSchema } from "@bgreen/types";
 import { signOut } from "@workos-inc/authkit-nextjs";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -55,4 +60,67 @@ export async function switchActiveOrganizationAction(formData: FormData): Promis
 
   await setActiveOrgId(targetId);
   revalidatePath("/");
+}
+
+export interface CreateInviteFormState {
+  error: string | null;
+  acceptUrl: string | null;
+  invitedEmail: string | null;
+  emailDelivered: boolean | null;
+  emailReason: string | null;
+}
+
+const emptyInviteState: CreateInviteFormState = {
+  error: null,
+  acceptUrl: null,
+  invitedEmail: null,
+  emailDelivered: null,
+  emailReason: null,
+};
+
+export async function createInviteAction(
+  organizationId: string,
+  _prev: CreateInviteFormState,
+  formData: FormData,
+): Promise<CreateInviteFormState> {
+  const rawEmail = formData.get("email");
+  const rawRole = formData.get("role");
+  const email = typeof rawEmail === "string" ? rawEmail.trim() : "";
+  if (!email) {
+    return { ...emptyInviteState, error: "Indique um email." };
+  }
+
+  let role: MembershipRole = "member";
+  if (typeof rawRole === "string") {
+    const parsed = MembershipRoleSchema.safeParse(rawRole);
+    if (!parsed.success) {
+      return { ...emptyInviteState, error: "Papel inválido." };
+    }
+    role = parsed.data;
+  }
+
+  const result = await createInvite({ organizationId, email, role });
+  if ("error" in result) {
+    return {
+      ...emptyInviteState,
+      error: `Não foi possível criar o convite (${result.error}).`,
+    };
+  }
+  return {
+    error: null,
+    acceptUrl: result.acceptUrl,
+    invitedEmail: result.invitedEmail,
+    emailDelivered: result.emailDelivered,
+    emailReason: result.emailReason,
+  };
+}
+
+export async function acceptInviteAction(formData: FormData): Promise<void> {
+  const token = formData.get("token");
+  if (typeof token !== "string" || token.length === 0) return;
+  const result = await acceptInvite(token);
+  if ("error" in result) return;
+  await setActiveOrgId(result.organizationId);
+  revalidatePath("/");
+  redirect("/");
 }

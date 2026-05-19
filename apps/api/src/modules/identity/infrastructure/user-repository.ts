@@ -16,6 +16,12 @@ function rowToUser(row: typeof schema.users.$inferSelect): User {
 }
 
 export class DrizzleUserRepository implements UserRepository {
+  async findById(id: string): Promise<User | null> {
+    const rows = await db.select().from(schema.users).where(eq(schema.users.id, id)).limit(1);
+    const row = rows[0];
+    return row ? rowToUser(row) : null;
+  }
+
   async findByWorkosUserId(workosUserId: string): Promise<User | null> {
     const rows = await db
       .select()

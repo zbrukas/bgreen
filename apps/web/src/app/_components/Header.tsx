@@ -1,3 +1,4 @@
+import type { MembershipRole } from "@bgreen/types";
 import Link from "next/link";
 import { signOutAction } from "../actions";
 import { OrganizationSwitcher } from "./OrganizationSwitcher";
@@ -6,9 +7,17 @@ interface HeaderProps {
   userEmail: string;
   organizations: Array<{ id: string; name: string }>;
   activeOrganizationId: string | null;
+  activeOrganizationRole: MembershipRole | null;
 }
 
-export function Header({ userEmail, organizations, activeOrganizationId }: HeaderProps) {
+export function Header({
+  userEmail,
+  organizations,
+  activeOrganizationId,
+  activeOrganizationRole,
+}: HeaderProps) {
+  const canInvite = activeOrganizationId !== null && activeOrganizationRole === "admin";
+
   return (
     <header
       style={{
@@ -36,6 +45,14 @@ export function Header({ userEmail, organizations, activeOrganizationId }: Heade
             organizations={organizations}
             activeOrganizationId={activeOrganizationId}
           />
+        )}
+        {canInvite && activeOrganizationId && (
+          <Link
+            href={`/organizations/${activeOrganizationId}/invites/new`}
+            style={{ fontSize: "0.9rem", textDecoration: "none" }}
+          >
+            Convidar membro
+          </Link>
         )}
         {organizations.length >= 1 && (
           <Link href="/organizations/new" style={{ fontSize: "0.9rem", textDecoration: "none" }}>

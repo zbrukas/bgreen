@@ -1,5 +1,5 @@
 import type { AppType } from "@bgreen/api/rpc";
-import type { LegalForm } from "@bgreen/types";
+import type { InvitePreview, LegalForm, MembershipRole } from "@bgreen/types";
 import { withAuth } from "@workos-inc/authkit-nextjs";
 import { hc } from "hono/client";
 import { getActiveOrgId } from "./active-org";
@@ -29,12 +29,16 @@ export async function fetchHealth(): Promise<{ status: string; service: string }
   }
 }
 
-export async function fetchMe(): Promise<{
+export interface MeResponse {
   id: string;
   email: string;
   firstName: string | null;
   lastName: string | null;
-} | null> {
+  activeOrganizationId: string | null;
+  activeOrganizationRole: MembershipRole | null;
+}
+
+export async function fetchMe(): Promise<MeResponse | null> {
   try {
     const headers = await authedHeaders();
     if (!headers.Authorization) return null;
@@ -46,6 +50,8 @@ export async function fetchMe(): Promise<{
       email: data.email,
       firstName: data.firstName,
       lastName: data.lastName,
+      activeOrganizationId: data.activeOrganizationId,
+      activeOrganizationRole: data.activeOrganizationRole,
     };
   } catch {
     return null;
@@ -84,6 +90,80 @@ export async function createOrganization(input: {
     }
     const data = await res.json();
     return { id: data.organization.id, name: data.organization.name };
+  } catch {
+    return { error: "network_error" };
+  }
+}
+
+export async function createInvite(input: {
+  organizationId: string;
+  email: string;
+  role: MembershipRole;
+}): Promise<
+  | { acceptUrl: string; invitedEmail: string; emailDelivered: boolean; emailReason: string | null }
+  | { error: string }
+> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return { error: "not_signed_in" };
+    const res = await api.organizations[":orgId"].invites.$post(
+      {
+        param: { orgId: input.organizationId },
+        json: { email: input.email, role: input.role },
+      },
+      { headers },
+    );
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({ error: "request_failed" }))) as {
+        error?: string;
+      };
+      return { error: body.error ?? "request_failed" };
+    }
+    const data = await res.json();
+    return {
+      acceptUrl: data.acceptUrl,
+      invitedEmail: data.invite.invitedEmail,
+      emailDelivered: data.emailDelivered,
+      emailReason: data.emailReason,
+    };
+  } catch {
+    return { error: "network_error" };
+  }
+}
+
+export async function fetchInvitePreview(
+  token: string,
+): Promise<InvitePreview | { error: string }> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return { error: "not_signed_in" };
+    const res = await api.invites[":token"].$get({ param: { token } }, { headers });
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({ error: "request_failed" }))) as {
+        error?: string;
+      };
+      return { error: body.error ?? "request_failed" };
+    }
+    return await res.json();
+  } catch {
+    return { error: "network_error" };
+  }
+}
+
+export async function acceptInvite(
+  token: string,
+): Promise<{ organizationId: string } | { error: string }> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return { error: "not_signed_in" };
+    const res = await api.invites[":token"].accept.$post({ param: { token } }, { headers });
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({ error: "request_failed" }))) as {
+        error?: string;
+      };
+      return { error: body.error ?? "request_failed" };
+    }
+    return await res.json();
   } catch {
     return { error: "network_error" };
   }

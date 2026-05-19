@@ -55,7 +55,12 @@ export default async function Home() {
 
   return (
     <>
-      <Header userEmail={auth.user.email} organizations={orgs} activeOrganizationId={activeOrgId} />
+      <Header
+        userEmail={auth.user.email}
+        organizations={orgs}
+        activeOrganizationId={activeOrgId}
+        activeOrganizationRole={me?.activeOrganizationRole ?? null}
+      />
       <main style={{ padding: "2rem", fontFamily: "system-ui, sans-serif", maxWidth: 720 }}>
         <h1>{activeOrg ? activeOrg.name : "bGreen"}</h1>
         <p>bGreen User row: {me ? `${me.id} — ${me.email}` : "sync failed"}</p>

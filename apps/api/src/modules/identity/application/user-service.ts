@@ -9,6 +9,7 @@ export interface SyncUserInput {
 
 // Application port — every adapter (Drizzle, in-memory test double) implements this.
 export interface UserRepository {
+  findById(id: string): Promise<User | null>;
   findByWorkosUserId(workosUserId: string): Promise<User | null>;
   upsertFromWorkos(input: SyncUserInput): Promise<User>;
 }
