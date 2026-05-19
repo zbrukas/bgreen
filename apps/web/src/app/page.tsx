@@ -2,7 +2,7 @@ import { getActiveOrgId, setActiveOrgId } from "@/lib/active-org";
 import { fetchHealth, fetchMe, fetchMyOrganizations } from "@/lib/api-client";
 import { getSignInUrl, withAuth } from "@workos-inc/authkit-nextjs";
 import { CreateOrganizationForm } from "./_components/CreateOrganizationForm";
-import { signOutAction } from "./actions";
+import { Header } from "./_components/Header";
 
 export const dynamic = "force-dynamic";
 
@@ -29,9 +29,22 @@ export default async function Home() {
 
   const [me, orgs] = await Promise.all([fetchMe(), fetchMyOrganizations()]);
 
-  // If user has orgs but no active-org cookie yet, default to the first one.
+  if (orgs.length === 0) {
+    return (
+      <main style={{ padding: "2rem", fontFamily: "system-ui, sans-serif", maxWidth: 720 }}>
+        <h1>bGreen</h1>
+        <p>
+          Olá <strong>{auth.user.email}</strong>. Vamos criar a sua primeira organização.
+        </p>
+        <CreateOrganizationForm />
+      </main>
+    );
+  }
+
+  // Resolve active org. Cookie wins if it points at a current membership;
+  // otherwise fall back to the first org and persist the choice.
   let activeOrgId = await getActiveOrgId();
-  if (!activeOrgId && orgs.length > 0) {
+  if (!activeOrgId || !orgs.some((o) => o.id === activeOrgId)) {
     const first = orgs[0];
     if (first) {
       await setActiveOrgId(first.id);
@@ -41,32 +54,18 @@ export default async function Home() {
   const activeOrg = orgs.find((o) => o.id === activeOrgId) ?? null;
 
   return (
-    <main style={{ padding: "2rem", fontFamily: "system-ui, sans-serif", maxWidth: 720 }}>
-      <h1>bGreen</h1>
-      <p>
-        Signed in as <strong>{auth.user.email}</strong> (via WorkOS).
-      </p>
-      <p>bGreen User row: {me ? `${me.id} — ${me.email}` : "sync failed"}</p>
-
-      {orgs.length === 0 ? (
-        <CreateOrganizationForm />
-      ) : (
-        <>
-          <p>
-            Active organization: <strong>{activeOrg ? activeOrg.name : "(none selected)"}</strong>
-          </p>
-          <p>
-            All organizations ({orgs.length}): {orgs.map((o) => o.name).join(", ")}
-          </p>
-        </>
-      )}
-
-      <p>
-        API health: <strong>{healthLine}</strong>
-      </p>
-      <form action={signOutAction}>
-        <button type="submit">Sign out</button>
-      </form>
-    </main>
+    <>
+      <Header userEmail={auth.user.email} organizations={orgs} activeOrganizationId={activeOrgId} />
+      <main style={{ padding: "2rem", fontFamily: "system-ui, sans-serif", maxWidth: 720 }}>
+        <h1>{activeOrg ? activeOrg.name : "bGreen"}</h1>
+        <p>bGreen User row: {me ? `${me.id} — ${me.email}` : "sync failed"}</p>
+        <p>
+          You belong to {orgs.length} {orgs.length === 1 ? "organization" : "organizations"}.
+        </p>
+        <p>
+          API health: <strong>{healthLine}</strong>
+        </p>
+      </main>
+    </>
   );
 }

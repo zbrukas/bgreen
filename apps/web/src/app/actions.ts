@@ -1,11 +1,12 @@
 "use server";
 
 import { setActiveOrgId } from "@/lib/active-org";
-import { createOrganization } from "@/lib/api-client";
+import { createOrganization, fetchMyOrganizations } from "@/lib/api-client";
 import type { LegalForm } from "@bgreen/types";
 import { LegalFormSchema } from "@bgreen/types";
 import { signOut } from "@workos-inc/authkit-nextjs";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 export async function signOutAction(): Promise<void> {
   await signOut();
@@ -41,5 +42,17 @@ export async function createOrganizationAction(
 
   await setActiveOrgId(result.id);
   revalidatePath("/");
-  return { error: null };
+  redirect("/");
+}
+
+export async function switchActiveOrganizationAction(formData: FormData): Promise<void> {
+  const targetId = formData.get("organizationId");
+  if (typeof targetId !== "string" || targetId.length === 0) return;
+
+  // Re-verify membership server-side; never trust the form value alone.
+  const orgs = await fetchMyOrganizations();
+  if (!orgs.some((o) => o.id === targetId)) return;
+
+  await setActiveOrgId(targetId);
+  revalidatePath("/");
 }
