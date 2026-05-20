@@ -10,6 +10,11 @@ const submitInput = z.object({
   asDraft: z.boolean().optional(),
 });
 
+const updateInput = z.object({
+  values: z.record(z.string(), z.unknown()),
+  action: z.enum(["save_draft", "submit"]),
+});
+
 export const recordsRoutes = new Hono<AppEnv>()
   .get("/", async (c) => {
     const orgId = c.var.organizationId;
@@ -50,4 +55,25 @@ export const recordsRoutes = new Hono<AppEnv>()
       return c.json({ error: result.code }, 400);
     }
     return c.json(result.record, 201);
+  })
+  .patch("/:id", zValidator("json", updateInput), async (c) => {
+    const orgId = c.var.organizationId;
+    if (!orgId) return c.json({ error: "no_active_org" }, 400);
+    const input = c.req.valid("json");
+    const result = await recordService.update({
+      organizationId: orgId,
+      recordId: c.req.param("id"),
+      rawValues: input.values,
+      actorUserId: c.var.user.id,
+      action: input.action,
+    });
+    if (!result.ok) {
+      if (result.code === "validation_failed") {
+        return c.json({ error: result.code, errors: result.errors }, 422);
+      }
+      if (result.code === "forbidden") return c.json({ error: result.code }, 403);
+      if (result.code === "record_not_found") return c.json({ error: result.code }, 404);
+      return c.json({ error: result.code }, 400);
+    }
+    return c.json(result.record);
   });

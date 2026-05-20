@@ -47,16 +47,30 @@ export type ValidationResult =
   | { ok: true; values: RecordValues }
   | { ok: false; errors: FormError[] };
 
-export function validateFormValues(schema: FormSchema, raw: unknown): ValidationResult {
+// "submit" — full strictness (required, min_rows, min_selections enforced).
+// "draft" — leniency for incomplete data: required + min-count checks skipped,
+// but type/range/format/unknown-field checks still apply.
+export type ValidationMode = "submit" | "draft";
+
+export interface ValidateOptions {
+  mode?: ValidationMode;
+}
+
+export function validateFormValues(
+  schema: FormSchema,
+  raw: unknown,
+  options: ValidateOptions = {},
+): ValidationResult {
   if (!isPlainObject(raw)) {
     return {
       ok: false,
       errors: [{ fieldId: "", code: "wrong_type", message: "Expected an object of field values." }],
     };
   }
+  const mode: ValidationMode = options.mode ?? "submit";
   const errors: FormError[] = [];
   const fields = schema.rows.flatMap((row) => row.fields);
-  const values = validateScope(fields, raw, "", errors);
+  const values = validateScope(fields, raw, "", mode, errors);
   if (errors.length > 0) return { ok: false, errors };
   return { ok: true, values };
 }
@@ -75,6 +89,7 @@ function validateScope(
   fields: ReadonlyArray<Field | LeafField>,
   input: Record<string, unknown>,
   pathPrefix: string,
+  mode: ValidationMode,
   errors: FormError[],
 ): RecordValues {
   const out: RecordValues = {};
@@ -96,7 +111,7 @@ function validateScope(
 
     const present = Object.prototype.hasOwnProperty.call(input, field.id);
     const value = present ? input[field.id] : undefined;
-    const result = validateField(field, value, present, `${pathPrefix}${field.id}`, errors);
+    const result = validateField(field, value, present, `${pathPrefix}${field.id}`, mode, errors);
     if (result.kind === "value") {
       out[field.id] = result.value;
     } else if (result.kind === "error") {
@@ -127,10 +142,11 @@ function validateField(
   value: unknown,
   present: boolean,
   path: string,
+  mode: ValidationMode,
   errors: FormError[],
 ): FieldResult {
   if (field.kind === "repeating") {
-    return validateRepeating(field, value, present, path, errors);
+    return validateRepeating(field, value, present, path, mode, errors);
   }
   const isEmpty =
     !present ||
@@ -139,7 +155,7 @@ function validateField(
     (typeof value === "string" && value.trim() === "") ||
     (field.kind === "multi_select" && Array.isArray(value) && value.length === 0);
   if (isEmpty) {
-    if (field.required === true) {
+    if (mode === "submit" && field.required === true) {
       return errorOf(path, "required", `${field.label} é obrigatório.`);
     }
     return { kind: "skip" };
@@ -154,7 +170,7 @@ function validateField(
     case "select":
       return validateSelect(field, value, path);
     case "multi_select":
-      return validateMultiSelect(field, value, path);
+      return validateMultiSelect(field, value, path, mode);
   }
 }
 
@@ -218,7 +234,12 @@ function validateSelect(field: SelectField, value: unknown, path: string): Field
   return { kind: "value", value };
 }
 
-function validateMultiSelect(field: MultiSelectField, value: unknown, path: string): FieldResult {
+function validateMultiSelect(
+  field: MultiSelectField,
+  value: unknown,
+  path: string,
+  mode: ValidationMode,
+): FieldResult {
   if (!Array.isArray(value)) {
     return errorOf(path, "wrong_type", `${field.label} deve ser uma lista de valores.`);
   }
@@ -236,7 +257,7 @@ function validateMultiSelect(field: MultiSelectField, value: unknown, path: stri
       cleaned.push(item);
     }
   }
-  if (field.minSelected !== undefined && cleaned.length < field.minSelected) {
+  if (mode === "submit" && field.minSelected !== undefined && cleaned.length < field.minSelected) {
     return errorOf(
       path,
       "min_selections",
@@ -258,17 +279,18 @@ function validateRepeating(
   value: unknown,
   present: boolean,
   path: string,
+  mode: ValidationMode,
   errors: FormError[],
 ): FieldResult {
   if (!present || value === undefined || value === null) {
-    if (field.minRows !== undefined && field.minRows > 0) {
+    if (mode === "submit" && field.minRows !== undefined && field.minRows > 0) {
       return errorOf(
         path,
         "min_rows",
         `${field.label} requer pelo menos ${field.minRows} ${field.minRows === 1 ? "linha" : "linhas"}.`,
       );
     }
-    if (field.required === true) {
+    if (mode === "submit" && field.required === true) {
       return errorOf(path, "required", `${field.label} é obrigatório.`);
     }
     return { kind: "skip" };
@@ -276,7 +298,7 @@ function validateRepeating(
   if (!Array.isArray(value)) {
     return errorOf(path, "wrong_type", `${field.label} deve ser uma lista de linhas.`);
   }
-  if (field.minRows !== undefined && value.length < field.minRows) {
+  if (mode === "submit" && field.minRows !== undefined && value.length < field.minRows) {
     return errorOf(
       path,
       "min_rows",
@@ -304,7 +326,7 @@ function validateRepeating(
       continue;
     }
     const before = errors.length;
-    const sub = validateScope(field.fields, row, `${path}[${i}].`, errors);
+    const sub = validateScope(field.fields, row, `${path}[${i}].`, mode, errors);
     if (errors.length > before) hadRowError = true;
     rows.push(sub);
   }

@@ -4,6 +4,8 @@ export type {
   CreateRecordInput,
   RecordRepository,
   SubmitResult,
+  UpdateRecordInput,
+  UpdateResult,
 } from "./application/record-service.js";
 export { DrizzleRecordRepository } from "./infrastructure/record-repository.js";
 export {

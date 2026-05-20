@@ -107,6 +107,14 @@ export default async function TemplatesListPage() {
                       textAlign: "right",
                     }}
                   >
+                    {tpl.status === "published" && (
+                      <Link
+                        href={`/records/new?template=${tpl.id}`}
+                        style={{ marginRight: "0.75rem" }}
+                      >
+                        Submeter
+                      </Link>
+                    )}
                     <Link href={`/templates/${tpl.id}`}>Ver</Link>
                   </td>
                 </tr>

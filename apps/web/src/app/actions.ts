@@ -9,6 +9,7 @@ import {
   archiveTemplate,
   createInvite,
   createOrganization,
+  createRecord,
   createTemplate,
   fetchMyOrganizations,
   findCaeByCode,
@@ -16,6 +17,7 @@ import {
   lookupVies,
   publishTemplate,
   searchCae,
+  updateRecord,
 } from "@/lib/api-client";
 import { validateNif } from "@bgreen/pt-data";
 import type {
@@ -286,4 +288,39 @@ export async function archiveTemplateAction(formData: FormData): Promise<void> {
   if ("error" in result) return;
   revalidatePath("/templates");
   revalidatePath(`/templates/${id}`);
+}
+
+// ---------- Records ----------
+
+export type SubmitRecordActionInput =
+  | { mode: "create"; templateId: string; values: Record<string, unknown>; asDraft: boolean }
+  | {
+      mode: "update";
+      id: string;
+      values: Record<string, unknown>;
+      action: "save_draft" | "submit";
+    };
+
+export type SubmitRecordActionResult =
+  | { ok: true; id: string }
+  | { ok: false; error: string; fieldErrors?: import("@bgreen/form-engine").FormError[] };
+
+export async function submitRecordAction(
+  input: SubmitRecordActionInput,
+): Promise<SubmitRecordActionResult> {
+  const result =
+    input.mode === "create"
+      ? await createRecord({
+          templateId: input.templateId,
+          values: input.values,
+          asDraft: input.asDraft,
+        })
+      : await updateRecord({ id: input.id, values: input.values, action: input.action });
+
+  if (!result.ok) {
+    return { ok: false, error: result.error, fieldErrors: result.fieldErrors };
+  }
+  revalidatePath("/records");
+  revalidatePath(`/records/${result.record.id}`);
+  return { ok: true, id: result.record.id };
 }

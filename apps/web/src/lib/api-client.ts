@@ -1,5 +1,7 @@
 import type { AppType } from "@bgreen/api/rpc";
+import type { FormError } from "@bgreen/form-engine";
 import type {
+  Record as BgRecord,
   FormSchema,
   InvitePreview,
   LegalForm,
@@ -360,5 +362,96 @@ export async function archiveTemplate(id: string): Promise<RecordTemplate | { er
     return (await res.json()) as RecordTemplate;
   } catch {
     return { error: "network_error" };
+  }
+}
+
+// ---------- Records ----------
+
+export type SubmitRecordResult =
+  | { ok: true; record: BgRecord }
+  | { ok: false; error: string; fieldErrors?: FormError[] };
+
+export async function fetchMyRecords(): Promise<BgRecord[]> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return [];
+    const res = await api.records.$get(undefined, { headers });
+    if (!res.ok) return [];
+    return (await res.json()) as BgRecord[];
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchRecord(id: string): Promise<BgRecord | null> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return null;
+    const res = await api.records[":id"].$get({ param: { id } }, { headers });
+    if (!res.ok) return null;
+    return (await res.json()) as BgRecord;
+  } catch {
+    return null;
+  }
+}
+
+export async function createRecord(input: {
+  templateId: string;
+  values: Record<string, unknown>;
+  asDraft: boolean;
+}): Promise<SubmitRecordResult> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return { ok: false, error: "not_signed_in" };
+    const res = await api.records.$post(
+      {
+        json: {
+          templateId: input.templateId,
+          values: input.values,
+          asDraft: input.asDraft,
+        },
+      },
+      { headers },
+    );
+    if (res.ok) {
+      const record = (await res.json()) as BgRecord;
+      return { ok: true, record };
+    }
+    const body = (await res.json().catch(() => ({}))) as {
+      error?: string;
+      errors?: FormError[];
+    };
+    return { ok: false, error: body.error ?? "request_failed", fieldErrors: body.errors };
+  } catch {
+    return { ok: false, error: "network_error" };
+  }
+}
+
+export async function updateRecord(input: {
+  id: string;
+  values: Record<string, unknown>;
+  action: "save_draft" | "submit";
+}): Promise<SubmitRecordResult> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return { ok: false, error: "not_signed_in" };
+    const res = await api.records[":id"].$patch(
+      {
+        param: { id: input.id },
+        json: { values: input.values, action: input.action },
+      },
+      { headers },
+    );
+    if (res.ok) {
+      const record = (await res.json()) as BgRecord;
+      return { ok: true, record };
+    }
+    const body = (await res.json().catch(() => ({}))) as {
+      error?: string;
+      errors?: FormError[];
+    };
+    return { ok: false, error: body.error ?? "request_failed", fieldErrors: body.errors };
+  } catch {
+    return { ok: false, error: "network_error" };
   }
 }

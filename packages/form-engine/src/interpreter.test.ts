@@ -134,6 +134,44 @@ describe("validateFormValues", () => {
     if (!r.ok) expect(r.errors.length).toBe(2);
   });
 
+  describe("draft mode", () => {
+    it("skips required on missing top-level fields", () => {
+      const s = schema({ id: "name", kind: "text", label: "Nome", required: true });
+      const submit = validateFormValues(s, {}, { mode: "submit" });
+      expect(submit.ok).toBe(false);
+
+      const draft = validateFormValues(s, {}, { mode: "draft" });
+      expect(draft.ok).toBe(true);
+    });
+
+    it("still flags wrong-type even when not required", () => {
+      const s = schema({ id: "kwh", kind: "number", label: "kWh" });
+      const draft = validateFormValues(s, { kwh: "abc" }, { mode: "draft" });
+      expect(draft.ok).toBe(false);
+      if (!draft.ok) expect(draft.errors[0]?.code).toBe("wrong_type");
+    });
+
+    it("skips min_selections but enforces max_selections", () => {
+      const s = schema({
+        id: "tags",
+        kind: "multi_select",
+        label: "Etiquetas",
+        options: [
+          { value: "a", label: "A" },
+          { value: "b", label: "B" },
+        ],
+        minSelected: 2,
+        maxSelected: 2,
+      });
+      const draft = validateFormValues(s, { tags: ["a"] }, { mode: "draft" });
+      expect(draft.ok).toBe(true);
+
+      const overflow = validateFormValues(s, { tags: ["a", "b", "b"] }, { mode: "draft" });
+      // After dedupe this becomes 2 — should be fine.
+      expect(overflow.ok).toBe(true);
+    });
+  });
+
   describe("multi_select", () => {
     const baseField = {
       id: "tags",
@@ -379,6 +417,24 @@ describe("validateFormValues", () => {
       }
     });
 
+    it("draft mode preserves max_rows enforcement", () => {
+      const s = schema(repeatField);
+      const r = validateFormValues(
+        s,
+        {
+          vehicles: [
+            { plate: "1", km: 0 },
+            { plate: "2", km: 0 },
+            { plate: "3", km: 0 },
+            { plate: "4", km: 0 },
+          ],
+        },
+        { mode: "draft" },
+      );
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.errors[0]?.code).toBe("max_rows");
+    });
+
     it("rejects non-array repeating value", () => {
       const s = schema(repeatField);
       const r = validateFormValues(s, { vehicles: "not an array" });
@@ -390,6 +446,16 @@ describe("validateFormValues", () => {
       const s = schema({ ...repeatField, minRows: 0 });
       const r = validateFormValues(s, {});
       expect(r.ok).toBe(true);
+    });
+
+    it("min_rows skipped in draft mode but enforced on submit", () => {
+      const s = schema(repeatField);
+      const draft = validateFormValues(s, { vehicles: [] }, { mode: "draft" });
+      expect(draft.ok).toBe(true);
+
+      const submitted = validateFormValues(s, { vehicles: [] }, { mode: "submit" });
+      expect(submitted.ok).toBe(false);
+      if (!submitted.ok) expect(submitted.errors[0]?.code).toBe("min_rows");
     });
 
     it("show-if scoped inside a sub-row references siblings, not top-level", () => {

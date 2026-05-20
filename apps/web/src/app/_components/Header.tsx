@@ -46,6 +46,9 @@ export function Header({
             activeOrganizationId={activeOrganizationId}
           />
         )}
+        <Link href="/records" style={{ fontSize: "0.9rem", textDecoration: "none" }}>
+          Registos
+        </Link>
         <Link href="/templates" style={{ fontSize: "0.9rem", textDecoration: "none" }}>
           Modelos
         </Link>
