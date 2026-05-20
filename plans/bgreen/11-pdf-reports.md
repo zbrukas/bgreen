@@ -1,7 +1,7 @@
-# V10 — PDF Reports
+# V11 — PDF Reports
 
 > **Status:** Not started
-> **Depends on:** [V9 — Framework Coverage Checker](09-framework-coverage.md)
+> **Depends on:** [V10 — Framework Coverage Checker](10-framework-coverage.md), [V8 — Scoring + Dashboards](08-scoring-dashboards.md)
 > **Parent PRD:** [../bgreen-greenfield-rewrite.md](../bgreen-greenfield-rewrite.md)
 > **User stories covered:** PRD §64–70 (PDF reports)
 
@@ -53,7 +53,7 @@ Ship the third deployed pillar: `apps/pdf`. Users pick a report template, kick o
 - [ ] "Gerar relatório PDF" CTA opens:
   - Template picker (GHG / ESRS E1 / custom).
   - Period selector (year / quarter / custom range).
-  - For ESRS E1: warning panel surfaced from V9 if coverage is incomplete ("Atenção: 12 datapoints obrigatórios estão em falta — gerar mesmo assim?").
+  - For ESRS E1: warning panel surfaced from V10 if coverage is incomplete ("Atenção: 12 datapoints obrigatórios estão em falta — gerar mesmo assim?").
   - Submit → Inngest fires → UI shows "em geração" status.
 - [ ] Notification on completion: in-app toast + Resend email.
 

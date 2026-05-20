@@ -2,7 +2,7 @@
 
 Parent PRD: [`../bgreen-greenfield-rewrite.md`](../bgreen-greenfield-rewrite.md)
 
-Ten vertical slices. Each independently deployable. Each loadable as a single AI context. Verticals run sequentially — later verticals assume earlier ones live.
+Eleven vertical slices. Each independently deployable. Each loadable as a single AI context. Verticals run sequentially — later verticals assume earlier ones live.
 
 | # | Plan | Theme | Status |
 |---|---|---|---|
@@ -13,9 +13,10 @@ Ten vertical slices. Each independently deployable. Each loadable as a single AI
 | 5 | [05-workflows-audit-fga.md](05-workflows-audit-fga.md) | XState workflows, AuditLog, WorkOS FGA | Not started |
 | 6 | [06-ai-foundation-ies.md](06-ai-foundation-ies.md) | AnthropicAiClient, Inngest, S3, IES extraction | Not started |
 | 7 | [07-economic-profile-benchmarks.md](07-economic-profile-benchmarks.md) | EconomicProfile, sector benchmarks, size classification | Not started |
-| 8 | [08-recommendations.md](08-recommendations.md) | AI recommendations with feedback loop | Not started |
-| 9 | [09-framework-coverage.md](09-framework-coverage.md) | ESRS / GHG / GRI gap analysis | Not started |
-| 10 | [10-pdf-reports.md](10-pdf-reports.md) | apps/pdf, Gotenberg, AI commentary, S3 archive | Not started |
+| 8 | [08-scoring-dashboards.md](08-scoring-dashboards.md) | ESG scoring engine + record scores + dashboard | Not started |
+| 9 | [09-recommendations.md](09-recommendations.md) | AI recommendations with feedback loop | Not started |
+| 10 | [10-framework-coverage.md](10-framework-coverage.md) | ESRS / GHG / GRI gap analysis | Not started |
+| 11 | [11-pdf-reports.md](11-pdf-reports.md) | apps/pdf, Gotenberg, AI commentary, S3 archive | Not started |
 
 ## Conventions per plan
 

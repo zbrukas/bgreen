@@ -1,7 +1,7 @@
-# V8 — Recommendations
+# V9 — Recommendations
 
 > **Status:** Not started
-> **Depends on:** [V7 — Economic Profile + Sector Benchmarks](07-economic-profile-benchmarks.md)
+> **Depends on:** [V7 — Economic Profile + Sector Benchmarks](07-economic-profile-benchmarks.md), [V8 — Scoring + Dashboards](08-scoring-dashboards.md)
 > **Parent PRD:** [../bgreen-greenfield-rewrite.md](../bgreen-greenfield-rewrite.md)
 > **User stories covered:** PRD §54–63 (recommendations + feedback)
 
@@ -74,6 +74,6 @@ Ship the core product loop: a user clicks "Gerar recomendações" → Claude pro
 
 End of vertical: a user with a confirmed profile clicks "Gerar recomendações" → 60-90 seconds later they see 8-12 prioritized recommendations in pt-PT with rationale → they tag 3 as "útil", 1 as "já implementada", 1 as "incorreta" → history view shows the run with feedback counts → preliminary recommendations also work for a brand-new user with only a self-reported size.
 
-## Notes for the next vertical (V9)
+## Notes for the next vertical (V10)
 
-V9 turns the regulatory-coverage checker on. Recommendations could reference detected gaps ("you're missing E1-6 disclosure — here's how to start"), but the cross-feature integration is deferred. V8 ships standalone; V9 adds an adjacent surface.
+V10 turns the regulatory-coverage checker on. Recommendations could reference detected gaps ("you're missing E1-6 disclosure — here's how to start"), but the cross-feature integration is deferred. V9 ships standalone; V10 adds an adjacent surface.

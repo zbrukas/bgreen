@@ -181,6 +181,18 @@ From the user's perspective (carried over from PRD #19):
 80. As a user, I want to delete all AI-derived data about my company on request (right to erasure), so I can exit cleanly.
 81. As an organization admin, I want to delete my organization and all data within it, so GDPR right to be forgotten is respected.
 
+### ESG scoring + dashboards (V8)
+
+82. As an organization admin, I want to attach scores to my template field options (e.g., select "Sim" = 10, "Em desenvolvimento" = 5, "Não" = 0), so each submitted record produces a quantifiable ESG score.
+83. As an organization admin, I want to weight fields within a template, so material questions count more than ancillary ones toward the final score.
+84. As an organization admin, I want to define score buckets (e.g., 0–50 "C", 50–80 "B", 80–100 "A"), so the result reads as a tier instead of a raw number.
+85. As a data filler, I want to see my submitted record's score, tier, and per-field contribution breakdown, so I understand what drove the result.
+86. As a user, I want a dashboard with the latest score per template and a trend sparkline of the last few entries, so I see progress at a glance.
+87. As a user in a sector with available benchmark data, I want my organization's score compared to peers (e.g., "P50: 62 / your: 71"), so I know where I stand.
+88. As a user, I want fields hidden by show-if predicates to be excluded from the score, so conditional questions never penalise me.
+89. As a user, I want previously-submitted record scores to remain stable even if a published template is later archived and replaced, so historical comparisons are defensible.
+90. As a user, I want AI-generated recommendations and PDF reports to surface my lowest-scoring areas, so the rest of the product points me at what to improve.
+
 ## Implementation Decisions
 
 ### Repository structure
@@ -381,11 +393,12 @@ v1 ships in vertical-slice phases. Each phase ends with a working deploy:
 5. **Audit + FGA** — `AuditLog` writes on entity changes, WorkOS FGA relationships seeded, authorization middleware live.
 6. **AI groundwork** — `AnthropicAiClient`, Inngest setup, S3 upload pipeline, `IesExtractionService` end-to-end (per PRD #19).
 7. **EconomicProfile + SectorBenchmark** — schemas, IES extraction UI, size classification flow (per PRD #19).
-8. **Recommendations** — generation service, feedback capture, history (per PRD #19).
-9. **Framework coverage checker** — ESRS / GHG / GRI datapoint maps seeded, AI-explained gap analysis.
-10. **PDF reports** — `apps/pdf` service, Gotenberg, report templates (GHG + ESRS E1 + custom), AI commentary embed, S3 archive, email notification.
+8. **Scoring + dashboards** — FormSchema gains scoring metadata (per-option scores, field weights, template-level buckets), `ScoringEngine` computes per-record score on submit, `/dashboard` surfaces trend + tier + peer-rank. Feeds V9 and V11.
+9. **Recommendations** — generation service, feedback capture, history (per PRD #19); prompt builder reads scores from V8.
+10. **Framework coverage checker** — ESRS / GHG / GRI datapoint maps seeded, AI-explained gap analysis.
+11. **PDF reports** — `apps/pdf` service, Gotenberg, report templates (GHG + ESRS E1 + custom), AI commentary embed, scoring section, S3 archive, email notification.
 
-Each phase independently deployable. Phases 1–5 are infrastructure; phases 6–10 are the ESG product surface.
+Each phase independently deployable. Phases 1–5 are infrastructure; phases 6–11 are the ESG product surface.
 
 ### Hard blockers (carried from PRD #19, still apply)
 

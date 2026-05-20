@@ -1,13 +1,13 @@
-# V9 — Framework Coverage Checker
+# V10 — Framework Coverage Checker
 
 > **Status:** Not started
-> **Depends on:** [V8 — Recommendations](08-recommendations.md)
+> **Depends on:** [V9 — Recommendations](09-recommendations.md)
 > **Parent PRD:** [../bgreen-greenfield-rewrite.md](../bgreen-greenfield-rewrite.md)
-> **User stories covered:** PRD §71–74 (regulatory framework coverage), supports §65 (PDF report template picker in V10)
+> **User stories covered:** PRD §71–74 (regulatory framework coverage), supports §65 (PDF report template picker in V11)
 
 ## Goal
 
-Tell a user, for a chosen reporting framework (CSRD/ESRS, GHG Protocol, GRI), which datapoints they cover from their records, which are partial, and which are missing — with AI-generated explanations grounded in their sector. This is the "what do I still need to collect before I can hit `Gerar relatório`?" surface that V10 leans on.
+Tell a user, for a chosen reporting framework (CSRD/ESRS, GHG Protocol, GRI), which datapoints they cover from their records, which are partial, and which are missing — with AI-generated explanations grounded in their sector. This is the "what do I still need to collect before I can hit `Gerar relatório`?" surface that V11 leans on.
 
 ## Acceptance criteria
 
@@ -41,7 +41,7 @@ Tell a user, for a chosen reporting framework (CSRD/ESRS, GHG Protocol, GRI), wh
 
 - Full ESRS coverage (all topics, all sectors) → v1.5 (start with E1 + most-applicable).
 - Auto-suggested mappings (AI infers which template covers which datapoint) → deferred; user maps explicitly.
-- Generating compliance-grade reports from coverage → that's V10.
+- Generating compliance-grade reports from coverage → that's V11.
 - Sector-specific deep dives beyond CAE-3 applicability rules → deferred.
 - Country-specific frameworks beyond EU/PT context → not in v1.
 - Live tracking of framework changes / version bumps → manually update seeds; no automation.
@@ -70,6 +70,6 @@ Tell a user, for a chosen reporting framework (CSRD/ESRS, GHG Protocol, GRI), wh
 
 End of vertical: a user picks framework "ESRS E1", sees a matrix of ~30 datapoints — most are red ("missing"), a few green ("covered") because they've submitted Energy Consumption records → user clicks a red row → AI explains the applicability and suggests next step → admin maps the existing "Monthly Energy Consumption" template to E1-5 and the row goes green.
 
-## Notes for the next vertical (V10)
+## Notes for the next vertical (V11)
 
-V10's PDF reports lean on this vertical: the report template picker (GHG / ESRS E1 / custom) will pre-filter by framework; missing-datapoints can be surfaced as warnings before generation. Keep `CoverageCalculator` consumable by V10's pipeline.
+V11's PDF reports lean on this vertical: the report template picker (GHG / ESRS E1 / custom) will pre-filter by framework; missing-datapoints can be surfaced as warnings before generation. Keep `CoverageCalculator` consumable by V11's pipeline.
