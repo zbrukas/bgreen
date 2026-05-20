@@ -1,3 +1,4 @@
+import { HttpViesClient } from "@bgreen/pt-data";
 import { DrizzleUserRepository, UserService } from "./modules/identity/module.js";
 import {
   DrizzleInviteRepository,
@@ -29,3 +30,5 @@ export const inviteService = new InviteService(
   repositories.organizations,
   repositories.users,
 );
+
+export const viesClient = new HttpViesClient({ timeoutMs: 4000 });

@@ -161,6 +161,27 @@ export async function fetchInvitePreview(
   }
 }
 
+export interface ViesLookupResult {
+  valid: boolean;
+  name: string | null;
+  address: string | null;
+  source: "vies" | "unreachable";
+  requestDate?: string;
+}
+
+export async function lookupVies(nif: string): Promise<ViesLookupResult | null> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return null;
+    const res = await api.lookups.vies[":nif"].$get({ param: { nif } }, { headers });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data as ViesLookupResult;
+  } catch {
+    return null;
+  }
+}
+
 export async function acceptInvite(
   token: string,
 ): Promise<{ organizationId: string } | { error: string }> {

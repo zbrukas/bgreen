@@ -1,8 +1,13 @@
 "use client";
 
+import type { ViesLookupResult } from "@/lib/api-client";
 import { validateNif } from "@bgreen/pt-data";
-import { useActionState, useMemo, useState } from "react";
-import { type CreateOrganizationFormState, createOrganizationAction } from "../actions";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type CreateOrganizationFormState,
+  createOrganizationAction,
+  lookupViesAction,
+} from "../actions";
 import { CaePicker } from "./CaePicker";
 
 const legalFormOptions: Array<{ value: string; label: string }> = [
@@ -36,32 +41,59 @@ const initialState: CreateOrganizationFormState = { error: null };
 export function CreateOrganizationForm() {
   const [state, formAction, isPending] = useActionState(createOrganizationAction, initialState);
   const [nif, setNif] = useState("");
+  const [name, setName] = useState("");
+  const [nameTouched, setNameTouched] = useState(false);
+  const [vies, setVies] = useState<ViesLookupResult | null>(null);
+  const [viesLoading, setViesLoading] = useState(false);
 
   const nifFeedback = useMemo(() => {
     if (nif.trim() === "") return null;
     const result = validateNif(nif);
-    if (result.valid) return { kind: "ok" as const };
+    if (result.valid) return { kind: "ok" as const, normalized: result.normalized };
     return { kind: "error" as const, reason: result.reason };
   }, [nif]);
+
+  const validNormalizedNif = nifFeedback?.kind === "ok" ? nifFeedback.normalized : null;
+
+  // Debounced VIES lookup whenever the NIF becomes valid. Auto-fills the
+  // name field only if the user hasn't typed into it.
+  const nameTouchedRef = useRef(nameTouched);
+  nameTouchedRef.current = nameTouched;
+
+  useEffect(() => {
+    if (!validNormalizedNif) {
+      setVies(null);
+      setViesLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setViesLoading(true);
+    const timer = setTimeout(async () => {
+      const result = await lookupViesAction(validNormalizedNif);
+      if (cancelled) return;
+      setVies(result);
+      setViesLoading(false);
+      if (result?.valid && result.name && !nameTouchedRef.current) {
+        setName(result.name);
+      }
+    }, 500);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      setViesLoading(false);
+    };
+  }, [validNormalizedNif]);
+
+  const nameWasAutoFilled =
+    vies?.valid === true && vies.name !== null && name === vies.name && !nameTouched;
 
   return (
     <form action={formAction} style={{ display: "grid", gap: "1rem", maxWidth: 480 }}>
       <h2 style={{ margin: 0 }}>Criar a sua organização</h2>
       <p style={{ margin: 0, color: "#555" }}>
-        NIF e dimensão são opcionais por agora — pode adicioná-los mais tarde.
+        Indique o NIF — se a sua empresa estiver registada no VIES, preenchemos o nome
+        automaticamente.
       </p>
-
-      <label style={{ display: "grid", gap: "0.25rem" }}>
-        <span>Nome</span>
-        <input
-          name="name"
-          type="text"
-          required
-          autoComplete="organization"
-          maxLength={200}
-          style={{ padding: "0.5rem", fontSize: "1rem" }}
-        />
-      </label>
 
       <label style={{ display: "grid", gap: "0.25rem" }}>
         <span>NIF</span>
@@ -87,12 +119,52 @@ export function CreateOrganizationForm() {
           }}
         />
         {nifFeedback?.kind === "ok" && (
-          <span style={{ color: "#1f7a3d", fontSize: "0.85rem" }}>✓ NIF válido.</span>
+          <span style={{ color: "#1f7a3d", fontSize: "0.85rem" }}>
+            ✓ NIF válido.
+            {viesLoading && <span style={{ color: "#777" }}> A consultar VIES…</span>}
+            {!viesLoading && vies?.source === "unreachable" && (
+              <span style={{ color: "#a36400" }}> VIES indisponível — preencha manualmente.</span>
+            )}
+            {!viesLoading && vies?.valid === false && (
+              <span style={{ color: "#777" }}> Não registado no VIES.</span>
+            )}
+          </span>
         )}
         {nifFeedback?.kind === "error" && (
           <span style={{ color: "#b00020", fontSize: "0.85rem" }}>
             {nifReasonCopy[nifFeedback.reason] ?? "NIF inválido."}
           </span>
+        )}
+      </label>
+
+      <label style={{ display: "grid", gap: "0.25rem" }}>
+        <span>Nome</span>
+        <input
+          name="name"
+          type="text"
+          required
+          autoComplete="organization"
+          maxLength={200}
+          value={name}
+          onChange={(e) => {
+            setName(e.target.value);
+            setNameTouched(true);
+          }}
+          style={{
+            padding: "0.5rem",
+            fontSize: "1rem",
+            borderColor: nameWasAutoFilled ? "#1f7a3d" : undefined,
+            borderWidth: nameWasAutoFilled ? "2px" : undefined,
+            borderStyle: nameWasAutoFilled ? "solid" : undefined,
+          }}
+        />
+        {nameWasAutoFilled && (
+          <span style={{ color: "#1f7a3d", fontSize: "0.85rem" }}>
+            ✓ Verificado via VIES — pode editar se necessário.
+          </span>
+        )}
+        {vies?.valid && vies.address && !nameTouched && (
+          <span style={{ color: "#666", fontSize: "0.8rem" }}>{vies.address}</span>
         )}
       </label>
 

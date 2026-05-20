@@ -2,10 +2,12 @@
 
 import { setActiveOrgId } from "@/lib/active-org";
 import {
+  type ViesLookupResult,
   acceptInvite,
   createInvite,
   createOrganization,
   fetchMyOrganizations,
+  lookupVies,
 } from "@/lib/api-client";
 import { validateNif } from "@bgreen/pt-data";
 import type { LegalForm, MembershipRole, OrganizationSize } from "@bgreen/types";
@@ -146,6 +148,11 @@ export async function createInviteAction(
     emailDelivered: result.emailDelivered,
     emailReason: result.emailReason,
   };
+}
+
+export async function lookupViesAction(nif: string): Promise<ViesLookupResult | null> {
+  if (typeof nif !== "string" || nif.trim() === "") return null;
+  return lookupVies(nif.trim());
 }
 
 export async function acceptInviteAction(formData: FormData): Promise<void> {
