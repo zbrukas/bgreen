@@ -2,9 +2,9 @@
 
 ESG data collection, AI-powered recommendations, and regulator-ready PDFs for Portuguese mid-caps.
 
-Planning lives (for now) in the legacy repo:
-- **Master PRD:** [`../legacy-bgreen/plans/bgreen-greenfield-rewrite.md`](../legacy-bgreen/plans/bgreen-greenfield-rewrite.md)
-- **Vertical plans (V1–V10):** [`../legacy-bgreen/plans/bgreen/`](../legacy-bgreen/plans/bgreen/)
+Planning lives here:
+- **Master PRD:** [`plans/bgreen-greenfield-rewrite.md`](plans/bgreen-greenfield-rewrite.md)
+- **Vertical plans (V1–V10):** [`plans/bgreen/`](plans/bgreen/)
 
 ## Stack
 

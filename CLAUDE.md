@@ -1,6 +1,6 @@
 # bGreen — AI Assistant Brief
 
-This is the greenfield TypeScript rewrite of bg1. Motivation, scope, and architecture live in the **master PRD** ([`../legacy-bgreen/plans/bgreen-greenfield-rewrite.md`](../legacy-bgreen/plans/bgreen-greenfield-rewrite.md)) and the **vertical plans** ([`../legacy-bgreen/plans/bgreen/`](../legacy-bgreen/plans/bgreen/)).
+This is the greenfield TypeScript rewrite of bg1. Motivation, scope, and architecture live in the **master PRD** ([`plans/bgreen-greenfield-rewrite.md`](plans/bgreen-greenfield-rewrite.md)) and the **vertical plans** ([`plans/bgreen/`](plans/bgreen/)).
 
 Read those first. This file captures only the operational rules.
 
@@ -29,7 +29,6 @@ Read those first. This file captures only the operational rules.
 
 - Active vertical → the lowest-numbered plan in `plans/bgreen/` whose acceptance criteria aren't all ticked.
 - Before adding a feature, check the parent PRD's "Out of scope" section and the active vertical's "Out of scope" section. Most temptations are deliberately deferred.
-- Plans live in the **legacy-bgreen** repo until this repo stabilizes.
 
 ## Commits
 
