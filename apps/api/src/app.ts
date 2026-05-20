@@ -4,9 +4,11 @@ import { Inngest } from "inngest";
 import { serve as inngestServe } from "inngest/hono";
 import type { AppEnv } from "./context.js";
 import { authMiddleware } from "./middleware/auth.js";
+import { recordTemplatesRoutes } from "./modules/form-templates/module.js";
 import { identityRoutes } from "./modules/identity/module.js";
 import { lookupsRoutes } from "./modules/lookups/module.js";
 import { inviteRoutes, organizationsRoutes } from "./modules/organizations/module.js";
+import { recordsRoutes } from "./modules/records/module.js";
 
 const inngest = new Inngest({ id: "bgreen-api" });
 
@@ -22,7 +24,9 @@ const authedRoutes = new Hono<AppEnv>()
   .route("/identity", identityRoutes)
   .route("/organizations", organizationsRoutes)
   .route("/invites", inviteRoutes)
-  .route("/lookups", lookupsRoutes);
+  .route("/lookups", lookupsRoutes)
+  .route("/record-templates", recordTemplatesRoutes)
+  .route("/records", recordsRoutes);
 
 export const app = new Hono().use("*", logger()).route("/", publicRoutes).route("/", authedRoutes);
 

@@ -19,6 +19,7 @@
     "@bgreen/auth": "workspace:*",
     "@bgreen/db": "workspace:*",
     "@bgreen/emails": "workspace:*",
+    "@bgreen/form-engine": "workspace:*",
     "@bgreen/pt-data": "workspace:*",
     "@bgreen/types": "workspace:*",
     "@hono/node-server": "^1.13.7",
