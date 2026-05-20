@@ -74,6 +74,7 @@ export async function fetchMyOrganizations(): Promise<Array<{ id: string; name: 
 export async function createOrganization(input: {
   name: string;
   nif: string | null;
+  caeCode: string | null;
   legalForm: LegalForm | null;
   selfReportedSize: OrganizationSize | null;
 }): Promise<{ id: string; name: string } | { error: string }> {
@@ -85,6 +86,7 @@ export async function createOrganization(input: {
         json: {
           name: input.name,
           nif: input.nif,
+          caeCode: input.caeCode,
           legalForm: input.legalForm,
           selfReportedSize: input.selfReportedSize,
         },

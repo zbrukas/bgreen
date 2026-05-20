@@ -7,6 +7,7 @@ export const OrganizationSchema = z.object({
   workosOrganizationId: z.string().nullable(),
   name: z.string().min(1),
   nif: z.string().nullable(),
+  caeCode: z.string().nullable(),
   legalForm: LegalFormSchema.nullable(),
   selfReportedSize: OrganizationSizeSchema.nullable(),
   createdAt: z.string().datetime({ offset: true }),

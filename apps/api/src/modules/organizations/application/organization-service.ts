@@ -6,6 +6,7 @@ import type { Organization } from "../domain/organization.js";
 export interface CreateOrganizationInput {
   name: string;
   nif: string | null;
+  caeCode: string | null;
   legalForm: LegalForm | null;
   selfReportedSize: OrganizationSize | null;
   workosOrganizationId?: string | null;

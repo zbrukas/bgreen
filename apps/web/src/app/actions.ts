@@ -28,6 +28,7 @@ export async function createOrganizationAction(
 ): Promise<CreateOrganizationFormState> {
   const rawName = formData.get("name");
   const rawNif = formData.get("nif");
+  const rawCae = formData.get("caeCode");
   const rawLegalForm = formData.get("legalForm");
   const rawSize = formData.get("selfReportedSize");
 
@@ -43,6 +44,15 @@ export async function createOrganizationAction(
       return { error: "NIF inválido. Verifique os 9 dígitos e o dígito de controlo." };
     }
     nif = nifResult.normalized;
+  }
+
+  let caeCode: string | null = null;
+  if (typeof rawCae === "string" && rawCae.trim() !== "") {
+    const trimmed = rawCae.trim();
+    if (!/^\d{3,5}$/.test(trimmed)) {
+      return { error: "CAE inválido." };
+    }
+    caeCode = trimmed;
   }
 
   let legalForm: LegalForm | null = null;
@@ -63,7 +73,7 @@ export async function createOrganizationAction(
     selfReportedSize = parsed.data;
   }
 
-  const result = await createOrganization({ name, nif, legalForm, selfReportedSize });
+  const result = await createOrganization({ name, nif, caeCode, legalForm, selfReportedSize });
   if ("error" in result) {
     return { error: `Não foi possível criar a organização (${result.error}).` };
   }

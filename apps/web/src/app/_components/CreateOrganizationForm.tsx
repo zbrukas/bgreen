@@ -3,6 +3,7 @@
 import { validateNif } from "@bgreen/pt-data";
 import { useActionState, useMemo, useState } from "react";
 import { type CreateOrganizationFormState, createOrganizationAction } from "../actions";
+import { CaePicker } from "./CaePicker";
 
 const legalFormOptions: Array<{ value: string; label: string }> = [
   { value: "", label: "— Selecione (opcional) —" },
@@ -94,6 +95,8 @@ export function CreateOrganizationForm() {
           </span>
         )}
       </label>
+
+      <CaePicker name="caeCode" />
 
       <label style={{ display: "grid", gap: "0.25rem" }}>
         <span>Forma jurídica</span>

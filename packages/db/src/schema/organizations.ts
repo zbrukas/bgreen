@@ -7,6 +7,7 @@ export const organizations = pgTable("organizations", {
   workosOrganizationId: text("workos_organization_id").unique(),
   name: text("name").notNull(),
   nif: text("nif").unique(),
+  caeCode: text("cae_code"),
   legalForm: legalFormEnum("legal_form"),
   selfReportedSize: organizationSizeEnum("self_reported_size"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

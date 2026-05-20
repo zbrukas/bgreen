@@ -14,6 +14,13 @@ const createOrganizationInput = z.object({
     .nullable()
     .optional()
     .refine((v) => v == null || v === "" || validateNif(v).valid, "invalid_nif"),
+  // CAE Rev.3 codes are 3–5 digits. We accept the string as-is from the picker;
+  // the catalog is the source of truth for what's a real code.
+  caeCode: z
+    .string()
+    .nullable()
+    .optional()
+    .refine((v) => v == null || v === "" || /^\d{3,5}$/.test(v), "invalid_cae_code"),
   legalForm: LegalFormSchema.nullable().optional(),
   selfReportedSize: OrganizationSizeSchema.nullable().optional(),
 });
@@ -43,6 +50,7 @@ export const organizationsRoutes = new Hono<AppEnv>()
       ownerUserId: c.var.user.id,
       name: input.name,
       nif: normalizedNif,
+      caeCode: input.caeCode && input.caeCode !== "" ? input.caeCode : null,
       legalForm: input.legalForm ?? null,
       selfReportedSize: input.selfReportedSize ?? null,
     });
