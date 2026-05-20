@@ -1,5 +1,12 @@
 import type { AppType } from "@bgreen/api/rpc";
-import type { InvitePreview, LegalForm, MembershipRole, OrganizationSize } from "@bgreen/types";
+import type {
+  FormSchema,
+  InvitePreview,
+  LegalForm,
+  MembershipRole,
+  OrganizationSize,
+  RecordTemplate,
+} from "@bgreen/types";
 import { withAuth } from "@workos-inc/authkit-nextjs";
 import { hc } from "hono/client";
 import { getActiveOrgId } from "./active-org";
@@ -261,6 +268,96 @@ export async function acceptInvite(
       return { error: body.error ?? "request_failed" };
     }
     return await res.json();
+  } catch {
+    return { error: "network_error" };
+  }
+}
+
+// ---------- Record templates ----------
+
+export async function fetchTemplates(): Promise<RecordTemplate[]> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return [];
+    const res = await api["record-templates"].$get(undefined, { headers });
+    if (!res.ok) return [];
+    return (await res.json()) as RecordTemplate[];
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchTemplate(id: string): Promise<RecordTemplate | null> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return null;
+    const res = await api["record-templates"][":id"].$get({ param: { id } }, { headers });
+    if (!res.ok) return null;
+    return (await res.json()) as RecordTemplate;
+  } catch {
+    return null;
+  }
+}
+
+export async function createTemplate(input: {
+  name: string;
+  description: string | null;
+  formSchema: FormSchema;
+}): Promise<RecordTemplate | { error: string }> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return { error: "not_signed_in" };
+    const res = await api["record-templates"].$post(
+      {
+        json: {
+          name: input.name,
+          description: input.description,
+          formSchema: input.formSchema,
+        },
+      },
+      { headers },
+    );
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({ error: "request_failed" }))) as {
+        error?: string;
+      };
+      return { error: body.error ?? "request_failed" };
+    }
+    return (await res.json()) as RecordTemplate;
+  } catch {
+    return { error: "network_error" };
+  }
+}
+
+export async function publishTemplate(id: string): Promise<RecordTemplate | { error: string }> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return { error: "not_signed_in" };
+    const res = await api["record-templates"][":id"].publish.$post({ param: { id } }, { headers });
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({ error: "request_failed" }))) as {
+        error?: string;
+      };
+      return { error: body.error ?? "request_failed" };
+    }
+    return (await res.json()) as RecordTemplate;
+  } catch {
+    return { error: "network_error" };
+  }
+}
+
+export async function archiveTemplate(id: string): Promise<RecordTemplate | { error: string }> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return { error: "not_signed_in" };
+    const res = await api["record-templates"][":id"].archive.$post({ param: { id } }, { headers });
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({ error: "request_failed" }))) as {
+        error?: string;
+      };
+      return { error: body.error ?? "request_failed" };
+    }
+    return (await res.json()) as RecordTemplate;
   } catch {
     return { error: "network_error" };
   }

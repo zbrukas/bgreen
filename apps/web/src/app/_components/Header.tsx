@@ -46,6 +46,9 @@ export function Header({
             activeOrganizationId={activeOrganizationId}
           />
         )}
+        <Link href="/templates" style={{ fontSize: "0.9rem", textDecoration: "none" }}>
+          Modelos
+        </Link>
         {canInvite && activeOrganizationId && (
           <Link
             href={`/organizations/${activeOrganizationId}/invites/new`}

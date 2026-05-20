@@ -6,17 +6,31 @@ import {
   type PostalCodeLookupResult,
   type ViesLookupResult,
   acceptInvite,
+  archiveTemplate,
   createInvite,
   createOrganization,
+  createTemplate,
   fetchMyOrganizations,
   findCaeByCode,
   lookupPostalCode,
   lookupVies,
+  publishTemplate,
   searchCae,
 } from "@/lib/api-client";
 import { validateNif } from "@bgreen/pt-data";
-import type { LegalForm, MembershipRole, OrganizationSize } from "@bgreen/types";
-import { LegalFormSchema, MembershipRoleSchema, OrganizationSizeSchema } from "@bgreen/types";
+import type {
+  FormSchema,
+  LegalForm,
+  MembershipRole,
+  OrganizationSize,
+  RecordTemplate,
+} from "@bgreen/types";
+import {
+  FormSchemaSchema,
+  LegalFormSchema,
+  MembershipRoleSchema,
+  OrganizationSizeSchema,
+} from "@bgreen/types";
 import { signOut } from "@workos-inc/authkit-nextjs";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -213,4 +227,63 @@ export async function acceptInviteAction(formData: FormData): Promise<void> {
   await setActiveOrgId(result.organizationId);
   revalidatePath("/");
   redirect("/");
+}
+
+// ---------- Record-template actions ----------
+
+export interface CreateTemplateInput {
+  name: string;
+  description: string | null;
+  formSchema: unknown;
+}
+
+export interface CreateTemplateFormState {
+  error: string | null;
+  created: RecordTemplate | null;
+}
+
+export async function createTemplateAction(
+  _prev: CreateTemplateFormState,
+  input: CreateTemplateInput,
+): Promise<CreateTemplateFormState> {
+  const name = typeof input.name === "string" ? input.name.trim() : "";
+  if (!name) {
+    return { error: "Indique um nome para o modelo.", created: null };
+  }
+  const parsed = FormSchemaSchema.safeParse(input.formSchema);
+  if (!parsed.success) {
+    const first = parsed.error.issues[0];
+    return {
+      error: `Schema inválido: ${first?.path.join(".") || "(raiz)"} — ${first?.message ?? ""}`,
+      created: null,
+    };
+  }
+  const result = await createTemplate({
+    name,
+    description: input.description ? input.description.trim() : null,
+    formSchema: parsed.data as FormSchema,
+  });
+  if ("error" in result) {
+    return { error: `Não foi possível criar o modelo (${result.error}).`, created: null };
+  }
+  revalidatePath("/templates");
+  return { error: null, created: result };
+}
+
+export async function publishTemplateAction(formData: FormData): Promise<void> {
+  const id = formData.get("id");
+  if (typeof id !== "string" || id === "") return;
+  const result = await publishTemplate(id);
+  if ("error" in result) return;
+  revalidatePath("/templates");
+  revalidatePath(`/templates/${id}`);
+}
+
+export async function archiveTemplateAction(formData: FormData): Promise<void> {
+  const id = formData.get("id");
+  if (typeof id !== "string" || id === "") return;
+  const result = await archiveTemplate(id);
+  if ("error" in result) return;
+  revalidatePath("/templates");
+  revalidatePath(`/templates/${id}`);
 }
