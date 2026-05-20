@@ -10,6 +10,22 @@ loadDotenv({ path: resolve(here, "../../.env") });
 
 const config: NextConfig = {
   reactStrictMode: true,
+  // Keep the file watcher off heavy reference data sitting in the workspace.
+  // The 27MB CSV and 12MB JSON in @bgreen/pt-data don't need to trigger
+  // rebuilds (or to be opened at all) during dev.
+  webpack: (cfg) => {
+    cfg.watchOptions = {
+      ...cfg.watchOptions,
+      ignored: [
+        "**/node_modules/**",
+        "**/packages/pt-data/raw/**",
+        "**/packages/pt-data/src/cae-data.json",
+        "**/packages/pt-data/src/postal-codes-data.json",
+        "**/packages/db/migrations/**",
+      ],
+    };
+    return cfg;
+  },
 };
 
 export default config;

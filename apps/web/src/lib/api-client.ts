@@ -77,6 +77,11 @@ export async function createOrganization(input: {
   caeCode: string | null;
   legalForm: LegalForm | null;
   selfReportedSize: OrganizationSize | null;
+  postalCode: string | null;
+  addressLine: string | null;
+  freguesia: string | null;
+  concelho: string | null;
+  distrito: string | null;
 }): Promise<{ id: string; name: string } | { error: string }> {
   try {
     const headers = await authedHeaders();
@@ -89,6 +94,11 @@ export async function createOrganization(input: {
           caeCode: input.caeCode,
           legalForm: input.legalForm,
           selfReportedSize: input.selfReportedSize,
+          postalCode: input.postalCode,
+          addressLine: input.addressLine,
+          freguesia: input.freguesia,
+          concelho: input.concelho,
+          distrito: input.distrito,
         },
       },
       { headers },
@@ -158,6 +168,61 @@ export async function fetchInvitePreview(
     return await res.json();
   } catch {
     return { error: "network_error" };
+  }
+}
+
+export interface PostalCodeLookupResult {
+  postalCode: string;
+  found: boolean;
+  freguesia?: string | null;
+  concelho?: string | null;
+  distrito?: string | null;
+}
+
+export async function lookupPostalCode(cp: string): Promise<PostalCodeLookupResult | null> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return null;
+    const res = await api.lookups["postal-code"][":cp"].$get({ param: { cp } }, { headers });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data as PostalCodeLookupResult;
+  } catch {
+    return null;
+  }
+}
+
+export interface CaeEntry {
+  code: string;
+  description: string;
+  level: number | null;
+}
+
+export async function searchCae(query: string, limit = 20): Promise<CaeEntry[]> {
+  if (query.trim() === "") return [];
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return [];
+    const res = await api.lookups.cae.$get(
+      { query: { q: query, limit: String(limit) } },
+      { headers },
+    );
+    if (!res.ok) return [];
+    return (await res.json()) as CaeEntry[];
+  } catch {
+    return [];
+  }
+}
+
+export async function findCaeByCode(code: string): Promise<CaeEntry | null> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return null;
+    const res = await api.lookups.cae[":code"].$get({ param: { code } }, { headers });
+    if (!res.ok) return null;
+    return (await res.json()) as CaeEntry;
+  } catch {
+    return null;
   }
 }
 

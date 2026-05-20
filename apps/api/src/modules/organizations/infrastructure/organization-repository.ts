@@ -18,6 +18,11 @@ function rowToOrganization(row: typeof schema.organizations.$inferSelect): Organ
     caeCode: row.caeCode,
     legalForm: row.legalForm,
     selfReportedSize: row.selfReportedSize,
+    postalCode: row.postalCode,
+    addressLine: row.addressLine,
+    freguesia: row.freguesia,
+    concelho: row.concelho,
+    distrito: row.distrito,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -44,6 +49,11 @@ export class DrizzleOrganizationRepository implements OrganizationRepository {
         caeCode: input.caeCode,
         legalForm: input.legalForm,
         selfReportedSize: input.selfReportedSize,
+        postalCode: input.postalCode,
+        addressLine: input.addressLine,
+        freguesia: input.freguesia,
+        concelho: input.concelho,
+        distrito: input.distrito,
         workosOrganizationId: input.workosOrganizationId ?? null,
       })
       .returning();

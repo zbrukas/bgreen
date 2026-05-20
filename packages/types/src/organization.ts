@@ -10,6 +10,11 @@ export const OrganizationSchema = z.object({
   caeCode: z.string().nullable(),
   legalForm: LegalFormSchema.nullable(),
   selfReportedSize: OrganizationSizeSchema.nullable(),
+  postalCode: z.string().nullable(),
+  addressLine: z.string().nullable(),
+  freguesia: z.string().nullable(),
+  concelho: z.string().nullable(),
+  distrito: z.string().nullable(),
   createdAt: z.string().datetime({ offset: true }),
   updatedAt: z.string().datetime({ offset: true }),
 });

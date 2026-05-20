@@ -2,12 +2,17 @@
 
 import { setActiveOrgId } from "@/lib/active-org";
 import {
+  type CaeEntry,
+  type PostalCodeLookupResult,
   type ViesLookupResult,
   acceptInvite,
   createInvite,
   createOrganization,
   fetchMyOrganizations,
+  findCaeByCode,
+  lookupPostalCode,
   lookupVies,
+  searchCae,
 } from "@/lib/api-client";
 import { validateNif } from "@bgreen/pt-data";
 import type { LegalForm, MembershipRole, OrganizationSize } from "@bgreen/types";
@@ -75,7 +80,37 @@ export async function createOrganizationAction(
     selfReportedSize = parsed.data;
   }
 
-  const result = await createOrganization({ name, nif, caeCode, legalForm, selfReportedSize });
+  const stringOrNull = (raw: FormDataEntryValue | null): string | null => {
+    if (typeof raw !== "string") return null;
+    const trimmed = raw.trim();
+    return trimmed === "" ? null : trimmed;
+  };
+  const postalCodeRaw = formData.get("postalCode");
+  let postalCode: string | null = null;
+  if (typeof postalCodeRaw === "string" && postalCodeRaw.trim() !== "") {
+    const trimmed = postalCodeRaw.trim();
+    if (!/^\d{4}-\d{3}$/.test(trimmed)) {
+      return { error: "Código postal inválido. Use o formato XXXX-XXX." };
+    }
+    postalCode = trimmed;
+  }
+  const addressLine = stringOrNull(formData.get("addressLine"));
+  const freguesia = stringOrNull(formData.get("freguesia"));
+  const concelho = stringOrNull(formData.get("concelho"));
+  const distrito = stringOrNull(formData.get("distrito"));
+
+  const result = await createOrganization({
+    name,
+    nif,
+    caeCode,
+    legalForm,
+    selfReportedSize,
+    postalCode,
+    addressLine,
+    freguesia,
+    concelho,
+    distrito,
+  });
   if ("error" in result) {
     return { error: `Não foi possível criar a organização (${result.error}).` };
   }
@@ -153,6 +188,21 @@ export async function createInviteAction(
 export async function lookupViesAction(nif: string): Promise<ViesLookupResult | null> {
   if (typeof nif !== "string" || nif.trim() === "") return null;
   return lookupVies(nif.trim());
+}
+
+export async function lookupPostalCodeAction(cp: string): Promise<PostalCodeLookupResult | null> {
+  if (typeof cp !== "string" || cp.trim() === "") return null;
+  return lookupPostalCode(cp.trim());
+}
+
+export async function searchCaeAction(query: string): Promise<CaeEntry[]> {
+  if (typeof query !== "string" || query.trim() === "") return [];
+  return searchCae(query.trim(), 30);
+}
+
+export async function findCaeByCodeAction(code: string): Promise<CaeEntry | null> {
+  if (typeof code !== "string" || code.trim() === "") return null;
+  return findCaeByCode(code.trim());
 }
 
 export async function acceptInviteAction(formData: FormData): Promise<void> {

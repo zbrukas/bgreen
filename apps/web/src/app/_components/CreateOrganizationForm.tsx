@@ -1,11 +1,12 @@
 "use client";
 
-import type { ViesLookupResult } from "@/lib/api-client";
+import type { PostalCodeLookupResult, ViesLookupResult } from "@/lib/api-client";
 import { validateNif } from "@bgreen/pt-data";
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import {
   type CreateOrganizationFormState,
   createOrganizationAction,
+  lookupPostalCodeAction,
   lookupViesAction,
 } from "../actions";
 import { CaePicker } from "./CaePicker";
@@ -45,6 +46,14 @@ export function CreateOrganizationForm() {
   const [nameTouched, setNameTouched] = useState(false);
   const [vies, setVies] = useState<ViesLookupResult | null>(null);
   const [viesLoading, setViesLoading] = useState(false);
+  const [postalCode, setPostalCode] = useState("");
+  const [freguesia, setFreguesia] = useState("");
+  const [concelho, setConcelho] = useState("");
+  const [distrito, setDistrito] = useState("");
+  const [addressLine, setAddressLine] = useState("");
+  const [postalLookup, setPostalLookup] = useState<PostalCodeLookupResult | null>(null);
+  const [postalLoading, setPostalLoading] = useState(false);
+  const [addressTouched, setAddressTouched] = useState(false);
 
   const nifFeedback = useMemo(() => {
     if (nif.trim() === "") return null;
@@ -86,6 +95,51 @@ export function CreateOrganizationForm() {
 
   const nameWasAutoFilled =
     vies?.valid === true && vies.name !== null && name === vies.name && !nameTouched;
+
+  // Debounced postal-code lookup. Mirrors the VIES pattern.
+  const addressTouchedRef = useRef(addressTouched);
+  addressTouchedRef.current = addressTouched;
+
+  const postalCodeValid = /^\d{4}-\d{3}$/.test(postalCode);
+
+  useEffect(() => {
+    if (!postalCodeValid) {
+      setPostalLookup(null);
+      setPostalLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setPostalLoading(true);
+    const timer = setTimeout(async () => {
+      const result = await lookupPostalCodeAction(postalCode);
+      if (cancelled) return;
+      setPostalLookup(result);
+      setPostalLoading(false);
+      if (result?.found && !addressTouchedRef.current) {
+        if (result.freguesia) setFreguesia(result.freguesia);
+        if (result.concelho) setConcelho(result.concelho);
+        if (result.distrito) setDistrito(result.distrito);
+      }
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      setPostalLoading(false);
+    };
+  }, [postalCode, postalCodeValid]);
+
+  const addressWasAutoFilled =
+    postalLookup?.found === true &&
+    !addressTouched &&
+    freguesia === (postalLookup.freguesia ?? "") &&
+    concelho === (postalLookup.concelho ?? "") &&
+    distrito === (postalLookup.distrito ?? "");
+
+  // Auto-format postal code as user types: insert dash after 4 digits.
+  function onPostalCodeChange(raw: string) {
+    const digits = raw.replace(/\D/g, "").slice(0, 7);
+    setPostalCode(digits.length > 4 ? `${digits.slice(0, 4)}-${digits.slice(4)}` : digits);
+  }
 
   return (
     <form action={formAction} style={{ display: "grid", gap: "1rem", maxWidth: 480 }}>
@@ -196,6 +250,123 @@ export function CreateOrganizationForm() {
         </select>
       </label>
 
+      <fieldset
+        style={{
+          display: "grid",
+          gap: "0.75rem",
+          border: "1px solid #e0e0e0",
+          borderRadius: "0.25rem",
+          padding: "0.75rem 1rem",
+          margin: 0,
+        }}
+      >
+        <legend style={{ padding: "0 0.5rem", fontSize: "0.9rem", color: "#444" }}>
+          Endereço (opcional)
+        </legend>
+
+        <label style={{ display: "grid", gap: "0.25rem" }}>
+          <span>Código postal</span>
+          <input
+            name="postalCode"
+            type="text"
+            inputMode="numeric"
+            autoComplete="postal-code"
+            placeholder="0000-000"
+            maxLength={8}
+            value={postalCode}
+            onChange={(e) => onPostalCodeChange(e.target.value)}
+            style={{
+              padding: "0.5rem",
+              fontSize: "1rem",
+              borderColor:
+                postalLookup?.found === true
+                  ? "#1f7a3d"
+                  : postalCode !== "" && !postalCodeValid
+                    ? "#b00020"
+                    : undefined,
+              borderWidth: postalLookup || (postalCode && !postalCodeValid) ? "2px" : undefined,
+              borderStyle: postalLookup || (postalCode && !postalCodeValid) ? "solid" : undefined,
+            }}
+          />
+          {postalLoading && (
+            <span style={{ color: "#777", fontSize: "0.85rem" }}>A consultar morada…</span>
+          )}
+          {!postalLoading && postalLookup?.found === false && (
+            <span style={{ color: "#a36400", fontSize: "0.85rem" }}>
+              Código postal não encontrado — preencha manualmente.
+            </span>
+          )}
+          {!postalLoading && addressWasAutoFilled && (
+            <span style={{ color: "#1f7a3d", fontSize: "0.85rem" }}>
+              ✓ Morada preenchida automaticamente.
+            </span>
+          )}
+        </label>
+
+        <label style={{ display: "grid", gap: "0.25rem" }}>
+          <span>Morada</span>
+          <input
+            name="addressLine"
+            type="text"
+            autoComplete="street-address"
+            placeholder="Rua, número, andar…"
+            maxLength={200}
+            value={addressLine}
+            onChange={(e) => {
+              setAddressLine(e.target.value);
+              setAddressTouched(true);
+            }}
+            style={{ padding: "0.5rem", fontSize: "1rem" }}
+          />
+        </label>
+
+        <div style={{ display: "grid", gap: "0.75rem", gridTemplateColumns: "1fr 1fr" }}>
+          <label style={{ display: "grid", gap: "0.25rem" }}>
+            <span>Freguesia</span>
+            <input
+              name="freguesia"
+              type="text"
+              maxLength={100}
+              value={freguesia}
+              onChange={(e) => {
+                setFreguesia(e.target.value);
+                setAddressTouched(true);
+              }}
+              style={{ padding: "0.5rem", fontSize: "1rem" }}
+            />
+          </label>
+          <label style={{ display: "grid", gap: "0.25rem" }}>
+            <span>Concelho</span>
+            <input
+              name="concelho"
+              type="text"
+              maxLength={100}
+              value={concelho}
+              onChange={(e) => {
+                setConcelho(e.target.value);
+                setAddressTouched(true);
+              }}
+              style={{ padding: "0.5rem", fontSize: "1rem" }}
+            />
+          </label>
+        </div>
+
+        <label style={{ display: "grid", gap: "0.25rem" }}>
+          <span>Distrito</span>
+          <input
+            name="distrito"
+            type="text"
+            maxLength={100}
+            value={distrito}
+            onChange={(e) => {
+              setDistrito(e.target.value);
+              setAddressTouched(true);
+            }}
+            style={{ padding: "0.5rem", fontSize: "1rem" }}
+          />
+        </label>
+      </fieldset>
+
       {state.error && (
         <p style={{ color: "#b00020", margin: 0 }} role="alert">
           {state.error}
@@ -204,7 +375,9 @@ export function CreateOrganizationForm() {
 
       <button
         type="submit"
-        disabled={isPending || nifFeedback?.kind === "error"}
+        disabled={
+          isPending || nifFeedback?.kind === "error" || (postalCode !== "" && !postalCodeValid)
+        }
         style={{ padding: "0.75rem 1rem", fontSize: "1rem" }}
       >
         {isPending ? "A criar…" : "Criar organização"}

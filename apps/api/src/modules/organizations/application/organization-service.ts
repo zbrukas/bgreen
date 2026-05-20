@@ -9,6 +9,11 @@ export interface CreateOrganizationInput {
   caeCode: string | null;
   legalForm: LegalForm | null;
   selfReportedSize: OrganizationSize | null;
+  postalCode: string | null;
+  addressLine: string | null;
+  freguesia: string | null;
+  concelho: string | null;
+  distrito: string | null;
   workosOrganizationId?: string | null;
 }
 

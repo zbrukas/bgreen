@@ -29,6 +29,20 @@
       "when": 1779235908593,
       "tag": "0003_yielding_queen_noir",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1779238988201,
+      "tag": "0004_unique_synch",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1779241679208,
+      "tag": "0005_cooing_proudstar",
+      "breakpoints": true
     }
   ]
 }

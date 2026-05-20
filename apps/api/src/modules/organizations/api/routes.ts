@@ -7,6 +7,8 @@ import { z } from "zod";
 import type { AppEnv } from "../../../context.js";
 import { inviteService, organizationService, repositories } from "../../../services.js";
 
+const nullableTrimmed = z.string().nullable().optional();
+
 const createOrganizationInput = z.object({
   name: z.string().min(1).max(200),
   nif: z
@@ -23,6 +25,15 @@ const createOrganizationInput = z.object({
     .refine((v) => v == null || v === "" || /^\d{3,5}$/.test(v), "invalid_cae_code"),
   legalForm: LegalFormSchema.nullable().optional(),
   selfReportedSize: OrganizationSizeSchema.nullable().optional(),
+  postalCode: z
+    .string()
+    .nullable()
+    .optional()
+    .refine((v) => v == null || v === "" || /^\d{4}-\d{3}$/.test(v), "invalid_postal_code"),
+  addressLine: nullableTrimmed,
+  freguesia: nullableTrimmed,
+  concelho: nullableTrimmed,
+  distrito: nullableTrimmed,
 });
 
 const createInviteInput = z.object({
@@ -46,6 +57,9 @@ export const organizationsRoutes = new Hono<AppEnv>()
     const nifResult = input.nif ? validateNif(input.nif) : null;
     const normalizedNif = nifResult?.valid ? nifResult.normalized : null;
 
+    const stringOrNull = (v: string | null | undefined): string | null =>
+      v && v.trim() !== "" ? v.trim() : null;
+
     const result = await organizationService.createWithOwner({
       ownerUserId: c.var.user.id,
       name: input.name,
@@ -53,6 +67,11 @@ export const organizationsRoutes = new Hono<AppEnv>()
       caeCode: input.caeCode && input.caeCode !== "" ? input.caeCode : null,
       legalForm: input.legalForm ?? null,
       selfReportedSize: input.selfReportedSize ?? null,
+      postalCode: stringOrNull(input.postalCode),
+      addressLine: stringOrNull(input.addressLine),
+      freguesia: stringOrNull(input.freguesia),
+      concelho: stringOrNull(input.concelho),
+      distrito: stringOrNull(input.distrito),
     });
     return c.json(result, 201);
   })

@@ -10,6 +10,11 @@ export const organizations = pgTable("organizations", {
   caeCode: text("cae_code"),
   legalForm: legalFormEnum("legal_form"),
   selfReportedSize: organizationSizeEnum("self_reported_size"),
+  postalCode: text("postal_code"),
+  addressLine: text("address_line"),
+  freguesia: text("freguesia"),
+  concelho: text("concelho"),
+  distrito: text("distrito"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
