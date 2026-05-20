@@ -133,4 +133,312 @@ describe("validateFormValues", () => {
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.errors.length).toBe(2);
   });
+
+  describe("multi_select", () => {
+    const baseField = {
+      id: "tags",
+      kind: "multi_select" as const,
+      label: "Etiquetas",
+      options: [
+        { value: "a", label: "A" },
+        { value: "b", label: "B" },
+        { value: "c", label: "C" },
+      ],
+    };
+
+    it("accepts a subset of valid option values and dedupes", () => {
+      const s = schema(baseField);
+      const r = validateFormValues(s, { tags: ["a", "c", "a"] });
+      expect(r.ok).toBe(true);
+      if (r.ok) expect(r.values.tags).toEqual(["a", "c"]);
+    });
+
+    it("rejects non-array values", () => {
+      const s = schema(baseField);
+      const r = validateFormValues(s, { tags: "a" });
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.errors[0]?.code).toBe("wrong_type");
+    });
+
+    it("rejects values not in the option list", () => {
+      const s = schema(baseField);
+      const r = validateFormValues(s, { tags: ["a", "zz"] });
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.errors[0]?.code).toBe("invalid_option");
+    });
+
+    it("flags empty array as required when required=true", () => {
+      const s = schema({ ...baseField, required: true });
+      const r = validateFormValues(s, { tags: [] });
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.errors[0]?.code).toBe("required");
+    });
+
+    it("enforces minSelected and maxSelected bounds", () => {
+      const s = schema({ ...baseField, minSelected: 2, maxSelected: 2 });
+
+      const tooFew = validateFormValues(s, { tags: ["a"] });
+      expect(tooFew.ok).toBe(false);
+      if (!tooFew.ok) expect(tooFew.errors[0]?.code).toBe("min_selections");
+
+      const tooMany = validateFormValues(s, { tags: ["a", "b", "c"] });
+      expect(tooMany.ok).toBe(false);
+      if (!tooMany.ok) expect(tooMany.errors[0]?.code).toBe("max_selections");
+
+      const justRight = validateFormValues(s, { tags: ["a", "b"] });
+      expect(justRight.ok).toBe(true);
+    });
+  });
+
+  describe("show-if", () => {
+    it("skips required-check on hidden field", () => {
+      const s = schema(
+        {
+          id: "kind",
+          kind: "select",
+          label: "Tipo",
+          options: [
+            { value: "company", label: "Empresa" },
+            { value: "person", label: "Pessoa" },
+          ],
+        },
+        {
+          id: "vat",
+          kind: "text",
+          label: "NIF",
+          required: true,
+          showIf: [{ fieldId: "kind", equals: "company" }],
+        },
+      );
+      const r = validateFormValues(s, { kind: "person" });
+      expect(r.ok).toBe(true);
+      if (r.ok) expect(r.values.vat).toBeUndefined();
+    });
+
+    it("enforces field rules when show-if is satisfied", () => {
+      const s = schema(
+        {
+          id: "kind",
+          kind: "select",
+          label: "Tipo",
+          options: [{ value: "company", label: "Empresa" }],
+        },
+        {
+          id: "vat",
+          kind: "text",
+          label: "NIF",
+          required: true,
+          showIf: [{ fieldId: "kind", equals: "company" }],
+        },
+      );
+      const r = validateFormValues(s, { kind: "company" });
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.errors[0]?.code).toBe("required");
+    });
+
+    it("AND-chains multiple predicates", () => {
+      const s = schema(
+        {
+          id: "a",
+          kind: "select",
+          label: "A",
+          options: [
+            { value: "x", label: "X" },
+            { value: "y", label: "Y" },
+          ],
+        },
+        {
+          id: "b",
+          kind: "select",
+          label: "B",
+          options: [
+            { value: "1", label: "Um" },
+            { value: "2", label: "Dois" },
+          ],
+        },
+        {
+          id: "c",
+          kind: "text",
+          label: "C",
+          required: true,
+          showIf: [
+            { fieldId: "a", equals: "x" },
+            { fieldId: "b", equals: "1" },
+          ],
+        },
+      );
+
+      // Both predicates satisfied → required kicks in.
+      const both = validateFormValues(s, { a: "x", b: "1" });
+      expect(both.ok).toBe(false);
+      if (!both.ok) expect(both.errors[0]?.code).toBe("required");
+
+      // Only one predicate satisfied → hidden, no error.
+      const one = validateFormValues(s, { a: "x", b: "2" });
+      expect(one.ok).toBe(true);
+    });
+
+    it("matches multi-select via array inclusion", () => {
+      const s = schema(
+        {
+          id: "scopes",
+          kind: "multi_select",
+          label: "Âmbitos",
+          options: [
+            { value: "s1", label: "1" },
+            { value: "s2", label: "2" },
+          ],
+        },
+        {
+          id: "detail",
+          kind: "text",
+          label: "Detalhe",
+          required: true,
+          showIf: [{ fieldId: "scopes", equals: "s2" }],
+        },
+      );
+      const hidden = validateFormValues(s, { scopes: ["s1"] });
+      expect(hidden.ok).toBe(true);
+
+      const visible = validateFormValues(s, { scopes: ["s1", "s2"] });
+      expect(visible.ok).toBe(false);
+      if (!visible.ok) expect(visible.errors[0]?.code).toBe("required");
+    });
+
+    it("reports error when show-if references a non-existent field", () => {
+      const s = schema({
+        id: "x",
+        kind: "text",
+        label: "X",
+        showIf: [{ fieldId: "ghost", equals: "1" }],
+      });
+      const r = validateFormValues(s, {});
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.errors[0]?.code).toBe("unknown_show_if_target");
+    });
+  });
+
+  describe("repeating", () => {
+    const repeatField = {
+      id: "vehicles",
+      kind: "repeating" as const,
+      label: "Veículos",
+      rowLabel: "Veículo",
+      minRows: 1,
+      maxRows: 3,
+      fields: [
+        { id: "plate", kind: "text" as const, label: "Matrícula", required: true },
+        { id: "km", kind: "number" as const, label: "Km", min: 0 },
+      ],
+    };
+
+    it("validates each sub-row against its sub-schema", () => {
+      const s = schema(repeatField);
+      const r = validateFormValues(s, {
+        vehicles: [
+          { plate: "AB-12-CD", km: "1500" },
+          { plate: "EF-34-GH", km: 0 },
+        ],
+      });
+      expect(r.ok).toBe(true);
+      if (r.ok) {
+        const rows = r.values.vehicles as Array<{ plate: string; km: number }>;
+        expect(rows).toHaveLength(2);
+        expect(rows[0]?.km).toBe(1500);
+      }
+    });
+
+    it("enforces minRows / maxRows", () => {
+      const s = schema(repeatField);
+      const tooFew = validateFormValues(s, { vehicles: [] });
+      expect(tooFew.ok).toBe(false);
+      if (!tooFew.ok) expect(tooFew.errors[0]?.code).toBe("min_rows");
+
+      const tooMany = validateFormValues(s, {
+        vehicles: [
+          { plate: "1", km: 0 },
+          { plate: "2", km: 0 },
+          { plate: "3", km: 0 },
+          { plate: "4", km: 0 },
+        ],
+      });
+      expect(tooMany.ok).toBe(false);
+      if (!tooMany.ok) expect(tooMany.errors[0]?.code).toBe("max_rows");
+    });
+
+    it("paths sub-row errors with parent[index].field syntax", () => {
+      const s = schema(repeatField);
+      const r = validateFormValues(s, {
+        vehicles: [{ plate: "", km: -10 }],
+      });
+      expect(r.ok).toBe(false);
+      if (!r.ok) {
+        const ids = r.errors.map((e) => e.fieldId);
+        expect(ids).toContain("vehicles[0].plate");
+        expect(ids).toContain("vehicles[0].km");
+      }
+    });
+
+    it("rejects non-array repeating value", () => {
+      const s = schema(repeatField);
+      const r = validateFormValues(s, { vehicles: "not an array" });
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.errors[0]?.code).toBe("wrong_type");
+    });
+
+    it("treats missing optional repeating as skipped", () => {
+      const s = schema({ ...repeatField, minRows: 0 });
+      const r = validateFormValues(s, {});
+      expect(r.ok).toBe(true);
+    });
+
+    it("show-if scoped inside a sub-row references siblings, not top-level", () => {
+      const s: FormSchema = {
+        version: 1,
+        rows: [
+          {
+            id: "r1",
+            fields: [
+              {
+                id: "fleet",
+                kind: "repeating",
+                label: "Frota",
+                rowLabel: "Veículo",
+                minRows: 0,
+                fields: [
+                  {
+                    id: "kind",
+                    kind: "select",
+                    label: "Tipo",
+                    options: [
+                      { value: "ev", label: "Eléctrico" },
+                      { value: "ice", label: "Combustão" },
+                    ],
+                  },
+                  {
+                    id: "fuel",
+                    kind: "text",
+                    label: "Combustível",
+                    required: true,
+                    showIf: [{ fieldId: "kind", equals: "ice" }],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      };
+
+      const r = validateFormValues(s, {
+        fleet: [{ kind: "ev" }, { kind: "ice" }],
+      });
+      expect(r.ok).toBe(false);
+      if (!r.ok) {
+        // Only the second sub-row should fail (fuel hidden in first, required in second).
+        expect(r.errors).toHaveLength(1);
+        expect(r.errors[0]?.fieldId).toBe("fleet[1].fuel");
+        expect(r.errors[0]?.code).toBe("required");
+      }
+    });
+  });
 });

@@ -9,11 +9,22 @@ export const FieldIdSchema = z
   .regex(/^[a-z][a-z0-9_]*$/, "Field id must be a snake_case slug starting with a letter.");
 export type FieldId = z.infer<typeof FieldIdSchema>;
 
+// Show-if predicate: hide the field unless every predicate matches. The
+// referenced fieldId must live in the same containment scope (top-level
+// fields can only reference top-level fields; repeating sub-row fields can
+// only reference siblings in the same sub-row).
+export const ShowIfPredicateSchema = z.object({
+  fieldId: FieldIdSchema,
+  equals: z.string().max(200),
+});
+export type ShowIfPredicate = z.infer<typeof ShowIfPredicateSchema>;
+
 const baseField = {
   id: FieldIdSchema,
   label: z.string().min(1).max(200),
   description: z.string().max(500).optional(),
   required: z.boolean().optional(),
+  showIf: z.array(ShowIfPredicateSchema).max(5).optional(),
 };
 
 export const TextFieldSchema = z.object({
@@ -47,25 +58,60 @@ export const DateFieldSchema = z.object({
 });
 export type DateField = z.infer<typeof DateFieldSchema>;
 
+const OptionSchema = z.object({
+  value: z.string().min(1).max(100),
+  label: z.string().min(1).max(200),
+});
+
 export const SelectFieldSchema = z.object({
   ...baseField,
   kind: z.literal("select"),
-  options: z
-    .array(
-      z.object({
-        value: z.string().min(1).max(100),
-        label: z.string().min(1).max(200),
-      }),
-    )
-    .min(1),
+  options: z.array(OptionSchema).min(1),
 });
 export type SelectField = z.infer<typeof SelectFieldSchema>;
+
+export const MultiSelectFieldSchema = z.object({
+  ...baseField,
+  kind: z.literal("multi_select"),
+  options: z.array(OptionSchema).min(1),
+  // Selection-count bounds. `required` controls "must select at least one";
+  // `minSelected` lets the admin demand more than one.
+  minSelected: z.number().int().min(1).max(50).optional(),
+  maxSelected: z.number().int().min(1).max(50).optional(),
+});
+export type MultiSelectField = z.infer<typeof MultiSelectFieldSchema>;
+
+// Leaf field union — everything that can live anywhere, including inside
+// a `repeating` sub-row. Excludes `repeating` itself so nesting is bounded
+// to one level (v1 constraint).
+export const LeafFieldSchema = z.discriminatedUnion("kind", [
+  TextFieldSchema,
+  NumberFieldSchema,
+  DateFieldSchema,
+  SelectFieldSchema,
+  MultiSelectFieldSchema,
+]);
+export type LeafField = z.infer<typeof LeafFieldSchema>;
+export type LeafFieldKind = LeafField["kind"];
+
+export const RepeatingFieldSchema = z.object({
+  ...baseField,
+  kind: z.literal("repeating"),
+  // Singular/plural noun used in the UI (e.g., "Linha", "Veículo").
+  rowLabel: z.string().min(1).max(80),
+  minRows: z.number().int().min(0).max(100).optional(),
+  maxRows: z.number().int().min(1).max(100).optional(),
+  fields: z.array(LeafFieldSchema).min(1),
+});
+export type RepeatingField = z.infer<typeof RepeatingFieldSchema>;
 
 export const FieldSchema = z.discriminatedUnion("kind", [
   TextFieldSchema,
   NumberFieldSchema,
   DateFieldSchema,
   SelectFieldSchema,
+  MultiSelectFieldSchema,
+  RepeatingFieldSchema,
 ]);
 export type Field = z.infer<typeof FieldSchema>;
 export type FieldKind = Field["kind"];
@@ -109,11 +155,16 @@ export const RecordStatusSchema = z.enum([
 export type RecordStatus = z.infer<typeof RecordStatusSchema>;
 
 // Stored as fieldId → value. Concrete value types depend on field kind:
-//   text   → string
-//   number → number (after coercion)
-//   date   → string YYYY-MM-DD
-//   select → string (one of the option values)
-export const RecordValuesSchema = z.record(z.string(), z.unknown());
+//   text         → string
+//   number       → number (after coercion)
+//   date         → string YYYY-MM-DD
+//   select       → string (one of the option values)
+//   multi_select → string[] (subset of option values, deduplicated)
+//   repeating    → Array<RecordValues>, one entry per sub-row
+export const RecordValuesSchema: z.ZodType<{ [key: string]: unknown }> = z.record(
+  z.string(),
+  z.unknown(),
+);
 export type RecordValues = z.infer<typeof RecordValuesSchema>;
 
 export const RecordSchema = z.object({
