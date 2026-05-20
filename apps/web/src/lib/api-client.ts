@@ -427,6 +427,36 @@ export async function createRecord(input: {
   }
 }
 
+export type ReviewDecision = "approve" | "request_changes" | "reject";
+
+export type ReviewRecordResult = { ok: true; record: BgRecord } | { ok: false; error: string };
+
+export async function reviewRecord(input: {
+  id: string;
+  decision: ReviewDecision;
+  comment: string | null;
+}): Promise<ReviewRecordResult> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return { ok: false, error: "not_signed_in" };
+    const res = await api.records[":id"].review.$post(
+      {
+        param: { id: input.id },
+        json: { decision: input.decision, comment: input.comment },
+      },
+      { headers },
+    );
+    if (res.ok) {
+      const record = (await res.json()) as BgRecord;
+      return { ok: true, record };
+    }
+    const body = (await res.json().catch(() => ({}))) as { error?: string };
+    return { ok: false, error: body.error ?? "request_failed" };
+  } catch {
+    return { ok: false, error: "network_error" };
+  }
+}
+
 export async function updateRecord(input: {
   id: string;
   values: Record<string, unknown>;

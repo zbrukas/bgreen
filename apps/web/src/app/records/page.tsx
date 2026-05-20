@@ -1,4 +1,5 @@
 import { fetchMe, fetchMyRecords, fetchTemplates } from "@/lib/api-client";
+import type { Record as BgRecord } from "@bgreen/types";
 import { getSignInUrl, withAuth } from "@workos-inc/authkit-nextjs";
 import Link from "next/link";
 
@@ -41,6 +42,9 @@ export default async function RecordsListPage() {
   const templateNameById = new Map(templates.map((t) => [t.id, t.name]));
   const publishedTemplates = templates.filter((t) => t.status === "published");
   const isAdmin = me?.activeOrganizationRole === "admin";
+
+  const pending = isAdmin ? records.filter((r) => r.status === "submitted") : [];
+  const others = isAdmin ? records.filter((r) => r.status !== "submitted") : records;
 
   return (
     <main style={{ padding: "2rem", fontFamily: "system-ui, sans-serif", maxWidth: 900 }}>
@@ -85,8 +89,46 @@ export default async function RecordsListPage() {
         </section>
       )}
 
+      {isAdmin && (
+        <RecordsTable
+          title={`Pendentes de revisão${pending.length > 0 ? ` (${pending.length})` : ""}`}
+          emptyMessage="Nenhum registo aguarda revisão."
+          records={pending}
+          templateNameById={templateNameById}
+          actionLabel="Rever"
+        />
+      )}
+
+      <RecordsTable
+        title={isAdmin ? "Restantes registos" : "Os meus registos"}
+        emptyMessage="Ainda não existem registos."
+        records={others}
+        templateNameById={templateNameById}
+      />
+    </main>
+  );
+}
+
+interface RecordsTableProps {
+  title: string;
+  emptyMessage: string;
+  records: BgRecord[];
+  templateNameById: Map<string, string>;
+  actionLabel?: string;
+}
+
+function RecordsTable({
+  title,
+  emptyMessage,
+  records,
+  templateNameById,
+  actionLabel,
+}: RecordsTableProps) {
+  return (
+    <section style={{ marginBottom: "1.5rem" }}>
+      <h2 style={{ margin: "0 0 0.5rem", fontSize: "1.05rem" }}>{title}</h2>
       {records.length === 0 ? (
-        <p style={{ color: "#666" }}>Ainda não existem registos.</p>
+        <p style={{ color: "#666", fontSize: "0.9rem" }}>{emptyMessage}</p>
       ) : (
         <table
           style={{
@@ -140,7 +182,10 @@ export default async function RecordsListPage() {
                   }}
                 >
                   <Link href={`/records/${r.id}`}>
-                    {r.status === "draft" ? "Continuar" : "Ver"}
+                    {actionLabel ??
+                      (r.status === "draft" || r.status === "changes_requested"
+                        ? "Continuar"
+                        : "Ver")}
                   </Link>
                 </td>
               </tr>
@@ -148,6 +193,6 @@ export default async function RecordsListPage() {
           </tbody>
         </table>
       )}
-    </main>
+    </section>
   );
 }

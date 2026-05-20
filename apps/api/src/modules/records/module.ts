@@ -3,6 +3,9 @@ export { RecordService } from "./application/record-service.js";
 export type {
   CreateRecordInput,
   RecordRepository,
+  ReviewDecision,
+  ReviewRecordInput,
+  ReviewResult,
   SubmitResult,
   UpdateRecordInput,
   UpdateResult,

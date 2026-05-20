@@ -4,6 +4,7 @@ import { setActiveOrgId } from "@/lib/active-org";
 import {
   type CaeEntry,
   type PostalCodeLookupResult,
+  type ReviewDecision,
   type ViesLookupResult,
   acceptInvite,
   archiveTemplate,
@@ -16,6 +17,7 @@ import {
   lookupPostalCode,
   lookupVies,
   publishTemplate,
+  reviewRecord,
   searchCae,
   updateRecord,
 } from "@/lib/api-client";
@@ -323,4 +325,23 @@ export async function submitRecordAction(
   revalidatePath("/records");
   revalidatePath(`/records/${result.record.id}`);
   return { ok: true, id: result.record.id };
+}
+
+export type ReviewRecordActionResult = { ok: true } | { ok: false; error: string };
+
+export async function reviewRecordAction(input: {
+  id: string;
+  decision: ReviewDecision;
+  comment: string | null;
+}): Promise<ReviewRecordActionResult> {
+  const trimmed = input.comment?.trim() ?? "";
+  const result = await reviewRecord({
+    id: input.id,
+    decision: input.decision,
+    comment: trimmed === "" ? null : trimmed,
+  });
+  if (!result.ok) return { ok: false, error: result.error };
+  revalidatePath("/records");
+  revalidatePath(`/records/${result.record.id}`);
+  return { ok: true };
 }

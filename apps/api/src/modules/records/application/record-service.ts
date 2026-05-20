@@ -36,6 +36,14 @@ export interface RecordRepository {
     values: RecordValues;
     submittedAt: Date | null;
   }): Promise<Record | null>;
+  recordReview(input: {
+    organizationId: string;
+    recordId: string;
+    status: RecordStatus;
+    reviewComment: string | null;
+    reviewedAt: Date;
+    reviewedByUserId: string;
+  }): Promise<Record | null>;
   findById(organizationId: string, id: string): Promise<Record | null>;
   listForUserInOrg(organizationId: string, userId: string): Promise<Record[]>;
   listForOrganization(organizationId: string): Promise<Record[]>;
@@ -58,6 +66,23 @@ export type UpdateResult =
         | "not_editable";
     }
   | { ok: false; code: "validation_failed"; errors: FormError[] };
+
+export type ReviewDecision = "approve" | "request_changes" | "reject";
+
+export interface ReviewRecordInput {
+  organizationId: string;
+  recordId: string;
+  reviewerUserId: string;
+  decision: ReviewDecision;
+  comment: string | null;
+}
+
+export type ReviewResult =
+  | { ok: true; record: Record }
+  | {
+      ok: false;
+      code: "record_not_found" | "not_reviewable" | "comment_required";
+    };
 
 export class RecordService {
   constructor(
@@ -96,7 +121,9 @@ export class RecordService {
     if (existing.submittedByUserId !== input.actorUserId) {
       return { ok: false, code: "forbidden" };
     }
-    if (existing.status !== "draft") {
+    // Drafts can be edited freely; records returned with changes_requested
+    // can be re-edited and resubmitted by the original submitter.
+    if (existing.status !== "draft" && existing.status !== "changes_requested") {
       return { ok: false, code: "not_editable" };
     }
 
@@ -125,6 +152,36 @@ export class RecordService {
       status,
       values: validated.values,
       submittedAt,
+    });
+    if (!record) return { ok: false, code: "record_not_found" };
+    return { ok: true, record };
+  }
+
+  async review(input: ReviewRecordInput): Promise<ReviewResult> {
+    const existing = await this.records.findById(input.organizationId, input.recordId);
+    if (!existing) return { ok: false, code: "record_not_found" };
+    if (existing.status !== "submitted") {
+      return { ok: false, code: "not_reviewable" };
+    }
+    const trimmed = input.comment?.trim() ?? "";
+    if (input.decision !== "approve" && trimmed === "") {
+      return { ok: false, code: "comment_required" };
+    }
+
+    const nextStatus: RecordStatus =
+      input.decision === "approve"
+        ? "approved"
+        : input.decision === "request_changes"
+          ? "changes_requested"
+          : "rejected";
+
+    const record = await this.records.recordReview({
+      organizationId: input.organizationId,
+      recordId: input.recordId,
+      status: nextStatus,
+      reviewComment: trimmed === "" ? null : trimmed,
+      reviewedAt: new Date(),
+      reviewedByUserId: input.reviewerUserId,
     });
     if (!record) return { ok: false, code: "record_not_found" };
     return { ok: true, record };

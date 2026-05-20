@@ -15,6 +15,11 @@ const updateInput = z.object({
   action: z.enum(["save_draft", "submit"]),
 });
 
+const reviewInput = z.object({
+  decision: z.enum(["approve", "request_changes", "reject"]),
+  comment: z.string().max(2000).nullable().optional(),
+});
+
 export const recordsRoutes = new Hono<AppEnv>()
   .get("/", async (c) => {
     const orgId = c.var.organizationId;
@@ -55,6 +60,24 @@ export const recordsRoutes = new Hono<AppEnv>()
       return c.json({ error: result.code }, 400);
     }
     return c.json(result.record, 201);
+  })
+  .post("/:id/review", zValidator("json", reviewInput), async (c) => {
+    const orgId = c.var.organizationId;
+    if (!orgId) return c.json({ error: "no_active_org" }, 400);
+    if (c.var.membershipRole !== "admin") return c.json({ error: "forbidden" }, 403);
+    const input = c.req.valid("json");
+    const result = await recordService.review({
+      organizationId: orgId,
+      recordId: c.req.param("id"),
+      reviewerUserId: c.var.user.id,
+      decision: input.decision,
+      comment: input.comment ?? null,
+    });
+    if (!result.ok) {
+      if (result.code === "record_not_found") return c.json({ error: result.code }, 404);
+      return c.json({ error: result.code }, 400);
+    }
+    return c.json(result.record);
   })
   .patch("/:id", zValidator("json", updateInput), async (c) => {
     const orgId = c.var.organizationId;

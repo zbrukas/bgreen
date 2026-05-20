@@ -66,6 +66,30 @@ export class DrizzleRecordRepository implements RecordRepository {
     return row ? rowToRecord(row) : null;
   }
 
+  async recordReview(input: {
+    organizationId: string;
+    recordId: string;
+    status: Record["status"];
+    reviewComment: string | null;
+    reviewedAt: Date;
+    reviewedByUserId: string;
+  }): Promise<Record | null> {
+    const [row] = await db
+      .update(schema.records)
+      .set({
+        status: input.status,
+        reviewComment: input.reviewComment,
+        reviewedAt: input.reviewedAt,
+        reviewedByUserId: input.reviewedByUserId,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(orgScope(schema.records, input.organizationId), eq(schema.records.id, input.recordId)),
+      )
+      .returning();
+    return row ? rowToRecord(row) : null;
+  }
+
   async findById(organizationId: string, id: string): Promise<Record | null> {
     const rows = await db
       .select()
