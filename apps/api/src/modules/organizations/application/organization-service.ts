@@ -1,10 +1,13 @@
+import type { OrganizationSize } from "@bgreen/types";
 import type { LegalForm } from "../domain/legal-form.js";
 import type { MembershipRole, OrganizationMembership } from "../domain/organization-membership.js";
 import type { Organization } from "../domain/organization.js";
 
 export interface CreateOrganizationInput {
   name: string;
+  nif: string | null;
   legalForm: LegalForm | null;
+  selfReportedSize: OrganizationSize | null;
   workosOrganizationId?: string | null;
 }
 

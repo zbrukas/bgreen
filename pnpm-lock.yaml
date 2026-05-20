@@ -35,6 +35,9 @@ importers:
       '@bgreen/emails':
         specifier: workspace:*
         version: link:../../packages/emails
+      '@bgreen/pt-data':
+        specifier: workspace:*
+        version: link:../../packages/pt-data
       '@bgreen/types':
         specifier: workspace:*
         version: link:../../packages/types
@@ -103,6 +106,9 @@ importers:
       '@bgreen/api':
         specifier: workspace:*
         version: link:../api
+      '@bgreen/pt-data':
+        specifier: workspace:*
+        version: link:../../packages/pt-data
       '@bgreen/types':
         specifier: workspace:*
         version: link:../../packages/types

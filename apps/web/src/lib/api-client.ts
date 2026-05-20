@@ -1,5 +1,5 @@
 import type { AppType } from "@bgreen/api/rpc";
-import type { InvitePreview, LegalForm, MembershipRole } from "@bgreen/types";
+import type { InvitePreview, LegalForm, MembershipRole, OrganizationSize } from "@bgreen/types";
 import { withAuth } from "@workos-inc/authkit-nextjs";
 import { hc } from "hono/client";
 import { getActiveOrgId } from "./active-org";
@@ -73,13 +73,22 @@ export async function fetchMyOrganizations(): Promise<Array<{ id: string; name: 
 
 export async function createOrganization(input: {
   name: string;
+  nif: string | null;
   legalForm: LegalForm | null;
+  selfReportedSize: OrganizationSize | null;
 }): Promise<{ id: string; name: string } | { error: string }> {
   try {
     const headers = await authedHeaders();
     if (!headers.Authorization) return { error: "not_signed_in" };
     const res = await api.organizations.$post(
-      { json: { name: input.name, legalForm: input.legalForm } },
+      {
+        json: {
+          name: input.name,
+          nif: input.nif,
+          legalForm: input.legalForm,
+          selfReportedSize: input.selfReportedSize,
+        },
+      },
       { headers },
     );
     if (!res.ok) {

@@ -7,8 +7,9 @@ import {
   createOrganization,
   fetchMyOrganizations,
 } from "@/lib/api-client";
-import type { LegalForm, MembershipRole } from "@bgreen/types";
-import { LegalFormSchema, MembershipRoleSchema } from "@bgreen/types";
+import { validateNif } from "@bgreen/pt-data";
+import type { LegalForm, MembershipRole, OrganizationSize } from "@bgreen/types";
+import { LegalFormSchema, MembershipRoleSchema, OrganizationSizeSchema } from "@bgreen/types";
 import { signOut } from "@workos-inc/authkit-nextjs";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -26,11 +27,24 @@ export async function createOrganizationAction(
   formData: FormData,
 ): Promise<CreateOrganizationFormState> {
   const rawName = formData.get("name");
+  const rawNif = formData.get("nif");
   const rawLegalForm = formData.get("legalForm");
+  const rawSize = formData.get("selfReportedSize");
+
   const name = typeof rawName === "string" ? rawName.trim() : "";
   if (!name) {
     return { error: "Indique um nome para a organização." };
   }
+
+  let nif: string | null = null;
+  if (typeof rawNif === "string" && rawNif.trim() !== "") {
+    const nifResult = validateNif(rawNif);
+    if (!nifResult.valid) {
+      return { error: "NIF inválido. Verifique os 9 dígitos e o dígito de controlo." };
+    }
+    nif = nifResult.normalized;
+  }
+
   let legalForm: LegalForm | null = null;
   if (typeof rawLegalForm === "string" && rawLegalForm !== "") {
     const parsed = LegalFormSchema.safeParse(rawLegalForm);
@@ -40,7 +54,16 @@ export async function createOrganizationAction(
     legalForm = parsed.data;
   }
 
-  const result = await createOrganization({ name, legalForm });
+  let selfReportedSize: OrganizationSize | null = null;
+  if (typeof rawSize === "string" && rawSize !== "") {
+    const parsed = OrganizationSizeSchema.safeParse(rawSize);
+    if (!parsed.success) {
+      return { error: "Dimensão inválida." };
+    }
+    selfReportedSize = parsed.data;
+  }
+
+  const result = await createOrganization({ name, nif, legalForm, selfReportedSize });
   if ("error" in result) {
     return { error: `Não foi possível criar a organização (${result.error}).` };
   }

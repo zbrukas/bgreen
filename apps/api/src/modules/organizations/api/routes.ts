@@ -1,5 +1,6 @@
 import { sendInviteEmail } from "@bgreen/emails";
-import { LegalFormSchema, MembershipRoleSchema } from "@bgreen/types";
+import { validateNif } from "@bgreen/pt-data";
+import { LegalFormSchema, MembershipRoleSchema, OrganizationSizeSchema } from "@bgreen/types";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
@@ -8,7 +9,13 @@ import { inviteService, organizationService, repositories } from "../../../servi
 
 const createOrganizationInput = z.object({
   name: z.string().min(1).max(200),
+  nif: z
+    .string()
+    .nullable()
+    .optional()
+    .refine((v) => v == null || v === "" || validateNif(v).valid, "invalid_nif"),
   legalForm: LegalFormSchema.nullable().optional(),
+  selfReportedSize: OrganizationSizeSchema.nullable().optional(),
 });
 
 const createInviteInput = z.object({
@@ -27,10 +34,17 @@ export const organizationsRoutes = new Hono<AppEnv>()
   })
   .post("/", zValidator("json", createOrganizationInput), async (c) => {
     const input = c.req.valid("json");
+    // Normalize the NIF (strip whitespace) before persistence so callers
+    // can be lazy about formatting.
+    const nifResult = input.nif ? validateNif(input.nif) : null;
+    const normalizedNif = nifResult?.valid ? nifResult.normalized : null;
+
     const result = await organizationService.createWithOwner({
       ownerUserId: c.var.user.id,
       name: input.name,
+      nif: normalizedNif,
       legalForm: input.legalForm ?? null,
+      selfReportedSize: input.selfReportedSize ?? null,
     });
     return c.json(result, 201);
   })

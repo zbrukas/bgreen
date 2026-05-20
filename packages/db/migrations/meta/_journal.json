@@ -15,6 +15,13 @@
       "when": 1779233270434,
       "tag": "0001_certain_fenris",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1779235094229,
+      "tag": "0002_pretty_caretaker",
+      "breakpoints": true
     }
   ]
 }

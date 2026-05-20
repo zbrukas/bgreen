@@ -14,7 +14,9 @@ function rowToOrganization(row: typeof schema.organizations.$inferSelect): Organ
     id: row.id,
     workosOrganizationId: row.workosOrganizationId,
     name: row.name,
+    nif: row.nif,
     legalForm: row.legalForm,
+    selfReportedSize: row.selfReportedSize,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -37,7 +39,9 @@ export class DrizzleOrganizationRepository implements OrganizationRepository {
       .insert(schema.organizations)
       .values({
         name: input.name,
+        nif: input.nif,
         legalForm: input.legalForm,
+        selfReportedSize: input.selfReportedSize,
         workosOrganizationId: input.workosOrganizationId ?? null,
       })
       .returning();
