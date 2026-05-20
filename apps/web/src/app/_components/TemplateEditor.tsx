@@ -1,5 +1,6 @@
 "use client";
 
+import type { RecordTemplate } from "@bgreen/types";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { createTemplateAction } from "../actions";
@@ -21,6 +22,7 @@ const TOP_LEVEL_KINDS: Array<{ value: EditorFieldKind; label: string }> = [
   { value: "date", label: "Data" },
   { value: "select", label: "Lista" },
   { value: "multi_select", label: "Múltipla escolha" },
+  { value: "calculated", label: "Calculado" },
   { value: "repeating", label: "Linhas repetidas" },
 ];
 
@@ -30,9 +32,18 @@ const LEAF_KINDS: Array<{ value: EditorLeafKind; label: string }> = [
   { value: "date", label: "Data" },
   { value: "select", label: "Lista" },
   { value: "multi_select", label: "Múltipla escolha" },
+  { value: "calculated", label: "Calculado" },
 ];
 
-export function TemplateEditor() {
+// Kinds where source-mapping pre-fill is meaningful (multi-select/calculated/
+// repeating intentionally excluded — those don't map well to a single source value).
+const MAPPABLE_KINDS: ReadonlySet<EditorFieldKind> = new Set(["text", "number", "date", "select"]);
+
+interface TemplateEditorProps {
+  availableTemplates: Array<Pick<RecordTemplate, "id" | "name" | "status" | "formSchema">>;
+}
+
+export function TemplateEditor({ availableTemplates }: TemplateEditorProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [rows, setRows] = useState<EditorRow[]>([newRow()]);
@@ -176,6 +187,7 @@ export function TemplateEditor() {
                   fieldIdx={fieldIdx}
                   siblings={row.fields.slice(0, fieldIdx)}
                   allowRepeating
+                  availableTemplates={availableTemplates}
                   onPatch={(patch) => patchField(rowIdx, fieldIdx, patch)}
                   onRemove={() =>
                     setRows((prev) =>
@@ -251,6 +263,7 @@ interface FieldCardProps {
   siblings: EditorField[];
   allowRepeating: boolean;
   removable: boolean;
+  availableTemplates: Array<Pick<RecordTemplate, "id" | "name" | "status" | "formSchema">>;
   onPatch: (patch: Partial<EditorField>) => void;
   onRemove: () => void;
   onPatchSub?: (subIdx: number, patch: Partial<EditorField>) => void;
@@ -262,6 +275,7 @@ function FieldCard({
   siblings,
   allowRepeating,
   removable,
+  availableTemplates,
   onPatch,
   onRemove,
   onPatchSub,
@@ -428,16 +442,27 @@ function FieldCard({
         </div>
       )}
 
+      {field.kind === "calculated" && <CalculatedEditor field={field} onPatch={onPatch} />}
+
       {field.kind === "repeating" && (
         <RepeatingEditor
           field={field}
           fieldIdx={fieldIdx}
           onPatch={onPatch}
           onPatchSub={onPatchSub}
+          availableTemplates={availableTemplates}
         />
       )}
 
       <ShowIfPicker field={field} siblings={siblings} onPatch={onPatch} />
+
+      {MAPPABLE_KINDS.has(field.kind) && (
+        <SourceMappingPicker
+          field={field}
+          availableTemplates={availableTemplates}
+          onPatch={onPatch}
+        />
+      )}
 
       <button
         type="button"
@@ -516,11 +541,13 @@ function RepeatingEditor({
   fieldIdx: _fieldIdx,
   onPatch,
   onPatchSub,
+  availableTemplates,
 }: {
   field: EditorField;
   fieldIdx: number;
   onPatch: (patch: Partial<EditorField>) => void;
   onPatchSub?: (subIdx: number, patch: Partial<EditorField>) => void;
+  availableTemplates: Array<Pick<RecordTemplate, "id" | "name" | "status" | "formSchema">>;
 }) {
   return (
     <div
@@ -577,6 +604,7 @@ function RepeatingEditor({
           fieldIdx={subIdx}
           siblings={field.subFields.slice(0, subIdx)}
           allowRepeating={false}
+          availableTemplates={availableTemplates}
           removable={field.subFields.length > 1}
           onPatch={(patch) => onPatchSub?.(subIdx, patch)}
           onRemove={() => onPatch({ subFields: field.subFields.filter((_, i) => i !== subIdx) })}
@@ -668,6 +696,141 @@ function ShowIfPicker({
         <p style={{ margin: 0, fontSize: "0.75rem", color: "#777" }}>
           Todas as condições devem ser satisfeitas (E lógico). Campos ocultos não são validados.
         </p>
+      </div>
+    </details>
+  );
+}
+
+function CalculatedEditor({
+  field,
+  onPatch,
+}: {
+  field: EditorField;
+  onPatch: (patch: Partial<EditorField>) => void;
+}) {
+  return (
+    <div style={{ display: "grid", gap: "0.4rem" }}>
+      <label style={{ display: "grid", gap: "0.25rem" }}>
+        <span style={{ fontSize: "0.85rem" }}>
+          Expressão (referencie outros campos pelo identificador)
+        </span>
+        <textarea
+          value={field.expression}
+          onChange={(e) => onPatch({ expression: e.target.value })}
+          rows={2}
+          placeholder="ex.: actividade * factor"
+          style={{
+            padding: "0.4rem",
+            fontSize: "0.9rem",
+            fontFamily: "monospace",
+            resize: "vertical",
+          }}
+        />
+      </label>
+      <label style={{ display: "grid", gap: "0.25rem", maxWidth: 200 }}>
+        <span style={{ fontSize: "0.85rem" }}>Unidade (opcional)</span>
+        <input
+          type="text"
+          value={field.unit}
+          onChange={(e) => onPatch({ unit: e.target.value })}
+          placeholder="kg CO₂e, kWh…"
+          style={{ padding: "0.35rem", fontSize: "0.9rem" }}
+        />
+      </label>
+      <p style={{ margin: 0, fontSize: "0.75rem", color: "#777" }}>
+        Operadores suportados: <code>+ - * /</code> e parênteses. Os identificadores devem existir
+        no mesmo âmbito (linha principal ou sub-linha).
+      </p>
+    </div>
+  );
+}
+
+function SourceMappingPicker({
+  field,
+  availableTemplates,
+  onPatch,
+}: {
+  field: EditorField;
+  availableTemplates: Array<Pick<RecordTemplate, "id" | "name" | "status" | "formSchema">>;
+  onPatch: (patch: Partial<EditorField>) => void;
+}) {
+  const mapping = field.sourceMapping;
+  const eligibleTemplates = availableTemplates.filter((t) => t.status !== "archived");
+  const selectedTemplate = mapping
+    ? availableTemplates.find((t) => t.id === mapping.sourceTemplateId)
+    : undefined;
+  const sourceFields = selectedTemplate
+    ? selectedTemplate.formSchema.rows.flatMap((r) => r.fields).filter((f) => f.kind === field.kind)
+    : [];
+
+  return (
+    <details style={{ borderTop: "1px dotted #ddd", paddingTop: "0.5rem" }}>
+      <summary style={{ fontSize: "0.85rem", cursor: "pointer", color: "#555" }}>
+        Pré-preencher de outro modelo {mapping && "(activo)"}
+      </summary>
+      <div style={{ display: "grid", gap: "0.4rem", marginTop: "0.4rem" }}>
+        {eligibleTemplates.length === 0 ? (
+          <p style={{ margin: 0, fontSize: "0.8rem", color: "#777" }}>
+            Não existem outros modelos disponíveis na organização.
+          </p>
+        ) : (
+          <>
+            <label style={{ display: "grid", gap: "0.25rem" }}>
+              <span style={{ fontSize: "0.8rem" }}>Modelo de origem</span>
+              <select
+                value={mapping?.sourceTemplateId ?? ""}
+                onChange={(e) => {
+                  const sourceTemplateId = e.target.value;
+                  onPatch({
+                    sourceMapping: sourceTemplateId
+                      ? { sourceTemplateId, sourceFieldId: "" }
+                      : null,
+                  });
+                }}
+                style={{ padding: "0.3rem", fontSize: "0.85rem" }}
+              >
+                <option value="">— sem pré-preenchimento —</option>
+                {eligibleTemplates.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {mapping && selectedTemplate && (
+              <label style={{ display: "grid", gap: "0.25rem" }}>
+                <span style={{ fontSize: "0.8rem" }}>
+                  Campo de origem (tipo deve coincidir: {field.kind})
+                </span>
+                <select
+                  value={mapping.sourceFieldId}
+                  onChange={(e) =>
+                    onPatch({
+                      sourceMapping: { ...mapping, sourceFieldId: e.target.value },
+                    })
+                  }
+                  style={{ padding: "0.3rem", fontSize: "0.85rem" }}
+                >
+                  <option value="">— escolha um campo —</option>
+                  {sourceFields.map((sf) => (
+                    <option key={sf.id} value={sf.id}>
+                      {sf.id} ({sf.label})
+                    </option>
+                  ))}
+                </select>
+                {sourceFields.length === 0 && (
+                  <span style={{ fontSize: "0.75rem", color: "#b00020" }}>
+                    O modelo "{selectedTemplate.name}" não tem campos do tipo {field.kind}.
+                  </span>
+                )}
+              </label>
+            )}
+            <p style={{ margin: 0, fontSize: "0.75rem", color: "#777" }}>
+              Ao criar um novo registo, este campo é pré-preenchido com o valor do campo escolhido
+              no registo submetido mais recente do modelo de origem.
+            </p>
+          </>
+        )}
       </div>
     </details>
   );

@@ -45,6 +45,7 @@ export interface RecordRepository {
     reviewedByUserId: string;
   }): Promise<Record | null>;
   findById(organizationId: string, id: string): Promise<Record | null>;
+  findLatestSubmitted(organizationId: string, templateId: string): Promise<Record | null>;
   listForUserInOrg(organizationId: string, userId: string): Promise<Record[]>;
   listForOrganization(organizationId: string): Promise<Record[]>;
 }
@@ -185,6 +186,45 @@ export class RecordService {
     });
     if (!record) return { ok: false, code: "record_not_found" };
     return { ok: true, record };
+  }
+
+  // Computes pre-fill values for a new draft against `templateId`. Walks
+  // the template's fields and, for each one with a sourceMapping, finds
+  // the most-recent submitted record of the referenced source template
+  // (same org) and copies the value of the source field. Returns only the
+  // fields that successfully prefilled.
+  async computePrefill(
+    organizationId: string,
+    templateId: string,
+  ): Promise<{ values: RecordValues } | { error: "template_not_found" }> {
+    const template = await this.templates.findById(organizationId, templateId);
+    if (!template) return { error: "template_not_found" };
+
+    const out: RecordValues = {};
+    const latestBySource = new Map<string, Record | null>();
+
+    for (const row of template.formSchema.rows) {
+      for (const field of row.fields) {
+        if (field.kind === "repeating") continue;
+        const mapping = field.sourceMapping;
+        if (!mapping) continue;
+
+        // Cache per source template — multiple fields may map from the
+        // same template.
+        let source = latestBySource.get(mapping.sourceTemplateId);
+        if (source === undefined) {
+          source = await this.records.findLatestSubmitted(organizationId, mapping.sourceTemplateId);
+          latestBySource.set(mapping.sourceTemplateId, source);
+        }
+        if (!source) continue;
+
+        const value = source.values[mapping.sourceFieldId];
+        if (value === undefined || value === null || value === "") continue;
+        out[field.id] = value;
+      }
+    }
+
+    return { values: out };
   }
 
   get(organizationId: string, id: string): Promise<Record | null> {

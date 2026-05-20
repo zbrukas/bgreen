@@ -1,7 +1,7 @@
 "use client";
 
 import type { FormError } from "@bgreen/form-engine";
-import { validateFormValues } from "@bgreen/form-engine";
+import { evaluateExpression, parseExpression, validateFormValues } from "@bgreen/form-engine";
 import type { Field, LeafField, RecordTemplate } from "@bgreen/types";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
@@ -277,6 +277,7 @@ function FieldInput({
           field={field}
           path={path}
           value={value}
+          scopeValues={scopeValues}
           onChange={onChange}
           errorsByPath={errorsByPath}
           rowKeys={rowKeys}
@@ -298,6 +299,7 @@ interface FieldControlProps {
   field: Field | LeafField;
   path: string;
   value: unknown;
+  scopeValues: FormValues;
   errorsByPath: Map<string, KeyedError[]>;
   rowKeys?: string[];
   onChange: (v: unknown) => void;
@@ -310,6 +312,7 @@ function FieldControl({
   field,
   path,
   value,
+  scopeValues,
   errorsByPath,
   rowKeys,
   onChange,
@@ -396,6 +399,29 @@ function FieldControl({
             </label>
           ))}
         </div>
+      );
+    }
+    case "calculated": {
+      const display = computeCalculatedDisplay(field.expression, scopeValues);
+      return (
+        <output
+          id={path}
+          style={{
+            padding: "0.4rem 0.6rem",
+            fontSize: "0.95rem",
+            background: "#f5f5f5",
+            border: "1px solid #e0e0e0",
+            borderRadius: "0.25rem",
+            color: display.kind === "value" ? "#1f7a3d" : "#888",
+            fontFamily: "monospace",
+          }}
+        >
+          {display.kind === "value"
+            ? `${formatNumber(display.value)}${field.unit ? ` ${field.unit}` : ""}`
+            : display.kind === "empty"
+              ? "—"
+              : display.message}
+        </output>
       );
     }
     case "repeating": {
@@ -541,6 +567,9 @@ function renderValue(field: Field | LeafField, value: unknown): string {
         .join(", ");
     case "number":
       return field.unit ? `${value} ${field.unit}` : String(value);
+    case "calculated":
+      if (typeof value !== "number") return "—";
+      return field.unit ? `${formatNumber(value)} ${field.unit}` : formatNumber(value);
     case "repeating":
       if (!Array.isArray(value) || value.length === 0) return "—";
       return `${value.length} ${value.length === 1 ? "linha" : "linhas"}`;
@@ -556,6 +585,30 @@ const statusLabel: Record<string, string> = {
   changes_requested: "Alterações pedidas",
   rejected: "Rejeitado",
 };
+
+type CalculatedDisplay =
+  | { kind: "value"; value: number }
+  | { kind: "empty" }
+  | { kind: "error"; message: string };
+
+function computeCalculatedDisplay(expression: string, scope: FormValues): CalculatedDisplay {
+  const parsed = parseExpression(expression);
+  if (!parsed.ok) {
+    return { kind: "error", message: "Expressão inválida" };
+  }
+  const result = evaluateExpression(parsed.ast, scope);
+  if (result.ok) return { kind: "value", value: result.value };
+  if (result.error.code === "missing_dependency") return { kind: "empty" };
+  if (result.error.code === "non_numeric_dependency") {
+    return { kind: "error", message: `Campo "${result.error.refId}" não é numérico` };
+  }
+  return { kind: "error", message: "Divisão por zero" };
+}
+
+function formatNumber(value: number): string {
+  // Up to 4 decimals, trailing zeros trimmed, pt-PT separators.
+  return value.toLocaleString("pt-PT", { maximumFractionDigits: 4 });
+}
 
 function translateError(code: string): string {
   switch (code) {

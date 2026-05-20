@@ -371,6 +371,19 @@ export type SubmitRecordResult =
   | { ok: true; record: BgRecord }
   | { ok: false; error: string; fieldErrors?: FormError[] };
 
+export async function fetchRecordPrefill(templateId: string): Promise<Record<string, unknown>> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return {};
+    const res = await api.records.prefill.$get({ query: { template: templateId } }, { headers });
+    if (!res.ok) return {};
+    const data = (await res.json()) as { values?: Record<string, unknown> };
+    return data.values ?? {};
+  } catch {
+    return {};
+  }
+}
+
 export async function fetchMyRecords(): Promise<BgRecord[]> {
   try {
     const headers = await authedHeaders();

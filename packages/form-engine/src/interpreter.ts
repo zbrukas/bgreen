@@ -8,6 +8,7 @@
 // enum membership, date range, show-if visibility, repeating sub-rows).
 
 import type {
+  CalculatedField,
   DateField,
   Field,
   FormSchema,
@@ -20,6 +21,7 @@ import type {
   ShowIfPredicate,
   TextField,
 } from "@bgreen/types";
+import { evaluateExpression, parseExpression } from "./expression";
 
 export type FormErrorCode =
   | "required"
@@ -33,7 +35,10 @@ export type FormErrorCode =
   | "min_rows"
   | "max_rows"
   | "unknown_field"
-  | "unknown_show_if_target";
+  | "unknown_show_if_target"
+  | "calc_invalid_expression"
+  | "calc_division_by_zero"
+  | "calc_invalid_dependency";
 
 export interface FormError {
   // Dotted path: top-level field id, or `parent[rowIndex].subFieldId` for
@@ -95,7 +100,10 @@ function validateScope(
   const out: RecordValues = {};
   const knownIds = new Set(fields.map((f) => f.id));
 
+  // First pass: validate user-supplied fields (skipping calculated ones —
+  // those are derived after).
   for (const field of fields) {
+    if (field.kind === "calculated") continue;
     const showIfResult = evaluateShowIf(field, input, fields, pathPrefix);
     if (showIfResult.unknownTarget.length > 0) {
       for (const targetId of showIfResult.unknownTarget) {
@@ -119,6 +127,18 @@ function validateScope(
     }
   }
 
+  // Second pass: derive calculated fields from the values just collected.
+  for (const field of fields) {
+    if (field.kind !== "calculated") continue;
+    const showIfResult = evaluateShowIf(field, input, fields, pathPrefix);
+    if (!showIfResult.visible) continue;
+    const path = `${pathPrefix}${field.id}`;
+    const computed = computeCalculated(field, out, path);
+    if (computed.kind === "value") out[field.id] = computed.value;
+    else if (computed.kind === "error") errors.push(...computed.errors);
+    // "skip" → missing-dependency case: leave the field undefined silently.
+  }
+
   for (const key of Object.keys(input)) {
     if (!knownIds.has(key)) {
       errors.push({
@@ -127,9 +147,39 @@ function validateScope(
         message: `Field "${key}" is not defined in this schema.`,
       });
     }
+    // Calculated fields silently ignore any user-supplied value — they're
+    // a known id, so unknown_field doesn't apply.
   }
 
   return out;
+}
+
+function computeCalculated(field: CalculatedField, scope: RecordValues, path: string): FieldResult {
+  const parsed = parseExpression(field.expression);
+  if (!parsed.ok) {
+    return errorOf(
+      path,
+      "calc_invalid_expression",
+      `${field.label}: expressão inválida — ${parsed.message}`,
+    );
+  }
+  const result = evaluateExpression(parsed.ast, scope);
+  if (!result.ok) {
+    if (result.error.code === "missing_dependency") {
+      // Dependency not filled yet — leave the calculated field empty
+      // without flagging an error (matches "draft is in-progress" UX).
+      return { kind: "skip" };
+    }
+    if (result.error.code === "non_numeric_dependency") {
+      return errorOf(
+        path,
+        "calc_invalid_dependency",
+        `${field.label}: o campo "${result.error.refId}" não é numérico.`,
+      );
+    }
+    return errorOf(path, "calc_division_by_zero", `${field.label}: divisão por zero.`);
+  }
+  return { kind: "value", value: result.value };
 }
 
 type FieldResult =
@@ -147,6 +197,11 @@ function validateField(
 ): FieldResult {
   if (field.kind === "repeating") {
     return validateRepeating(field, value, present, path, mode, errors);
+  }
+  if (field.kind === "calculated") {
+    // Calculated fields are derived after the first pass; user input is
+    // ignored. Should never be hit because validateScope filters them out.
+    return { kind: "skip" };
   }
   const isEmpty =
     !present ||

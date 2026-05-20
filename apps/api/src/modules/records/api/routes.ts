@@ -20,7 +20,19 @@ const reviewInput = z.object({
   comment: z.string().max(2000).nullable().optional(),
 });
 
+const prefillQuery = z.object({
+  template: z.string().uuid(),
+});
+
 export const recordsRoutes = new Hono<AppEnv>()
+  .get("/prefill", zValidator("query", prefillQuery), async (c) => {
+    const orgId = c.var.organizationId;
+    if (!orgId) return c.json({ error: "no_active_org" }, 400);
+    const { template } = c.req.valid("query");
+    const result = await recordService.computePrefill(orgId, template);
+    if ("error" in result) return c.json({ error: result.error }, 404);
+    return c.json(result);
+  })
   .get("/", async (c) => {
     const orgId = c.var.organizationId;
     if (!orgId) return c.json({ error: "no_active_org" }, 400);

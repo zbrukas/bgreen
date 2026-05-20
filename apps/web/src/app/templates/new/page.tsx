@@ -1,5 +1,5 @@
 import { TemplateEditor } from "@/app/_components/TemplateEditor";
-import { fetchMe } from "@/lib/api-client";
+import { fetchMe, fetchTemplates } from "@/lib/api-client";
 import { withAuth } from "@workos-inc/authkit-nextjs";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -22,12 +22,20 @@ export default async function NewTemplatePage() {
     );
   }
 
+  const templates = await fetchTemplates();
+  const available = templates.map((t) => ({
+    id: t.id,
+    name: t.name,
+    status: t.status,
+    formSchema: t.formSchema,
+  }));
+
   return (
     <main style={{ padding: "2rem", fontFamily: "system-ui, sans-serif", maxWidth: 720 }}>
       <p style={{ marginBottom: "1.5rem" }}>
         <Link href="/templates">← Voltar</Link>
       </p>
-      <TemplateEditor />
+      <TemplateEditor availableTemplates={available} />
     </main>
   );
 }

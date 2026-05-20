@@ -1,5 +1,5 @@
 import { RecordForm } from "@/app/_components/RecordForm";
-import { fetchTemplate } from "@/lib/api-client";
+import { fetchRecordPrefill, fetchTemplate } from "@/lib/api-client";
 import { getSignInUrl, withAuth } from "@workos-inc/authkit-nextjs";
 import Link from "next/link";
 
@@ -56,6 +56,9 @@ export default async function NewRecordPage({ searchParams }: PageProps) {
     );
   }
 
+  const prefill = await fetchRecordPrefill(templateId);
+  const prefillCount = Object.keys(prefill).length;
+
   return (
     <main style={{ padding: "2rem", fontFamily: "system-ui, sans-serif", maxWidth: 760 }}>
       <p style={{ marginBottom: "1rem" }}>
@@ -63,7 +66,25 @@ export default async function NewRecordPage({ searchParams }: PageProps) {
       </p>
       <h1 style={{ margin: "0 0 0.25rem" }}>{tpl.name}</h1>
       {tpl.description && <p style={{ margin: "0 0 1rem", color: "#555" }}>{tpl.description}</p>}
-      <RecordForm template={tpl} recordId={null} />
+      {prefillCount > 0 && (
+        <p
+          style={{
+            margin: "0 0 1rem",
+            padding: "0.5rem 0.75rem",
+            background: "#ede7f6",
+            color: "#5b3e9b",
+            border: "1px solid #d1c4e9",
+            borderRadius: "0.25rem",
+            fontSize: "0.85rem",
+          }}
+        >
+          {prefillCount}{" "}
+          {prefillCount === 1
+            ? "campo foi pré-preenchido a partir de outro modelo."
+            : "campos foram pré-preenchidos a partir de outros modelos."}
+        </p>
+      )}
+      <RecordForm template={tpl} recordId={null} initialValues={prefill} />
     </main>
   );
 }

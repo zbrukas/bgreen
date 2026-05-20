@@ -1,6 +1,6 @@
 import { db, orgScope, schema } from "@bgreen/db";
 import type { Record, RecordValues } from "@bgreen/types";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import type { RecordRepository } from "../application/record-service.js";
 
 function rowToRecord(row: typeof schema.records.$inferSelect): Record {
@@ -95,6 +95,25 @@ export class DrizzleRecordRepository implements RecordRepository {
       .select()
       .from(schema.records)
       .where(and(orgScope(schema.records, organizationId), eq(schema.records.id, id)))
+      .limit(1);
+    const row = rows[0];
+    return row ? rowToRecord(row) : null;
+  }
+
+  async findLatestSubmitted(organizationId: string, templateId: string): Promise<Record | null> {
+    const rows = await db
+      .select()
+      .from(schema.records)
+      .where(
+        and(
+          orgScope(schema.records, organizationId),
+          eq(schema.records.templateId, templateId),
+          // "submitted" or "approved" — both represent finalised user data
+          // suitable for cross-template prefill.
+          inArray(schema.records.status, ["submitted", "approved"]),
+        ),
+      )
+      .orderBy(desc(schema.records.submittedAt))
       .limit(1);
     const row = rows[0];
     return row ? rowToRecord(row) : null;

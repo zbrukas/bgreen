@@ -18,6 +18,7 @@ const fieldKindLabel: Record<string, string> = {
   date: "Data",
   select: "Lista",
   multi_select: "Múltipla escolha",
+  calculated: "Calculado",
   repeating: "Linhas repetidas",
 };
 
@@ -140,6 +141,38 @@ function FieldRow({ field }: { field: Field | LeafField }) {
         >
           mostrar se {field.showIf.map((p) => `${p.fieldId}="${p.equals}"`).join(" e ")}
         </span>
+      )}
+
+      {field.sourceMapping && (
+        <span
+          style={{
+            display: "inline-block",
+            marginLeft: "0.5rem",
+            fontSize: "0.75rem",
+            color: "#5b3e9b",
+            background: "#ede7f6",
+            padding: "0.1rem 0.4rem",
+            borderRadius: "0.2rem",
+          }}
+        >
+          pré-preenchido ← {field.sourceMapping.sourceFieldId} de outro modelo
+        </span>
+      )}
+
+      {field.kind === "calculated" && (
+        <div style={{ marginTop: "0.25rem", fontSize: "0.85rem", color: "#555" }}>
+          <code
+            style={{
+              fontFamily: "monospace",
+              background: "#f5f5f5",
+              padding: "0.1rem 0.3rem",
+              borderRadius: "0.2rem",
+            }}
+          >
+            {field.expression}
+          </code>
+          {field.unit && <span style={{ marginLeft: "0.4rem" }}>→ {field.unit}</span>}
+        </div>
       )}
 
       {(field.kind === "select" || field.kind === "multi_select") && (

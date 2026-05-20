@@ -356,6 +356,89 @@ describe("validateFormValues", () => {
     });
   });
 
+  describe("calculated", () => {
+    function calcSchema(): FormSchema {
+      return {
+        version: 1,
+        rows: [
+          {
+            id: "r1",
+            fields: [
+              { id: "activity", kind: "number", label: "Actividade" },
+              { id: "factor", kind: "number", label: "Factor" },
+              {
+                id: "co2e",
+                kind: "calculated",
+                label: "CO₂e",
+                expression: "activity * factor",
+                unit: "kg",
+              },
+            ],
+          },
+        ],
+      };
+    }
+
+    it("computes the value from sibling fields", () => {
+      const r = validateFormValues(calcSchema(), { activity: 100, factor: 0.5 });
+      expect(r.ok).toBe(true);
+      if (r.ok) expect(r.values.co2e).toBe(50);
+    });
+
+    it("leaves the calculated field empty when a dep is missing (skip)", () => {
+      const r = validateFormValues(calcSchema(), { activity: 100 });
+      expect(r.ok).toBe(true);
+      if (r.ok) expect(r.values.co2e).toBeUndefined();
+    });
+
+    it("ignores user-supplied values for calculated fields", () => {
+      const r = validateFormValues(calcSchema(), {
+        activity: 4,
+        factor: 5,
+        co2e: 9999,
+      });
+      expect(r.ok).toBe(true);
+      if (r.ok) expect(r.values.co2e).toBe(20);
+    });
+
+    it("flags an invalid expression", () => {
+      const bad: FormSchema = {
+        version: 1,
+        rows: [
+          {
+            id: "r1",
+            fields: [
+              { id: "a", kind: "number", label: "A" },
+              { id: "x", kind: "calculated", label: "X", expression: "a +" },
+            ],
+          },
+        ],
+      };
+      const r = validateFormValues(bad, { a: 1 });
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.errors[0]?.code).toBe("calc_invalid_expression");
+    });
+
+    it("flags division by zero", () => {
+      const s: FormSchema = {
+        version: 1,
+        rows: [
+          {
+            id: "r1",
+            fields: [
+              { id: "a", kind: "number", label: "A" },
+              { id: "b", kind: "number", label: "B" },
+              { id: "q", kind: "calculated", label: "Q", expression: "a / b" },
+            ],
+          },
+        ],
+      };
+      const r = validateFormValues(s, { a: 10, b: 0 });
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.errors[0]?.code).toBe("calc_division_by_zero");
+    });
+  });
+
   describe("repeating", () => {
     const repeatField = {
       id: "vehicles",

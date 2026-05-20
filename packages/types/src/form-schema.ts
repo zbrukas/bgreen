@@ -19,12 +19,23 @@ export const ShowIfPredicateSchema = z.object({
 });
 export type ShowIfPredicate = z.infer<typeof ShowIfPredicateSchema>;
 
+// Cross-template prefill rule: when a new draft is created, this field
+// is seeded with the value of `sourceFieldId` from the latest submitted
+// record of `sourceTemplateId` (same org). v1 supports only one strategy.
+export const SourceMappingSchema = z.object({
+  sourceTemplateId: z.string().uuid(),
+  sourceFieldId: FieldIdSchema,
+  strategy: z.literal("latest_submitted"),
+});
+export type SourceMapping = z.infer<typeof SourceMappingSchema>;
+
 const baseField = {
   id: FieldIdSchema,
   label: z.string().min(1).max(200),
   description: z.string().max(500).optional(),
   required: z.boolean().optional(),
   showIf: z.array(ShowIfPredicateSchema).max(5).optional(),
+  sourceMapping: SourceMappingSchema.optional(),
 };
 
 export const TextFieldSchema = z.object({
@@ -81,6 +92,20 @@ export const MultiSelectFieldSchema = z.object({
 });
 export type MultiSelectField = z.infer<typeof MultiSelectFieldSchema>;
 
+// Calculated field — read-only, value is derived from other fields in
+// the same scope via the expression language in @bgreen/form-engine.
+// The server evaluates the expression during validation; user-provided
+// values for calculated fields are ignored.
+export const CalculatedFieldSchema = z.object({
+  ...baseField,
+  kind: z.literal("calculated"),
+  // Expression source; parsed and evaluated by the form-engine.
+  expression: z.string().min(1).max(500),
+  // Display unit shown after the computed number (e.g., "kg CO₂e").
+  unit: z.string().max(20).optional(),
+});
+export type CalculatedField = z.infer<typeof CalculatedFieldSchema>;
+
 // Leaf field union — everything that can live anywhere, including inside
 // a `repeating` sub-row. Excludes `repeating` itself so nesting is bounded
 // to one level (v1 constraint).
@@ -90,6 +115,7 @@ export const LeafFieldSchema = z.discriminatedUnion("kind", [
   DateFieldSchema,
   SelectFieldSchema,
   MultiSelectFieldSchema,
+  CalculatedFieldSchema,
 ]);
 export type LeafField = z.infer<typeof LeafFieldSchema>;
 export type LeafFieldKind = LeafField["kind"];
@@ -111,6 +137,7 @@ export const FieldSchema = z.discriminatedUnion("kind", [
   DateFieldSchema,
   SelectFieldSchema,
   MultiSelectFieldSchema,
+  CalculatedFieldSchema,
   RepeatingFieldSchema,
 ]);
 export type Field = z.infer<typeof FieldSchema>;

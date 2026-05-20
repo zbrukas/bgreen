@@ -7,3 +7,14 @@ export {
   collectFields,
   validateFormValues,
 } from "./interpreter";
+
+export {
+  type EvaluateError,
+  type EvaluateResult,
+  type ExpressionAst,
+  type ParseError,
+  type ParseResult,
+  collectReferences,
+  evaluateExpression,
+  parseExpression,
+} from "./expression";

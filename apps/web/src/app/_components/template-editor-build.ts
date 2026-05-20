@@ -1,15 +1,28 @@
 // Pure helpers shared by TemplateEditor: the in-memory editor model + the
 // builder that converts it to a FormSchema for the server action.
 
-import type { FormSchema, LeafField, ShowIfPredicate } from "@bgreen/types";
+import { parseExpression } from "@bgreen/form-engine";
+import type { FormSchema, LeafField, ShowIfPredicate, SourceMapping } from "@bgreen/types";
 
-export type EditorFieldKind = "text" | "number" | "date" | "select" | "multi_select" | "repeating";
+export type EditorFieldKind =
+  | "text"
+  | "number"
+  | "date"
+  | "select"
+  | "multi_select"
+  | "calculated"
+  | "repeating";
 export type EditorLeafKind = Exclude<EditorFieldKind, "repeating">;
 
 export interface EditorShowIfPredicate {
   uiKey: string;
   fieldId: string;
   equals: string;
+}
+
+export interface EditorSourceMapping {
+  sourceTemplateId: string;
+  sourceFieldId: string;
 }
 
 export interface EditorField {
@@ -30,6 +43,8 @@ export interface EditorField {
   maxRows: string;
   subFields: EditorField[];
   showIf: EditorShowIfPredicate[];
+  expression: string;
+  sourceMapping: EditorSourceMapping | null;
 }
 
 export interface EditorRow {
@@ -59,6 +74,8 @@ export function newField(): EditorField {
     maxRows: "",
     subFields: [],
     showIf: [],
+    expression: "",
+    sourceMapping: null,
   };
 }
 
@@ -85,7 +102,9 @@ export function isFieldEmpty(f: EditorField): boolean {
     f.minRows.trim() === "" &&
     f.maxRows.trim() === "" &&
     f.subFields.length === 0 &&
-    f.showIf.length === 0
+    f.showIf.length === 0 &&
+    f.expression.trim() === "" &&
+    f.sourceMapping === null
   );
 }
 
@@ -151,11 +170,15 @@ function buildField(
   const showIf = buildShowIf(f.showIf, scopeIds, where, id);
   if (showIf && "message" in showIf) return showIf;
 
+  const mapping = buildSourceMapping(f.sourceMapping, where, id);
+  if (mapping && "message" in mapping) return mapping;
+
   const base = {
     id,
     label,
     required: f.required,
     ...(showIf && showIf.value.length > 0 ? { showIf: showIf.value } : {}),
+    ...(mapping?.value ? { sourceMapping: mapping.value } : {}),
   };
 
   switch (f.kind) {
@@ -205,6 +228,26 @@ function buildField(
           options: opts,
           ...(f.minSelected.trim() ? { minSelected: Number(f.minSelected) } : {}),
           ...(f.maxSelected.trim() ? { maxSelected: Number(f.maxSelected) } : {}),
+        },
+      };
+    }
+    case "calculated": {
+      const expression = f.expression.trim();
+      if (!expression) {
+        return { message: `${where} ("${id}"): indique a expressão a calcular.` };
+      }
+      const parsed = parseExpression(expression);
+      if (!parsed.ok) {
+        return {
+          message: `${where} ("${id}"): expressão inválida — ${parsed.message}`,
+        };
+      }
+      return {
+        field: {
+          ...base,
+          kind: "calculated",
+          expression,
+          ...(f.unit.trim() ? { unit: f.unit.trim() } : {}),
         },
       };
     }
@@ -296,4 +339,33 @@ function buildShowIf(
     out.push({ fieldId: target, equals });
   }
   return { value: out };
+}
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function buildSourceMapping(
+  mapping: EditorSourceMapping | null,
+  where: string,
+  selfId: string,
+): { value: SourceMapping | null } | BuildError | null {
+  if (!mapping) return null;
+  const sourceTemplateId = mapping.sourceTemplateId.trim();
+  const sourceFieldId = mapping.sourceFieldId.trim();
+  if (!sourceTemplateId && !sourceFieldId) return { value: null };
+  if (!sourceTemplateId) {
+    return { message: `${where} ("${selfId}"): escolha o modelo de origem do pré-preenchimento.` };
+  }
+  if (!UUID_PATTERN.test(sourceTemplateId)) {
+    return { message: `${where} ("${selfId}"): modelo de origem inválido.` };
+  }
+  if (!sourceFieldId) {
+    return { message: `${where} ("${selfId}"): escolha o campo de origem do pré-preenchimento.` };
+  }
+  return {
+    value: {
+      sourceTemplateId,
+      sourceFieldId,
+      strategy: "latest_submitted",
+    },
+  };
 }
