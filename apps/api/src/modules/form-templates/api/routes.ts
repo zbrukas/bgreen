@@ -5,10 +5,17 @@ import { z } from "zod";
 import type { AppEnv } from "../../../context.js";
 import { recordTemplateService } from "../../../services.js";
 
+const workflowDefinitionIdSchema = z.enum([
+  "single-step-submit",
+  "two-step-review",
+  "three-step-certify",
+]);
+
 const createInput = z.object({
   name: z.string().min(1).max(200),
   description: z.string().max(2000).nullable().optional(),
   formSchema: FormSchemaSchema,
+  workflowDefinitionId: workflowDefinitionIdSchema.optional(),
 });
 
 const updateInput = z.object({
@@ -48,6 +55,7 @@ export const recordTemplatesRoutes = new Hono<AppEnv>()
       description: input.description ?? null,
       formSchema: input.formSchema,
       createdByUserId: c.var.user.id,
+      workflowDefinitionId: input.workflowDefinitionId,
     });
     return c.json(created, 201);
   })

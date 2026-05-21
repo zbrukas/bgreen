@@ -1,8 +1,10 @@
 import type { FormError } from "@bgreen/form-engine";
 import { validateFormValues } from "@bgreen/form-engine";
-import type { Record, RecordStatus, RecordValues } from "@bgreen/types";
+import type { Record, RecordValues } from "@bgreen/types";
 import type { AuditService } from "../../audit/module.js";
 import type { RecordTemplateRepository } from "../../form-templates/application/record-template-service.js";
+import type { WorkflowService } from "../../workflows/module.js";
+import { defaultWorkflowDefinitionId } from "../../workflows/module.js";
 
 export interface CreateRecordInput {
   organizationId: string;
@@ -25,7 +27,6 @@ export interface RecordRepository {
   insert(input: {
     organizationId: string;
     templateId: string;
-    status: RecordStatus;
     values: RecordValues;
     submittedAt: Date | null;
     submittedByUserId: string | null;
@@ -33,14 +34,12 @@ export interface RecordRepository {
   updateValues(input: {
     organizationId: string;
     recordId: string;
-    status: RecordStatus;
     values: RecordValues;
     submittedAt: Date | null;
   }): Promise<Record | null>;
   recordReview(input: {
     organizationId: string;
     recordId: string;
-    status: RecordStatus;
     reviewComment: string | null;
     reviewedAt: Date;
     reviewedByUserId: string;
@@ -91,6 +90,7 @@ export class RecordService {
     private readonly records: RecordRepository,
     private readonly templates: RecordTemplateRepository,
     private readonly audit: AuditService,
+    private readonly workflows: WorkflowService,
   ) {}
 
   async submit(input: CreateRecordInput): Promise<SubmitResult> {
@@ -106,23 +106,48 @@ export class RecordService {
       return { ok: false, code: "validation_failed", errors: validated.errors };
     }
 
-    const status: RecordStatus = input.asDraft ? "draft" : "submitted";
+    // Insert the record row. Workflow instance is created right after;
+    // status lives on the workflow_instance, not the record row.
     const record = await this.records.insert({
       organizationId: input.organizationId,
       templateId: input.templateId,
-      status,
       values: validated.values,
       submittedAt: input.asDraft ? null : new Date(),
       submittedByUserId: input.submitterUserId,
     });
-    await this.audit.record({
-      actorUserId: input.submitterUserId,
+
+    // Start the workflow chosen by the template (defaults to two-step-review).
+    const definitionId = template.workflowDefinitionId ?? defaultWorkflowDefinitionId;
+    await this.workflows.start({
       organizationId: input.organizationId,
       entityKind: "record",
       entityId: record.id,
-      action: input.asDraft ? "record.draft_created" : "record.submitted",
-      payload: { templateId: record.templateId, status: record.status },
+      definitionId,
+      actorUserId: input.submitterUserId,
     });
+
+    if (input.asDraft) {
+      // Drafts stay in the initial state. Workflow.started covers the
+      // visible audit entry; add a record.draft_created for parity with
+      // V5.1 history rendering.
+      await this.audit.record({
+        actorUserId: input.submitterUserId,
+        organizationId: input.organizationId,
+        entityKind: "record",
+        entityId: record.id,
+        action: "record.draft_created",
+        payload: { templateId: record.templateId },
+      });
+    } else {
+      // Submit-direct: drive the workflow to the submitted state.
+      await this.workflows.send({
+        organizationId: input.organizationId,
+        entityKind: "record",
+        entityId: record.id,
+        event: { type: "submit", actorUserId: input.submitterUserId },
+      });
+    }
+
     return { ok: true, record };
   }
 
@@ -150,7 +175,6 @@ export class RecordService {
       return { ok: false, code: "validation_failed", errors: validated.errors };
     }
 
-    const status: RecordStatus = input.action === "submit" ? "submitted" : "draft";
     const submittedAt =
       input.action === "submit"
         ? new Date()
@@ -160,24 +184,29 @@ export class RecordService {
     const record = await this.records.updateValues({
       organizationId: input.organizationId,
       recordId: input.recordId,
-      status,
       values: validated.values,
       submittedAt,
     });
     if (!record) return { ok: false, code: "record_not_found" };
-    await this.audit.record({
-      actorUserId: input.actorUserId,
-      organizationId: input.organizationId,
-      entityKind: "record",
-      entityId: record.id,
-      action:
-        input.action === "submit"
-          ? existing.status === "changes_requested"
-            ? "record.resubmitted"
-            : "record.submitted"
-          : "record.draft_updated",
-      payload: { fromStatus: existing.status, toStatus: record.status },
-    });
+
+    if (input.action === "submit") {
+      await this.workflows.send({
+        organizationId: input.organizationId,
+        entityKind: "record",
+        entityId: record.id,
+        event: { type: "submit", actorUserId: input.actorUserId },
+      });
+    } else {
+      // save_draft has no workflow transition — log the values edit only.
+      await this.audit.record({
+        actorUserId: input.actorUserId,
+        organizationId: input.organizationId,
+        entityKind: "record",
+        entityId: record.id,
+        action: "record.draft_updated",
+        payload: { fromStatus: existing.status, toStatus: record.status },
+      });
+    }
     return { ok: true, record };
   }
 
@@ -192,35 +221,46 @@ export class RecordService {
       return { ok: false, code: "comment_required" };
     }
 
-    const nextStatus: RecordStatus =
-      input.decision === "approve"
-        ? "approved"
-        : input.decision === "request_changes"
-          ? "changes_requested"
-          : "rejected";
-
+    // status lives on the workflow_instance; the review repo write only
+    // touches the denormalised review-tracking columns on records.
     const record = await this.records.recordReview({
       organizationId: input.organizationId,
       recordId: input.recordId,
-      status: nextStatus,
       reviewComment: trimmed === "" ? null : trimmed,
       reviewedAt: new Date(),
       reviewedByUserId: input.reviewerUserId,
     });
     if (!record) return { ok: false, code: "record_not_found" };
-    await this.audit.record({
-      actorUserId: input.reviewerUserId,
+
+    // Drive the workflow with the decision event. Guards on the graph
+    // (e.g., reviewer ≠ submitter) reject self-reviews independently of
+    // any FGA role.
+    const event =
+      input.decision === "approve"
+        ? { type: "approve" as const, actorUserId: input.reviewerUserId, comment: trimmed || null }
+        : input.decision === "request_changes"
+          ? {
+              type: "request_changes" as const,
+              actorUserId: input.reviewerUserId,
+              comment: trimmed,
+            }
+          : { type: "reject" as const, actorUserId: input.reviewerUserId, comment: trimmed };
+    const transition = await this.workflows.send({
       organizationId: input.organizationId,
       entityKind: "record",
       entityId: record.id,
-      action: `record.${input.decision}`,
-      payload: {
-        decision: input.decision,
-        fromStatus: existing.status,
-        toStatus: record.status,
-        comment: trimmed === "" ? null : trimmed,
-      },
+      event,
     });
+    if (!transition.ok) {
+      // Should be unreachable in v1 — the record-level status check above
+      // is strictly looser than the graph's guards. Log defensively.
+      // biome-ignore lint/suspicious/noConsole: defensive log for impossible branch
+      console.warn("workflow transition rejected after status write", {
+        recordId: record.id,
+        decision: input.decision,
+        reason: transition.code,
+      });
+    }
     return { ok: true, record };
   }
 

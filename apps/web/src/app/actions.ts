@@ -239,6 +239,7 @@ export interface CreateTemplateInput {
   name: string;
   description: string | null;
   formSchema: unknown;
+  workflowDefinitionId?: "single-step-submit" | "two-step-review" | "three-step-certify";
 }
 
 export interface CreateTemplateFormState {
@@ -266,6 +267,7 @@ export async function createTemplateAction(
     name,
     description: input.description ? input.description.trim() : null,
     formSchema: parsed.data as FormSchema,
+    workflowDefinitionId: input.workflowDefinitionId,
   });
   if ("error" in result) {
     return { error: `Não foi possível criar o modelo (${result.error}).`, created: null };

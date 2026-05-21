@@ -309,6 +309,7 @@ export async function createTemplate(input: {
   name: string;
   description: string | null;
   formSchema: FormSchema;
+  workflowDefinitionId?: "single-step-submit" | "two-step-review" | "three-step-certify";
 }): Promise<RecordTemplate | { error: string }> {
   try {
     const headers = await authedHeaders();
@@ -319,6 +320,9 @@ export async function createTemplate(input: {
           name: input.name,
           description: input.description,
           formSchema: input.formSchema,
+          ...(input.workflowDefinitionId
+            ? { workflowDefinitionId: input.workflowDefinitionId }
+            : {}),
         },
       },
       { headers },
@@ -537,6 +541,33 @@ export async function fetchAuditTrail(
     );
     if (!res.ok) return [];
     return (await res.json()) as AuditEvent[];
+  } catch {
+    return [];
+  }
+}
+
+// ---------- Workflows ----------
+
+export interface WorkflowInstance {
+  id: string;
+  organizationId: string;
+  entityKind: "record";
+  entityId: string;
+  definitionId: "single-step-submit" | "two-step-review" | "three-step-certify";
+  definitionVersion: number;
+  currentState: string | Record<string, unknown>;
+  context: { submitterUserId: string | null; reviewerUserId: string | null };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function fetchInbox(): Promise<WorkflowInstance[]> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return [];
+    const res = await api.workflows.inbox.$get(undefined, { headers });
+    if (!res.ok) return [];
+    return (await res.json()) as WorkflowInstance[];
   } catch {
     return [];
   }

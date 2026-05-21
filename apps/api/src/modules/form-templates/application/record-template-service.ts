@@ -1,3 +1,4 @@
+import type { WorkflowDefinitionId } from "@bgreen/types";
 import type { AuditService } from "../../audit/module.js";
 import type {
   FormSchema,
@@ -11,6 +12,7 @@ export interface CreateRecordTemplateInput {
   description: string | null;
   formSchema: FormSchema;
   createdByUserId: string;
+  workflowDefinitionId?: WorkflowDefinitionId;
 }
 
 export interface UpdateRecordTemplateInput {

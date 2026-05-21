@@ -26,6 +26,12 @@ const fieldKindLabel: Record<string, string> = {
   repeating: "Linhas repetidas",
 };
 
+const workflowLabel: Record<string, string> = {
+  "single-step-submit": "Submissão simples",
+  "two-step-review": "Revisão (2 passos)",
+  "three-step-certify": "Certificação (3 passos)",
+};
+
 interface PageProps {
   params: Promise<{ id: string }>;
 }
@@ -69,6 +75,9 @@ export default async function TemplateDetailPage({ params }: PageProps) {
           <h1 className="text-2xl font-semibold tracking-tight">{tpl.name}</h1>
           <p className="text-sm text-muted-foreground">
             Estado: <strong>{statusLabel[tpl.status] ?? tpl.status}</strong>
+            <span className="mx-2">·</span>
+            Fluxo:{" "}
+            <strong>{workflowLabel[tpl.workflowDefinitionId] ?? tpl.workflowDefinitionId}</strong>
           </p>
         </div>
         {isAdmin && (

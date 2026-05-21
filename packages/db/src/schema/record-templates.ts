@@ -19,6 +19,10 @@ export const recordTemplates = pgTable("record_templates", {
   // GIN-indexable later (V1.5) when we start querying inside form data.
   formSchema: jsonb("form_schema").notNull(),
   status: recordTemplateStatusEnum("status").notNull().default("draft"),
+  // XState graph used for every Record submitted against this template.
+  // One of: "single-step-submit", "two-step-review", "three-step-certify".
+  // Default preserves V4 behaviour (admin reviews submitted records).
+  workflowDefinitionId: text("workflow_definition_id").notNull().default("two-step-review"),
   createdByUserId: uuid("created_by_user_id")
     .notNull()
     .references(() => users.id),

@@ -9,3 +9,4 @@ export * from "./pt-reference";
 export * from "./record-templates";
 export * from "./records";
 export * from "./users";
+export * from "./workflow-instances";

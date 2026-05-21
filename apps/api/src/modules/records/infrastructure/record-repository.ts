@@ -1,14 +1,30 @@
 import { db, orgScope, schema } from "@bgreen/db";
-import type { Record, RecordValues } from "@bgreen/types";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import type { Record, RecordStatus, RecordValues } from "@bgreen/types";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import type { RecordRepository } from "../application/record-service.js";
 
-function rowToRecord(row: typeof schema.records.$inferSelect): Record {
+// V5.2 dropped `records.status`; the authoritative state lives on the
+// matching workflow_instances row. We join + coalesce so the Record
+// domain type continues to expose a flat `status` string.
+
+const RECORD_STATUS_VALUES: ReadonlySet<RecordStatus> = new Set<RecordStatus>([
+  "draft",
+  "submitted",
+  "approved",
+  "changes_requested",
+  "rejected",
+]);
+
+interface RecordWithStatusRow extends Omit<typeof schema.records.$inferSelect, never> {
+  workflowState: unknown;
+}
+
+function rowToRecord(row: RecordWithStatusRow): Record {
   return {
     id: row.id,
     organizationId: row.organizationId,
     templateId: row.templateId,
-    status: row.status,
+    status: deriveStatus(row.workflowState),
     values: row.values as RecordValues,
     reviewComment: row.reviewComment,
     submittedAt: row.submittedAt ? row.submittedAt.toISOString() : null,
@@ -20,11 +36,52 @@ function rowToRecord(row: typeof schema.records.$inferSelect): Record {
   };
 }
 
+// XState states for v1 workflow graphs map 1:1 onto the legacy
+// RecordStatus enum. We coerce defensively in case a future graph
+// emits a state name outside the v1 set.
+function deriveStatus(raw: unknown): RecordStatus {
+  if (typeof raw === "string" && (RECORD_STATUS_VALUES as Set<string>).has(raw)) {
+    return raw as RecordStatus;
+  }
+  // certified maps to approved for the legacy display contract; review
+  // queues and badges still show "approved" until the UI learns
+  // certified-specific states in V5.3+.
+  if (raw === "certified") return "approved";
+  return "draft";
+}
+
+const selectColumns = {
+  id: schema.records.id,
+  organizationId: schema.records.organizationId,
+  templateId: schema.records.templateId,
+  values: schema.records.values,
+  reviewComment: schema.records.reviewComment,
+  submittedAt: schema.records.submittedAt,
+  submittedByUserId: schema.records.submittedByUserId,
+  reviewedAt: schema.records.reviewedAt,
+  reviewedByUserId: schema.records.reviewedByUserId,
+  createdAt: schema.records.createdAt,
+  updatedAt: schema.records.updatedAt,
+  workflowState: schema.workflowInstances.currentState,
+};
+
+function recordsWithStatus() {
+  return db
+    .select(selectColumns)
+    .from(schema.records)
+    .leftJoin(
+      schema.workflowInstances,
+      and(
+        eq(schema.workflowInstances.entityKind, "record"),
+        eq(schema.workflowInstances.entityId, schema.records.id),
+      ),
+    );
+}
+
 export class DrizzleRecordRepository implements RecordRepository {
   async insert(input: {
     organizationId: string;
     templateId: string;
-    status: Record["status"];
     values: RecordValues;
     submittedAt: Date | null;
     submittedByUserId: string | null;
@@ -34,50 +91,46 @@ export class DrizzleRecordRepository implements RecordRepository {
       .values({
         organizationId: input.organizationId,
         templateId: input.templateId,
-        status: input.status,
         values: input.values,
         submittedAt: input.submittedAt,
         submittedByUserId: input.submittedByUserId,
       })
       .returning();
     if (!row) throw new Error("insert record: unexpected empty returning() result");
-    return rowToRecord(row);
+    // New row — workflow_instance is inserted by RecordService right
+    // after; the join hasn't happened yet, so synthesise a draft state.
+    return rowToRecord({ ...row, workflowState: "draft" });
   }
 
   async updateValues(input: {
     organizationId: string;
     recordId: string;
-    status: Record["status"];
     values: RecordValues;
     submittedAt: Date | null;
   }): Promise<Record | null> {
-    const [row] = await db
+    await db
       .update(schema.records)
       .set({
-        status: input.status,
         values: input.values,
         submittedAt: input.submittedAt,
         updatedAt: new Date(),
       })
       .where(
         and(orgScope(schema.records, input.organizationId), eq(schema.records.id, input.recordId)),
-      )
-      .returning();
-    return row ? rowToRecord(row) : null;
+      );
+    return this.findById(input.organizationId, input.recordId);
   }
 
   async recordReview(input: {
     organizationId: string;
     recordId: string;
-    status: Record["status"];
     reviewComment: string | null;
     reviewedAt: Date;
     reviewedByUserId: string;
   }): Promise<Record | null> {
-    const [row] = await db
+    await db
       .update(schema.records)
       .set({
-        status: input.status,
         reviewComment: input.reviewComment,
         reviewedAt: input.reviewedAt,
         reviewedByUserId: input.reviewedByUserId,
@@ -85,15 +138,12 @@ export class DrizzleRecordRepository implements RecordRepository {
       })
       .where(
         and(orgScope(schema.records, input.organizationId), eq(schema.records.id, input.recordId)),
-      )
-      .returning();
-    return row ? rowToRecord(row) : null;
+      );
+    return this.findById(input.organizationId, input.recordId);
   }
 
   async findById(organizationId: string, id: string): Promise<Record | null> {
-    const rows = await db
-      .select()
-      .from(schema.records)
+    const rows = await recordsWithStatus()
       .where(and(orgScope(schema.records, organizationId), eq(schema.records.id, id)))
       .limit(1);
     const row = rows[0];
@@ -101,16 +151,18 @@ export class DrizzleRecordRepository implements RecordRepository {
   }
 
   async findLatestSubmitted(organizationId: string, templateId: string): Promise<Record | null> {
-    const rows = await db
-      .select()
-      .from(schema.records)
+    // Cross-template prefill consumes any "submitted" or "approved" state.
+    // Filtering happens against the workflow state via the JSONB column.
+    const rows = await recordsWithStatus()
       .where(
         and(
           orgScope(schema.records, organizationId),
           eq(schema.records.templateId, templateId),
-          // "submitted" or "approved" — both represent finalised user data
-          // suitable for cross-template prefill.
-          inArray(schema.records.status, ["submitted", "approved"]),
+          inArray(sql`${schema.workflowInstances.currentState}::text`, [
+            '"submitted"',
+            '"approved"',
+            '"certified"',
+          ]),
         ),
       )
       .orderBy(desc(schema.records.submittedAt))
@@ -120,9 +172,7 @@ export class DrizzleRecordRepository implements RecordRepository {
   }
 
   async listForUserInOrg(organizationId: string, userId: string): Promise<Record[]> {
-    const rows = await db
-      .select()
-      .from(schema.records)
+    const rows = await recordsWithStatus()
       .where(
         and(orgScope(schema.records, organizationId), eq(schema.records.submittedByUserId, userId)),
       )
@@ -131,9 +181,7 @@ export class DrizzleRecordRepository implements RecordRepository {
   }
 
   async listForOrganization(organizationId: string): Promise<Record[]> {
-    const rows = await db
-      .select()
-      .from(schema.records)
+    const rows = await recordsWithStatus()
       .where(orgScope(schema.records, organizationId))
       .orderBy(desc(schema.records.createdAt));
     return rows.map(rowToRecord);

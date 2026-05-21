@@ -48,9 +48,31 @@ interface TemplateEditorProps {
   availableTemplates: Array<Pick<RecordTemplate, "id" | "name" | "status" | "formSchema">>;
 }
 
+type WorkflowOption = "single-step-submit" | "two-step-review" | "three-step-certify";
+
+const WORKFLOW_OPTIONS: Array<{ value: WorkflowOption; label: string; hint: string }> = [
+  {
+    value: "two-step-review",
+    label: "Revisão (2 passos)",
+    hint: "Rascunho → submetido → aprovado/alterações/rejeitado",
+  },
+  {
+    value: "single-step-submit",
+    label: "Submissão simples (1 passo)",
+    hint: "Rascunho → submetido (sem revisão)",
+  },
+  {
+    value: "three-step-certify",
+    label: "Certificação (3 passos)",
+    hint: "Adiciona certificação por terceiro após aprovação",
+  },
+];
+
 export function TemplateEditor({ availableTemplates }: TemplateEditorProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [workflowDefinitionId, setWorkflowDefinitionId] =
+    useState<WorkflowOption>("two-step-review");
   const [rows, setRows] = useState<EditorRow[]>([newRow()]);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -110,6 +132,7 @@ export function TemplateEditor({ availableTemplates }: TemplateEditorProps) {
           name: name.trim(),
           description: description.trim() || null,
           formSchema: built.schema,
+          workflowDefinitionId,
         },
       );
       if (result.error) {
@@ -146,6 +169,24 @@ export function TemplateEditor({ availableTemplates }: TemplateEditorProps) {
           onChange={(e) => setDescription(e.target.value)}
           rows={2}
         />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="tpl-workflow">Fluxo de aprovação</Label>
+        <Select
+          id="tpl-workflow"
+          value={workflowDefinitionId}
+          onChange={(e) => setWorkflowDefinitionId(e.target.value as WorkflowOption)}
+        >
+          {WORKFLOW_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          {WORKFLOW_OPTIONS.find((o) => o.value === workflowDefinitionId)?.hint}
+        </p>
       </div>
 
       <section className="space-y-4">

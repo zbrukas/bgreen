@@ -1,5 +1,10 @@
 import { db, orgScope, schema } from "@bgreen/db";
-import type { FormSchema, RecordTemplate, RecordTemplateStatus } from "@bgreen/types";
+import type {
+  FormSchema,
+  RecordTemplate,
+  RecordTemplateStatus,
+  WorkflowDefinitionId,
+} from "@bgreen/types";
 import { and, eq } from "drizzle-orm";
 import type {
   CreateRecordTemplateInput,
@@ -15,6 +20,7 @@ function rowToTemplate(row: typeof schema.recordTemplates.$inferSelect): RecordT
     description: row.description,
     formSchema: row.formSchema as FormSchema,
     status: row.status,
+    workflowDefinitionId: row.workflowDefinitionId as WorkflowDefinitionId,
     createdByUserId: row.createdByUserId,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
@@ -31,6 +37,7 @@ export class DrizzleRecordTemplateRepository implements RecordTemplateRepository
         description: input.description,
         formSchema: input.formSchema,
         createdByUserId: input.createdByUserId,
+        ...(input.workflowDefinitionId ? { workflowDefinitionId: input.workflowDefinitionId } : {}),
       })
       .returning();
     if (!row) {

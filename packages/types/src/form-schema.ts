@@ -159,6 +159,16 @@ export type FormSchema = z.infer<typeof FormSchemaSchema>;
 export const RecordTemplateStatusSchema = z.enum(["draft", "published", "archived"]);
 export type RecordTemplateStatus = z.infer<typeof RecordTemplateStatusSchema>;
 
+// Workflow graph that records submitted under this template will follow.
+// V5.2 introduces this; v4 templates default to "two-step-review" on
+// migration so existing review-queue UX is preserved.
+export const WorkflowDefinitionIdSchema = z.enum([
+  "single-step-submit",
+  "two-step-review",
+  "three-step-certify",
+]);
+export type WorkflowDefinitionId = z.infer<typeof WorkflowDefinitionIdSchema>;
+
 export const RecordTemplateSchema = z.object({
   id: z.string().uuid(),
   organizationId: z.string().uuid(),
@@ -166,6 +176,7 @@ export const RecordTemplateSchema = z.object({
   description: z.string().nullable(),
   formSchema: FormSchemaSchema,
   status: RecordTemplateStatusSchema,
+  workflowDefinitionId: WorkflowDefinitionIdSchema,
   createdByUserId: z.string().uuid(),
   createdAt: z.string().datetime({ offset: true }),
   updatedAt: z.string().datetime({ offset: true }),

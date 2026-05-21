@@ -10,6 +10,7 @@ import { identityRoutes } from "./modules/identity/module.js";
 import { lookupsRoutes } from "./modules/lookups/module.js";
 import { inviteRoutes, organizationsRoutes } from "./modules/organizations/module.js";
 import { recordsRoutes } from "./modules/records/module.js";
+import { workflowsRoutes } from "./modules/workflows/module.js";
 
 const inngest = new Inngest({ id: "bgreen-api" });
 
@@ -28,7 +29,8 @@ const authedRoutes = new Hono<AppEnv>()
   .route("/lookups", lookupsRoutes)
   .route("/record-templates", recordTemplatesRoutes)
   .route("/records", recordsRoutes)
-  .route("/audit", auditRoutes);
+  .route("/audit", auditRoutes)
+  .route("/workflows", workflowsRoutes);
 
 export const app = new Hono().use("*", logger()).route("/", publicRoutes).route("/", authedRoutes);
 

@@ -1,16 +1,12 @@
-import { jsonb, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { organizations } from "./organizations";
 import { recordTemplates } from "./record-templates";
 import { users } from "./users";
 
-// Flat status field for v4.1; V5 replaces this with WorkflowInstance.
-export const recordStatusEnum = pgEnum("record_status", [
-  "draft",
-  "submitted",
-  "approved",
-  "changes_requested",
-  "rejected",
-]);
+// V5.2 removed the legacy `status` enum column. The authoritative state
+// now lives on the matching workflow_instance row (joined on
+// entity_kind='record' + entity_id=records.id). submittedAt/reviewedAt/
+// reviewComment stay here as denormalisations for sort + display.
 
 export const records = pgTable("records", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -20,7 +16,6 @@ export const records = pgTable("records", {
   templateId: uuid("template_id")
     .notNull()
     .references(() => recordTemplates.id, { onDelete: "restrict" }),
-  status: recordStatusEnum("status").notNull().default("draft"),
   // Field id → value map, validated against the template's FormSchema
   // by FormSchemaInterpreter before insert/update.
   values: jsonb("values").notNull(),

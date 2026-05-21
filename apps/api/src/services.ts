@@ -13,6 +13,7 @@ import {
   OrganizationService,
 } from "./modules/organizations/module.js";
 import { DrizzleRecordRepository, RecordService } from "./modules/records/module.js";
+import { DrizzleWorkflowRepository, WorkflowService } from "./modules/workflows/module.js";
 
 // Process-wide service instances. Repositories are cheap (no I/O at construction);
 // the underlying pg pool in @bgreen/db connects lazily on first query.
@@ -24,11 +25,14 @@ export const repositories = {
   recordTemplates: new DrizzleRecordTemplateRepository(),
   records: new DrizzleRecordRepository(),
   audit: new DrizzleAuditRepository(),
+  workflows: new DrizzleWorkflowRepository(),
 };
 
 export const userService = new UserService(repositories.users);
 
 export const auditService = new AuditService(repositories.audit);
+
+export const workflowService = new WorkflowService(repositories.workflows, auditService);
 
 export const organizationService = new OrganizationService(
   repositories.organizations,
@@ -53,6 +57,7 @@ export const recordService = new RecordService(
   repositories.records,
   repositories.recordTemplates,
   auditService,
+  workflowService,
 );
 
 export const viesClient = new HttpViesClient({ timeoutMs: 4000 });
