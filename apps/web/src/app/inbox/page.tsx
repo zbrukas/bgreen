@@ -16,16 +16,12 @@ export const dynamic = "force-dynamic";
 
 const stateLabel: Record<string, string> = {
   draft: "Rascunho — preencher",
-  submitted: "Submetido — rever",
   changes_requested: "Alterações pedidas — corrigir",
-  approved: "Aprovado — certificar",
 };
 
 const stateVariant: Record<string, NonNullable<BadgeProps["variant"]>> = {
   draft: "outline",
-  submitted: "info",
   changes_requested: "warning",
-  approved: "success",
 };
 
 export default async function InboxPage() {
@@ -67,8 +63,8 @@ export default async function InboxPage() {
       </p>
       <h1 className="text-2xl font-semibold tracking-tight">Pendentes</h1>
       <p className="text-sm text-muted-foreground">
-        Registos que aguardam a sua acção — preencher rascunhos, rever submissões ou certificar
-        aprovações.
+        Rascunhos e registos com alterações pedidas a aguardar a sua resposta. A revisão é feita
+        pelos serviços centrais.
       </p>
 
       {inbox.length === 0 ? (

@@ -1,5 +1,4 @@
 import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -8,8 +7,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { fetchMe, fetchTemplates } from "@/lib/api-client";
-import { cn } from "@/lib/utils";
+import { fetchTemplates } from "@/lib/api-client";
 import { getSignInUrl, withAuth } from "@workos-inc/authkit-nextjs";
 import Link from "next/link";
 
@@ -43,8 +41,8 @@ export default async function TemplatesListPage() {
     );
   }
 
-  const [me, templates] = await Promise.all([fetchMe(), fetchTemplates()]);
-  const isAdmin = me?.activeOrganizationRole === "org_admin";
+  const templates = await fetchTemplates();
+  const published = templates.filter((t) => t.status === "published");
 
   return (
     <main className="mx-auto max-w-5xl space-y-6 p-8">
@@ -53,22 +51,16 @@ export default async function TemplatesListPage() {
           ← Voltar
         </Link>
       </p>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">Modelos de registo</h1>
-        {isAdmin && (
-          <Link href="/templates/new" className={buttonVariants()}>
-            + Novo modelo
-          </Link>
-        )}
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Catálogo de modelos</h1>
+        <p className="text-sm text-muted-foreground">
+          Modelos publicados pelos serviços centrais. Para criar ou editar, contacte os serviços
+          centrais.
+        </p>
       </div>
 
-      {templates.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          Ainda não existem modelos.{" "}
-          {isAdmin
-            ? "Crie o primeiro para começar a recolher dados ESG."
-            : "Peça a um administrador para criar um."}
-        </p>
+      {published.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Ainda não existem modelos publicados.</p>
       ) : (
         <div className="rounded-lg border">
           <Table>
@@ -81,7 +73,7 @@ export default async function TemplatesListPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {templates.map((tpl) => {
+              {published.map((tpl) => {
                 const fieldCount = tpl.formSchema.rows.reduce((n, r) => n + r.fields.length, 0);
                 return (
                   <TableRow key={tpl.id}>
@@ -99,15 +91,13 @@ export default async function TemplatesListPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground">{fieldCount}</TableCell>
-                    <TableCell className={cn("text-right text-sm")}>
-                      {tpl.status === "published" && (
-                        <Link
-                          href={`/records/new?template=${tpl.id}`}
-                          className="mr-3 text-primary underline-offset-4 hover:underline"
-                        >
-                          Submeter
-                        </Link>
-                      )}
+                    <TableCell className="text-right text-sm">
+                      <Link
+                        href={`/records/new?template=${tpl.id}`}
+                        className="mr-3 text-primary underline-offset-4 hover:underline"
+                      >
+                        Submeter
+                      </Link>
                       <Link
                         href={`/templates/${tpl.id}`}
                         className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"

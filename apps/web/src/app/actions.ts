@@ -4,37 +4,21 @@ import { setActiveOrgId } from "@/lib/active-org";
 import {
   type CaeEntry,
   type PostalCodeLookupResult,
-  type ReviewDecision,
   type ViesLookupResult,
   acceptInvite,
-  archiveTemplate,
   createInvite,
   createOrganization,
   createRecord,
-  createTemplate,
   fetchMyOrganizations,
   findCaeByCode,
   lookupPostalCode,
   lookupVies,
-  publishTemplate,
-  reviewRecord,
   searchCae,
   updateRecord,
 } from "@/lib/api-client";
 import { validateNif } from "@bgreen/pt-data";
-import type {
-  FormSchema,
-  LegalForm,
-  MembershipRole,
-  OrganizationSize,
-  RecordTemplate,
-} from "@bgreen/types";
-import {
-  FormSchemaSchema,
-  LegalFormSchema,
-  MembershipRoleSchema,
-  OrganizationSizeSchema,
-} from "@bgreen/types";
+import type { LegalForm, MembershipRole, OrganizationSize } from "@bgreen/types";
+import { LegalFormSchema, MembershipRoleSchema, OrganizationSizeSchema } from "@bgreen/types";
 import { signOut } from "@workos-inc/authkit-nextjs";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -233,67 +217,6 @@ export async function acceptInviteAction(formData: FormData): Promise<void> {
   redirect("/");
 }
 
-// ---------- Record-template actions ----------
-
-export interface CreateTemplateInput {
-  name: string;
-  description: string | null;
-  formSchema: unknown;
-  workflowDefinitionId?: "single-step-submit" | "two-step-review" | "three-step-certify";
-}
-
-export interface CreateTemplateFormState {
-  error: string | null;
-  created: RecordTemplate | null;
-}
-
-export async function createTemplateAction(
-  _prev: CreateTemplateFormState,
-  input: CreateTemplateInput,
-): Promise<CreateTemplateFormState> {
-  const name = typeof input.name === "string" ? input.name.trim() : "";
-  if (!name) {
-    return { error: "Indique um nome para o modelo.", created: null };
-  }
-  const parsed = FormSchemaSchema.safeParse(input.formSchema);
-  if (!parsed.success) {
-    const first = parsed.error.issues[0];
-    return {
-      error: `Schema inválido: ${first?.path.join(".") || "(raiz)"} — ${first?.message ?? ""}`,
-      created: null,
-    };
-  }
-  const result = await createTemplate({
-    name,
-    description: input.description ? input.description.trim() : null,
-    formSchema: parsed.data as FormSchema,
-    workflowDefinitionId: input.workflowDefinitionId,
-  });
-  if ("error" in result) {
-    return { error: `Não foi possível criar o modelo (${result.error}).`, created: null };
-  }
-  revalidatePath("/templates");
-  return { error: null, created: result };
-}
-
-export async function publishTemplateAction(formData: FormData): Promise<void> {
-  const id = formData.get("id");
-  if (typeof id !== "string" || id === "") return;
-  const result = await publishTemplate(id);
-  if ("error" in result) return;
-  revalidatePath("/templates");
-  revalidatePath(`/templates/${id}`);
-}
-
-export async function archiveTemplateAction(formData: FormData): Promise<void> {
-  const id = formData.get("id");
-  if (typeof id !== "string" || id === "") return;
-  const result = await archiveTemplate(id);
-  if ("error" in result) return;
-  revalidatePath("/templates");
-  revalidatePath(`/templates/${id}`);
-}
-
 // ---------- Records ----------
 
 export type SubmitRecordActionInput =
@@ -327,23 +250,4 @@ export async function submitRecordAction(
   revalidatePath("/records");
   revalidatePath(`/records/${result.record.id}`);
   return { ok: true, id: result.record.id };
-}
-
-export type ReviewRecordActionResult = { ok: true } | { ok: false; error: string };
-
-export async function reviewRecordAction(input: {
-  id: string;
-  decision: ReviewDecision;
-  comment: string | null;
-}): Promise<ReviewRecordActionResult> {
-  const trimmed = input.comment?.trim() ?? "";
-  const result = await reviewRecord({
-    id: input.id,
-    decision: input.decision,
-    comment: trimmed === "" ? null : trimmed,
-  });
-  if (!result.ok) return { ok: false, error: result.error };
-  revalidatePath("/records");
-  revalidatePath(`/records/${result.record.id}`);
-  return { ok: true };
 }

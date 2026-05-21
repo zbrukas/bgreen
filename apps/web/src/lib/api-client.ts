@@ -2,7 +2,6 @@ import type { AppType } from "@bgreen/api/rpc";
 import type { FormError } from "@bgreen/form-engine";
 import type {
   Record as BgRecord,
-  FormSchema,
   InvitePreview,
   LegalForm,
   MembershipRole,
@@ -308,74 +307,6 @@ export async function fetchTemplate(id: string): Promise<RecordTemplate | null> 
   }
 }
 
-export async function createTemplate(input: {
-  name: string;
-  description: string | null;
-  formSchema: FormSchema;
-  workflowDefinitionId?: "single-step-submit" | "two-step-review" | "three-step-certify";
-}): Promise<RecordTemplate | { error: string }> {
-  try {
-    const headers = await authedHeaders();
-    if (!headers.Authorization) return { error: "not_signed_in" };
-    const res = await api["record-templates"].$post(
-      {
-        json: {
-          name: input.name,
-          description: input.description,
-          formSchema: input.formSchema,
-          ...(input.workflowDefinitionId
-            ? { workflowDefinitionId: input.workflowDefinitionId }
-            : {}),
-        },
-      },
-      { headers },
-    );
-    if (!res.ok) {
-      const body = (await res.json().catch(() => ({ error: "request_failed" }))) as {
-        error?: string;
-      };
-      return { error: body.error ?? "request_failed" };
-    }
-    return (await res.json()) as RecordTemplate;
-  } catch {
-    return { error: "network_error" };
-  }
-}
-
-export async function publishTemplate(id: string): Promise<RecordTemplate | { error: string }> {
-  try {
-    const headers = await authedHeaders();
-    if (!headers.Authorization) return { error: "not_signed_in" };
-    const res = await api["record-templates"][":id"].publish.$post({ param: { id } }, { headers });
-    if (!res.ok) {
-      const body = (await res.json().catch(() => ({ error: "request_failed" }))) as {
-        error?: string;
-      };
-      return { error: body.error ?? "request_failed" };
-    }
-    return (await res.json()) as RecordTemplate;
-  } catch {
-    return { error: "network_error" };
-  }
-}
-
-export async function archiveTemplate(id: string): Promise<RecordTemplate | { error: string }> {
-  try {
-    const headers = await authedHeaders();
-    if (!headers.Authorization) return { error: "not_signed_in" };
-    const res = await api["record-templates"][":id"].archive.$post({ param: { id } }, { headers });
-    if (!res.ok) {
-      const body = (await res.json().catch(() => ({ error: "request_failed" }))) as {
-        error?: string;
-      };
-      return { error: body.error ?? "request_failed" };
-    }
-    return (await res.json()) as RecordTemplate;
-  } catch {
-    return { error: "network_error" };
-  }
-}
-
 // ---------- Records ----------
 
 export type SubmitRecordResult =
@@ -446,36 +377,6 @@ export async function createRecord(input: {
       errors?: FormError[];
     };
     return { ok: false, error: body.error ?? "request_failed", fieldErrors: body.errors };
-  } catch {
-    return { ok: false, error: "network_error" };
-  }
-}
-
-export type ReviewDecision = "approve" | "request_changes" | "reject";
-
-export type ReviewRecordResult = { ok: true; record: BgRecord } | { ok: false; error: string };
-
-export async function reviewRecord(input: {
-  id: string;
-  decision: ReviewDecision;
-  comment: string | null;
-}): Promise<ReviewRecordResult> {
-  try {
-    const headers = await authedHeaders();
-    if (!headers.Authorization) return { ok: false, error: "not_signed_in" };
-    const res = await api.records[":id"].review.$post(
-      {
-        param: { id: input.id },
-        json: { decision: input.decision, comment: input.comment },
-      },
-      { headers },
-    );
-    if (res.ok) {
-      const record = (await res.json()) as BgRecord;
-      return { ok: true, record };
-    }
-    const body = (await res.json().catch(() => ({}))) as { error?: string };
-    return { ok: false, error: body.error ?? "request_failed" };
   } catch {
     return { ok: false, error: "network_error" };
   }

@@ -146,43 +146,19 @@ export class WorkflowService {
     return this.repo.listByState("submitted");
   }
 
-  // Returns workflow instances whose current state expects an action from
-  // the signed-in user. Acts as v1's "pending my action" data source.
-  // Until V5.3's FGA replaces this, the role check is the existing
-  // membership role:
-  //   * owner actions (edit drafts / resubmit after changes): the user
-  //     who originally submitted the record.
-  //   * reviewer actions (approve/request_changes/reject): admins on
-  //     records they didn't submit, in "submitted" state.
-  //   * certifier actions (three-step-certify only): admins on records
-  //     they didn't submit OR review, in "approved" state.
-  async listPendingForActor(
-    organizationId: string,
-    userId: string,
-    isAdmin: boolean,
-  ): Promise<WorkflowInstance[]> {
+  // V5.4: org-side inbox is owner-only — drafts to fill in and records
+  // returned with changes_requested. Review/certify lives in apps/cs.
+  async listPendingForActor(organizationId: string, userId: string): Promise<WorkflowInstance[]> {
     const all = await this.repo.listForOrganization(organizationId);
-    return all.filter((instance) => actionIsPending(instance, userId, isAdmin));
+    return all.filter((instance) => actionIsPending(instance, userId));
   }
 }
 
-function actionIsPending(instance: WorkflowInstance, userId: string, isAdmin: boolean): boolean {
+function actionIsPending(instance: WorkflowInstance, userId: string): boolean {
   const state = typeof instance.currentState === "string" ? instance.currentState : null;
   if (!state) return false;
-
-  if (state === "draft" || state === "changes_requested") {
-    return instance.context.submitterUserId === userId;
-  }
-  if (!isAdmin) return false;
-  if (state === "submitted") {
-    return instance.context.submitterUserId !== userId;
-  }
-  if (state === "approved" && instance.definitionId === "three-step-certify") {
-    return (
-      instance.context.submitterUserId !== userId && instance.context.reviewerUserId !== userId
-    );
-  }
-  return false;
+  if (state !== "draft" && state !== "changes_requested") return false;
+  return instance.context.submitterUserId === userId;
 }
 
 function extractComment(event: WorkflowEvent): string | null {

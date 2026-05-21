@@ -1,8 +1,6 @@
-import { archiveTemplateAction, publishTemplateAction } from "@/app/actions";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { fetchMe, fetchTemplate } from "@/lib/api-client";
+import { fetchTemplate } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 import type { Field, LeafField } from "@bgreen/types";
 import { withAuth } from "@workos-inc/authkit-nextjs";
@@ -47,7 +45,7 @@ export default async function TemplateDetailPage({ params }: PageProps) {
     );
   }
 
-  const [me, tpl] = await Promise.all([fetchMe(), fetchTemplate(id)]);
+  const tpl = await fetchTemplate(id);
   if (!tpl) {
     return (
       <main className="mx-auto max-w-3xl space-y-4 p-8">
@@ -60,7 +58,6 @@ export default async function TemplateDetailPage({ params }: PageProps) {
       </main>
     );
   }
-  const isAdmin = me?.activeOrganizationRole === "org_admin";
 
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-8">
@@ -70,36 +67,14 @@ export default async function TemplateDetailPage({ params }: PageProps) {
         </Link>
       </p>
 
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{tpl.name}</h1>
-          <p className="text-sm text-muted-foreground">
-            Estado: <strong>{statusLabel[tpl.status] ?? tpl.status}</strong>
-            <span className="mx-2">·</span>
-            Fluxo:{" "}
-            <strong>{workflowLabel[tpl.workflowDefinitionId] ?? tpl.workflowDefinitionId}</strong>
-          </p>
-        </div>
-        {isAdmin && (
-          <div className="flex gap-2">
-            {tpl.status === "draft" && (
-              <form action={publishTemplateAction}>
-                <input type="hidden" name="id" value={tpl.id} />
-                <Button type="submit" size="sm">
-                  Publicar
-                </Button>
-              </form>
-            )}
-            {tpl.status !== "archived" && (
-              <form action={archiveTemplateAction}>
-                <input type="hidden" name="id" value={tpl.id} />
-                <Button type="submit" size="sm" variant="outline">
-                  Arquivar
-                </Button>
-              </form>
-            )}
-          </div>
-        )}
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">{tpl.name}</h1>
+        <p className="text-sm text-muted-foreground">
+          Estado: <strong>{statusLabel[tpl.status] ?? tpl.status}</strong>
+          <span className="mx-2">·</span>
+          Fluxo:{" "}
+          <strong>{workflowLabel[tpl.workflowDefinitionId] ?? tpl.workflowDefinitionId}</strong>
+        </p>
       </div>
 
       {tpl.description && <p className="text-sm text-muted-foreground">{tpl.description}</p>}

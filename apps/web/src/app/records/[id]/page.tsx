@@ -1,6 +1,5 @@
 import { AuditTrail } from "@/app/_components/AuditTrail";
 import { RecordForm } from "@/app/_components/RecordForm";
-import { ReviewPanel } from "@/app/_components/ReviewPanel";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { fetchMe, fetchRecord, fetchTemplate } from "@/lib/api-client";
@@ -83,7 +82,6 @@ export default async function RecordDetailPage({ params }: PageProps) {
   const isAdmin = me?.activeOrganizationRole === "org_admin";
   const isOwner = record.submittedByUserId === me?.id;
   const editable = isOwner && (record.status === "draft" || record.status === "changes_requested");
-  const canReview = isAdmin && record.status === "submitted";
   const commentVariant = commentAlertVariant[record.status];
 
   return (
@@ -117,8 +115,6 @@ export default async function RecordDetailPage({ params }: PageProps) {
         readOnly={!editable}
         initialStatus={record.status}
       />
-
-      {canReview && <ReviewPanel recordId={record.id} />}
 
       {isAdmin && <AuditTrail entityKind="record" entityId={record.id} />}
     </main>
