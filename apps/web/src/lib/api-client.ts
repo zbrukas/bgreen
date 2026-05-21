@@ -49,6 +49,7 @@ export interface MeResponse {
   lastName: string | null;
   activeOrganizationId: string | null;
   activeOrganizationRole: MembershipRole | null;
+  userType: "central_services" | "organization";
 }
 
 export async function fetchMe(): Promise<MeResponse | null> {
@@ -65,6 +66,8 @@ export async function fetchMe(): Promise<MeResponse | null> {
       lastName: data.lastName,
       activeOrganizationId: data.activeOrganizationId,
       activeOrganizationRole: data.activeOrganizationRole,
+      userType:
+        (data as { userType?: "central_services" | "organization" }).userType ?? "organization",
     };
   } catch {
     return null;

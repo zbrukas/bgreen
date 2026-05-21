@@ -3,10 +3,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { getActiveOrgId, setActiveOrgId } from "@/lib/active-org";
 import { fetchHealth, fetchMe, fetchMyOrganizations } from "@/lib/api-client";
 import { getSignInUrl, withAuth } from "@workos-inc/authkit-nextjs";
+import { redirect } from "next/navigation";
 import { CreateOrganizationForm } from "./_components/CreateOrganizationForm";
 import { Header } from "./_components/Header";
 
 export const dynamic = "force-dynamic";
+
+const CS_APP_URL = process.env.CS_APP_PUBLIC_URL ?? "http://localhost:3001";
 
 export default async function Home() {
   const auth = await withAuth();
@@ -32,6 +35,11 @@ export default async function Home() {
   }
 
   const [me, orgs] = await Promise.all([fetchMe(), fetchMyOrganizations()]);
+
+  // Population redirect: CS users belong in the CS console, not here.
+  if (me?.userType === "central_services") {
+    redirect(CS_APP_URL);
+  }
 
   if (orgs.length === 0) {
     return (
