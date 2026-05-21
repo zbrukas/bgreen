@@ -5,6 +5,7 @@ import {
   DrizzleRecordTemplateRepository,
   RecordTemplateService,
 } from "./modules/form-templates/module.js";
+import { DrizzleCentralServicesDomainsRepository } from "./modules/identity/infrastructure/central-services-domains-repository.js";
 import { DrizzleUserRepository, UserService } from "./modules/identity/module.js";
 import {
   DrizzleInviteRepository,
@@ -27,11 +28,12 @@ export const repositories = {
   records: new DrizzleRecordRepository(),
   audit: new DrizzleAuditRepository(),
   workflows: new DrizzleWorkflowRepository(),
+  centralServicesDomains: new DrizzleCentralServicesDomainsRepository(),
 };
 
 export const fgaClient = getFgaClient();
 
-export const userService = new UserService(repositories.users);
+export const userService = new UserService(repositories.users, repositories.centralServicesDomains);
 
 export const auditService = new AuditService(repositories.audit);
 

@@ -1,7 +1,7 @@
 import { db, schema } from "@bgreen/db";
+import type { CentralServicesRole, User, UserType } from "@bgreen/types";
 import { eq } from "drizzle-orm";
 import type { SyncUserInput, UserRepository } from "../application/user-service.js";
-import type { User } from "../domain/user.js";
 
 function rowToUser(row: typeof schema.users.$inferSelect): User {
   return {
@@ -34,7 +34,15 @@ export class DrizzleUserRepository implements UserRepository {
     return row ? rowToUser(row) : null;
   }
 
-  async upsertFromWorkos(input: SyncUserInput): Promise<User> {
+  // V5.4: classification fields go in on INSERT only. The onConflict
+  // path explicitly omits them so re-syncs from WorkOS can never
+  // overwrite the population side — that's the immutability invariant.
+  async upsertFromWorkos(
+    input: SyncUserInput & {
+      userType: UserType;
+      centralServicesRole: CentralServicesRole | null;
+    },
+  ): Promise<User> {
     const [row] = await db
       .insert(schema.users)
       .values({
@@ -42,6 +50,8 @@ export class DrizzleUserRepository implements UserRepository {
         email: input.email,
         firstName: input.firstName,
         lastName: input.lastName,
+        userType: input.userType,
+        centralServicesRole: input.centralServicesRole,
       })
       .onConflictDoUpdate({
         target: schema.users.workosUserId,
