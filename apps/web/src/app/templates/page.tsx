@@ -1,4 +1,15 @@
+import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { fetchMe, fetchTemplates } from "@/lib/api-client";
+import { cn } from "@/lib/utils";
 import { getSignInUrl, withAuth } from "@workos-inc/authkit-nextjs";
 import Link from "next/link";
 
@@ -10,14 +21,23 @@ const statusLabel: Record<string, string> = {
   archived: "Arquivado",
 };
 
+const statusVariant: Record<string, "default" | "secondary" | "outline" | "success"> = {
+  draft: "secondary",
+  published: "success",
+  archived: "outline",
+};
+
 export default async function TemplatesListPage() {
   const auth = await withAuth();
   if (!auth.user) {
     const signInUrl = await getSignInUrl();
     return (
-      <main style={{ padding: "2rem", fontFamily: "system-ui, sans-serif" }}>
+      <main className="mx-auto max-w-xl p-8">
         <p>
-          <a href={signInUrl}>Iniciar sessão</a> para ver os modelos.
+          <a href={signInUrl} className="text-primary underline-offset-4 hover:underline">
+            Iniciar sessão
+          </a>{" "}
+          para ver os modelos.
         </p>
       </main>
     );
@@ -27,101 +47,80 @@ export default async function TemplatesListPage() {
   const isAdmin = me?.activeOrganizationRole === "admin";
 
   return (
-    <main style={{ padding: "2rem", fontFamily: "system-ui, sans-serif", maxWidth: 900 }}>
-      <p style={{ marginBottom: "1rem" }}>
-        <Link href="/">← Voltar</Link>
+    <main className="mx-auto max-w-5xl space-y-6 p-8">
+      <p>
+        <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
+          ← Voltar
+        </Link>
       </p>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "1rem",
-          marginBottom: "1rem",
-        }}
-      >
-        <h1 style={{ margin: 0 }}>Modelos de registo</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold tracking-tight">Modelos de registo</h1>
         {isAdmin && (
-          <Link
-            href="/templates/new"
-            style={{
-              padding: "0.5rem 0.75rem",
-              background: "#1f7a3d",
-              color: "white",
-              borderRadius: "0.25rem",
-              textDecoration: "none",
-              fontSize: "0.9rem",
-            }}
-          >
+          <Link href="/templates/new" className={buttonVariants()}>
             + Novo modelo
           </Link>
         )}
       </div>
 
       {templates.length === 0 ? (
-        <p style={{ color: "#666" }}>
+        <p className="text-sm text-muted-foreground">
           Ainda não existem modelos.{" "}
           {isAdmin
             ? "Crie o primeiro para começar a recolher dados ESG."
             : "Peça a um administrador para criar um."}
         </p>
       ) : (
-        <table
-          style={{
-            width: "100%",
-            borderCollapse: "collapse",
-            border: "1px solid #e0e0e0",
-            fontSize: "0.95rem",
-          }}
-        >
-          <thead style={{ background: "#fafafa", textAlign: "left" }}>
-            <tr>
-              <th style={{ padding: "0.5rem 0.75rem", borderBottom: "1px solid #e0e0e0" }}>Nome</th>
-              <th style={{ padding: "0.5rem 0.75rem", borderBottom: "1px solid #e0e0e0" }}>
-                Estado
-              </th>
-              <th style={{ padding: "0.5rem 0.75rem", borderBottom: "1px solid #e0e0e0" }}>
-                Campos
-              </th>
-              <th style={{ padding: "0.5rem 0.75rem", borderBottom: "1px solid #e0e0e0" }} />
-            </tr>
-          </thead>
-          <tbody>
-            {templates.map((tpl) => {
-              const fieldCount = tpl.formSchema.rows.reduce((n, r) => n + r.fields.length, 0);
-              return (
-                <tr key={tpl.id}>
-                  <td style={{ padding: "0.5rem 0.75rem", borderBottom: "1px solid #f0f0f0" }}>
-                    <Link href={`/templates/${tpl.id}`}>{tpl.name}</Link>
-                  </td>
-                  <td style={{ padding: "0.5rem 0.75rem", borderBottom: "1px solid #f0f0f0" }}>
-                    {statusLabel[tpl.status] ?? tpl.status}
-                  </td>
-                  <td style={{ padding: "0.5rem 0.75rem", borderBottom: "1px solid #f0f0f0" }}>
-                    {fieldCount}
-                  </td>
-                  <td
-                    style={{
-                      padding: "0.5rem 0.75rem",
-                      borderBottom: "1px solid #f0f0f0",
-                      textAlign: "right",
-                    }}
-                  >
-                    {tpl.status === "published" && (
+        <div className="rounded-lg border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nome</TableHead>
+                <TableHead>Estado</TableHead>
+                <TableHead>Campos</TableHead>
+                <TableHead className="text-right">Acções</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {templates.map((tpl) => {
+                const fieldCount = tpl.formSchema.rows.reduce((n, r) => n + r.fields.length, 0);
+                return (
+                  <TableRow key={tpl.id}>
+                    <TableCell>
                       <Link
-                        href={`/records/new?template=${tpl.id}`}
-                        style={{ marginRight: "0.75rem" }}
+                        href={`/templates/${tpl.id}`}
+                        className="font-medium text-primary underline-offset-4 hover:underline"
                       >
-                        Submeter
+                        {tpl.name}
                       </Link>
-                    )}
-                    <Link href={`/templates/${tpl.id}`}>Ver</Link>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={statusVariant[tpl.status] ?? "outline"}>
+                        {statusLabel[tpl.status] ?? tpl.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{fieldCount}</TableCell>
+                    <TableCell className={cn("text-right text-sm")}>
+                      {tpl.status === "published" && (
+                        <Link
+                          href={`/records/new?template=${tpl.id}`}
+                          className="mr-3 text-primary underline-offset-4 hover:underline"
+                        >
+                          Submeter
+                        </Link>
+                      )}
+                      <Link
+                        href={`/templates/${tpl.id}`}
+                        className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                      >
+                        Ver
+                      </Link>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
       )}
     </main>
   );

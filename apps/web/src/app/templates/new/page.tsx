@@ -13,9 +13,11 @@ export default async function NewTemplatePage() {
   const me = await fetchMe();
   if (me?.activeOrganizationRole !== "admin") {
     return (
-      <main style={{ padding: "2rem", fontFamily: "system-ui, sans-serif", maxWidth: 720 }}>
-        <p style={{ marginBottom: "1rem" }}>
-          <Link href="/templates">← Voltar</Link>
+      <main className="mx-auto max-w-3xl space-y-4 p-8">
+        <p>
+          <Link href="/templates" className="text-sm text-muted-foreground hover:text-foreground">
+            ← Voltar
+          </Link>
         </p>
         <p>Apenas administradores podem criar modelos.</p>
       </main>
@@ -31,9 +33,11 @@ export default async function NewTemplatePage() {
   }));
 
   return (
-    <main style={{ padding: "2rem", fontFamily: "system-ui, sans-serif", maxWidth: 720 }}>
-      <p style={{ marginBottom: "1.5rem" }}>
-        <Link href="/templates">← Voltar</Link>
+    <main className="mx-auto max-w-3xl space-y-6 p-8">
+      <p>
+        <Link href="/templates" className="text-sm text-muted-foreground hover:text-foreground">
+          ← Voltar
+        </Link>
       </p>
       <TemplateEditor availableTemplates={available} />
     </main>

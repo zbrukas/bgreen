@@ -1,5 +1,12 @@
 "use client";
 
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import type { RecordTemplate } from "@bgreen/types";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -35,8 +42,6 @@ const LEAF_KINDS: Array<{ value: EditorLeafKind; label: string }> = [
   { value: "calculated", label: "Calculado" },
 ];
 
-// Kinds where source-mapping pre-fill is meaningful (multi-select/calculated/
-// repeating intentionally excluded — those don't map well to a single source value).
 const MAPPABLE_KINDS: ReadonlySet<EditorFieldKind> = new Set(["text", "number", "date", "select"]);
 
 interface TemplateEditorProps {
@@ -118,141 +123,116 @@ export function TemplateEditor({ availableTemplates }: TemplateEditorProps) {
   }
 
   return (
-    <form
-      onSubmit={onSubmit}
-      style={{ display: "grid", gap: "1.5rem", maxWidth: 760, fontFamily: "system-ui, sans-serif" }}
-    >
-      <h1 style={{ margin: 0 }}>Novo modelo</h1>
+    <form onSubmit={onSubmit} className="space-y-6">
+      <h1 className="text-2xl font-semibold tracking-tight">Novo modelo</h1>
 
-      <label style={{ display: "grid", gap: "0.25rem" }}>
-        <span>Nome</span>
-        <input
-          type="text"
+      <div className="space-y-2">
+        <Label htmlFor="tpl-name">Nome</Label>
+        <Input
+          id="tpl-name"
           required
           maxLength={200}
           value={name}
           onChange={(e) => setName(e.target.value)}
-          style={{ padding: "0.5rem", fontSize: "1rem" }}
         />
-      </label>
+      </div>
 
-      <label style={{ display: "grid", gap: "0.25rem" }}>
-        <span>Descrição (opcional)</span>
-        <textarea
+      <div className="space-y-2">
+        <Label htmlFor="tpl-description">Descrição (opcional)</Label>
+        <Textarea
+          id="tpl-description"
           maxLength={2000}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={2}
-          style={{ padding: "0.5rem", fontSize: "1rem", fontFamily: "inherit" }}
         />
-      </label>
+      </div>
 
-      <section style={{ display: "grid", gap: "1rem" }}>
-        <h2 style={{ margin: 0, fontSize: "1.1rem" }}>Linhas e campos</h2>
-        {rows.map((row, rowIdx) => {
-          return (
-            <fieldset
-              key={row.uiKey}
-              style={{
-                border: "1px solid #cfd8dc",
-                borderRadius: "0.25rem",
-                padding: "0.75rem 1rem",
-                display: "grid",
-                gap: "0.75rem",
-                margin: 0,
-              }}
-            >
-              <legend style={{ padding: "0 0.5rem", color: "#444", fontSize: "0.9rem" }}>
-                Linha {rowIdx + 1}
-              </legend>
+      <section className="space-y-4">
+        <h2 className="text-lg font-medium">Linhas e campos</h2>
+        {rows.map((row, rowIdx) => (
+          <fieldset key={row.uiKey} className="space-y-3 rounded-lg border bg-card p-4">
+            <legend className="px-2 text-xs text-muted-foreground">Linha {rowIdx + 1}</legend>
 
-              <label style={{ display: "grid", gap: "0.25rem" }}>
-                <span style={{ fontSize: "0.85rem" }}>Etiqueta da linha (opcional)</span>
-                <input
-                  type="text"
-                  value={row.label}
-                  onChange={(e) =>
-                    setRows((prev) =>
-                      prev.map((r, i) => (i === rowIdx ? { ...r, label: e.target.value } : r)),
-                    )
-                  }
-                  style={{ padding: "0.4rem", fontSize: "0.95rem" }}
-                />
-              </label>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Etiqueta da linha (opcional)</Label>
+              <Input
+                value={row.label}
+                onChange={(e) =>
+                  setRows((prev) =>
+                    prev.map((r, i) => (i === rowIdx ? { ...r, label: e.target.value } : r)),
+                  )
+                }
+              />
+            </div>
 
-              {row.fields.map((field, fieldIdx) => (
-                <FieldCard
-                  key={field.uiKey}
-                  field={field}
-                  fieldIdx={fieldIdx}
-                  siblings={row.fields.slice(0, fieldIdx)}
-                  allowRepeating
-                  availableTemplates={availableTemplates}
-                  onPatch={(patch) => patchField(rowIdx, fieldIdx, patch)}
-                  onRemove={() =>
-                    setRows((prev) =>
-                      prev.map((r, i) =>
-                        i !== rowIdx
-                          ? r
-                          : { ...r, fields: r.fields.filter((_, j) => j !== fieldIdx) },
-                      ),
-                    )
-                  }
-                  removable={row.fields.length > 1 || rows.length > 1}
-                  onPatchSub={(subIdx, patch) => patchSubField(rowIdx, fieldIdx, subIdx, patch)}
-                />
-              ))}
+            {row.fields.map((field, fieldIdx) => (
+              <FieldCard
+                key={field.uiKey}
+                field={field}
+                fieldIdx={fieldIdx}
+                siblings={row.fields.slice(0, fieldIdx)}
+                allowRepeating
+                availableTemplates={availableTemplates}
+                onPatch={(patch) => patchField(rowIdx, fieldIdx, patch)}
+                onRemove={() =>
+                  setRows((prev) =>
+                    prev.map((r, i) =>
+                      i !== rowIdx
+                        ? r
+                        : { ...r, fields: r.fields.filter((_, j) => j !== fieldIdx) },
+                    ),
+                  )
+                }
+                removable={row.fields.length > 1 || rows.length > 1}
+                onPatchSub={(subIdx, patch) => patchSubField(rowIdx, fieldIdx, subIdx, patch)}
+              />
+            ))}
 
-              <div style={{ display: "flex", gap: "0.5rem", justifyContent: "space-between" }}>
-                <button
+            <div className="flex items-center justify-between">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setRows((prev) =>
+                    prev.map((r, i) =>
+                      i === rowIdx ? { ...r, fields: [...r.fields, newField()] } : r,
+                    ),
+                  )
+                }
+              >
+                + Adicionar campo
+              </Button>
+              {rows.length > 1 && (
+                <Button
                   type="button"
-                  onClick={() =>
-                    setRows((prev) =>
-                      prev.map((r, i) =>
-                        i === rowIdx ? { ...r, fields: [...r.fields, newField()] } : r,
-                      ),
-                    )
-                  }
-                  style={{ padding: "0.4rem 0.75rem", fontSize: "0.9rem" }}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setRows((prev) => prev.filter((_, i) => i !== rowIdx))}
                 >
-                  + Adicionar campo
-                </button>
-                {rows.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => setRows((prev) => prev.filter((_, i) => i !== rowIdx))}
-                    style={{ padding: "0.4rem 0.75rem", fontSize: "0.9rem" }}
-                  >
-                    Remover linha
-                  </button>
-                )}
-              </div>
-            </fieldset>
-          );
-        })}
+                  Remover linha
+                </Button>
+              )}
+            </div>
+          </fieldset>
+        ))}
 
-        <button
+        <Button
           type="button"
+          variant="outline"
+          size="sm"
           onClick={() => setRows((prev) => [...prev, newRow()])}
-          style={{ justifySelf: "start", padding: "0.4rem 0.75rem", fontSize: "0.9rem" }}
         >
           + Adicionar linha
-        </button>
+        </Button>
       </section>
 
-      {error && (
-        <p style={{ margin: 0, color: "#b00020" }} role="alert">
-          {error}
-        </p>
-      )}
+      {error && <Alert variant="destructive">{error}</Alert>}
 
-      <button
-        type="submit"
-        disabled={isPending}
-        style={{ padding: "0.75rem 1rem", fontSize: "1rem", justifySelf: "start" }}
-      >
+      <Button type="submit" disabled={isPending} size="lg">
         {isPending ? "A criar…" : "Criar modelo"}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -282,132 +262,114 @@ function FieldCard({
 }: FieldCardProps) {
   const kindOptions = allowRepeating ? TOP_LEVEL_KINDS : LEAF_KINDS;
   return (
-    <div
-      style={{
-        border: "1px solid #e0e0e0",
-        borderRadius: "0.25rem",
-        padding: "0.5rem 0.75rem",
-        display: "grid",
-        gap: "0.5rem",
-        background: "#fafafa",
-      }}
-    >
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
-        <label style={{ display: "grid", gap: "0.25rem" }}>
-          <span style={{ fontSize: "0.85rem" }}>Identificador (snake_case)</span>
-          <input
-            type="text"
+    <div className="space-y-3 rounded-md border bg-muted/30 p-3">
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <Label className="text-xs">Identificador (snake_case)</Label>
+          <Input
             value={field.id}
             onChange={(e) => onPatch({ id: e.target.value })}
             placeholder="ex.: kwh_consumo"
-            style={{ padding: "0.4rem", fontSize: "0.95rem", fontFamily: "monospace" }}
+            className="font-mono"
           />
-        </label>
-        <label style={{ display: "grid", gap: "0.25rem" }}>
-          <span style={{ fontSize: "0.85rem" }}>Etiqueta</span>
-          <input
-            type="text"
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Etiqueta</Label>
+          <Input
             value={field.label}
             onChange={(e) => onPatch({ label: e.target.value })}
             placeholder="ex.: Consumo de eletricidade"
-            style={{ padding: "0.4rem", fontSize: "0.95rem" }}
           />
-        </label>
+        </div>
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
-        <label style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
-          <span style={{ fontSize: "0.85rem" }}>Tipo</span>
-          <select
+      <div className="flex flex-wrap items-center gap-4">
+        <div className="flex items-center gap-2">
+          <Label className="text-xs">Tipo</Label>
+          <Select
             value={field.kind}
             onChange={(e) => onPatch({ kind: e.target.value as EditorFieldKind })}
-            style={{ padding: "0.3rem", fontSize: "0.9rem" }}
+            className="h-8 w-auto py-0 text-sm"
           >
             {kindOptions.map((k) => (
               <option key={k.value} value={k.value}>
                 {k.label}
               </option>
             ))}
-          </select>
-        </label>
+          </Select>
+        </div>
         {field.kind !== "repeating" && (
-          <label style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
+          <label className="inline-flex items-center gap-2 text-xs">
             <input
               type="checkbox"
               checked={field.required}
               onChange={(e) => onPatch({ required: e.target.checked })}
+              className="h-4 w-4 rounded border-input text-primary focus:ring-ring"
             />
-            <span style={{ fontSize: "0.85rem" }}>Obrigatório</span>
+            <span>Obrigatório</span>
           </label>
         )}
       </div>
 
       {field.kind === "text" && (
-        <label style={{ display: "grid", gap: "0.25rem", maxWidth: 200 }}>
-          <span style={{ fontSize: "0.85rem" }}>Comprimento máximo</span>
-          <input
+        <div className="max-w-xs space-y-1">
+          <Label className="text-xs">Comprimento máximo</Label>
+          <Input
             type="number"
             min={1}
             value={field.maxLength}
             onChange={(e) => onPatch({ maxLength: e.target.value })}
-            style={{ padding: "0.35rem", fontSize: "0.9rem" }}
           />
-        </label>
+        </div>
       )}
 
       {field.kind === "number" && (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.5rem" }}>
-          <label style={{ display: "grid", gap: "0.25rem" }}>
-            <span style={{ fontSize: "0.85rem" }}>Unidade</span>
-            <input
-              type="text"
+        <div className="grid grid-cols-3 gap-2">
+          <div className="space-y-1">
+            <Label className="text-xs">Unidade</Label>
+            <Input
               value={field.unit}
               onChange={(e) => onPatch({ unit: e.target.value })}
               placeholder="kWh, m³, kg…"
-              style={{ padding: "0.35rem", fontSize: "0.9rem" }}
             />
-          </label>
-          <label style={{ display: "grid", gap: "0.25rem" }}>
-            <span style={{ fontSize: "0.85rem" }}>Mínimo</span>
-            <input
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Mínimo</Label>
+            <Input
               type="number"
               value={field.min}
               onChange={(e) => onPatch({ min: e.target.value })}
-              style={{ padding: "0.35rem", fontSize: "0.9rem" }}
             />
-          </label>
-          <label style={{ display: "grid", gap: "0.25rem" }}>
-            <span style={{ fontSize: "0.85rem" }}>Máximo</span>
-            <input
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Máximo</Label>
+            <Input
               type="number"
               value={field.max}
               onChange={(e) => onPatch({ max: e.target.value })}
-              style={{ padding: "0.35rem", fontSize: "0.9rem" }}
             />
-          </label>
+          </div>
         </div>
       )}
 
       {field.kind === "date" && (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
-          <label style={{ display: "grid", gap: "0.25rem" }}>
-            <span style={{ fontSize: "0.85rem" }}>Data mínima (YYYY-MM-DD)</span>
-            <input
+        <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-1">
+            <Label className="text-xs">Data mínima</Label>
+            <Input
               type="date"
               value={field.min}
               onChange={(e) => onPatch({ min: e.target.value })}
-              style={{ padding: "0.35rem", fontSize: "0.9rem" }}
             />
-          </label>
-          <label style={{ display: "grid", gap: "0.25rem" }}>
-            <span style={{ fontSize: "0.85rem" }}>Data máxima</span>
-            <input
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Data máxima</Label>
+            <Input
               type="date"
               value={field.max}
               onChange={(e) => onPatch({ max: e.target.value })}
-              style={{ padding: "0.35rem", fontSize: "0.9rem" }}
             />
-          </label>
+          </div>
         </div>
       )}
 
@@ -416,29 +378,25 @@ function FieldCard({
       )}
 
       {field.kind === "multi_select" && (
-        <div
-          style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", maxWidth: 320 }}
-        >
-          <label style={{ display: "grid", gap: "0.25rem" }}>
-            <span style={{ fontSize: "0.85rem" }}>Mínimo de seleções</span>
-            <input
+        <div className="grid max-w-md grid-cols-2 gap-2">
+          <div className="space-y-1">
+            <Label className="text-xs">Mínimo de seleções</Label>
+            <Input
               type="number"
               min={1}
               value={field.minSelected}
               onChange={(e) => onPatch({ minSelected: e.target.value })}
-              style={{ padding: "0.35rem", fontSize: "0.9rem" }}
             />
-          </label>
-          <label style={{ display: "grid", gap: "0.25rem" }}>
-            <span style={{ fontSize: "0.85rem" }}>Máximo de seleções</span>
-            <input
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Máximo de seleções</Label>
+            <Input
               type="number"
               min={1}
               value={field.maxSelected}
               onChange={(e) => onPatch({ maxSelected: e.target.value })}
-              style={{ padding: "0.35rem", fontSize: "0.9rem" }}
             />
-          </label>
+          </div>
         </div>
       )}
 
@@ -464,14 +422,11 @@ function FieldCard({
         />
       )}
 
-      <button
-        type="button"
-        onClick={onRemove}
-        disabled={!removable}
-        style={{ justifySelf: "end", padding: "0.3rem 0.6rem", fontSize: "0.85rem" }}
-      >
-        Remover campo
-      </button>
+      <div className="flex justify-end">
+        <Button type="button" variant="ghost" size="sm" onClick={onRemove} disabled={!removable}>
+          Remover campo
+        </Button>
+      </div>
     </div>
   );
 }
@@ -490,48 +445,72 @@ function OptionsEditor({
     onPatch({ options: field.options.filter((_, i) => i !== idx) });
   }
   return (
-    <div style={{ display: "grid", gap: "0.4rem" }}>
-      <span style={{ fontSize: "0.85rem" }}>Opções</span>
+    <div className="space-y-2">
+      <Label className="text-xs">Opções</Label>
       {field.options.length === 0 && (
-        <p style={{ margin: 0, fontSize: "0.85rem", color: "#777" }}>
-          Sem opções ainda — adicione pelo menos uma.
-        </p>
+        <p className="text-xs text-muted-foreground">Sem opções ainda — adicione pelo menos uma.</p>
       )}
       {field.options.map((opt, optIdx) => (
-        <div
-          key={`${field.uiKey}-opt-${optIdx}`}
-          style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: "0.5rem" }}
-        >
-          <input
-            type="text"
+        <div key={`${field.uiKey}-opt-${optIdx}`} className="grid grid-cols-[1fr_1fr_auto] gap-2">
+          <Input
             placeholder="valor"
             value={opt.value}
             onChange={(e) => update(optIdx, { value: e.target.value })}
-            style={{ padding: "0.3rem", fontSize: "0.9rem", fontFamily: "monospace" }}
+            className="font-mono"
           />
-          <input
-            type="text"
+          <Input
             placeholder="etiqueta"
             value={opt.label}
             onChange={(e) => update(optIdx, { label: e.target.value })}
-            style={{ padding: "0.3rem", fontSize: "0.9rem" }}
           />
-          <button
-            type="button"
-            onClick={() => remove(optIdx)}
-            style={{ padding: "0.3rem 0.5rem", fontSize: "0.85rem" }}
-          >
+          <Button type="button" variant="ghost" size="sm" onClick={() => remove(optIdx)}>
             ✕
-          </button>
+          </Button>
         </div>
       ))}
-      <button
+      <Button
         type="button"
+        variant="outline"
+        size="sm"
         onClick={() => onPatch({ options: [...field.options, { value: "", label: "" }] })}
-        style={{ justifySelf: "start", padding: "0.3rem 0.6rem", fontSize: "0.85rem" }}
       >
         + Opção
-      </button>
+      </Button>
+    </div>
+  );
+}
+
+function CalculatedEditor({
+  field,
+  onPatch,
+}: {
+  field: EditorField;
+  onPatch: (patch: Partial<EditorField>) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="space-y-1">
+        <Label className="text-xs">Expressão (referencie outros campos pelo identificador)</Label>
+        <Textarea
+          value={field.expression}
+          onChange={(e) => onPatch({ expression: e.target.value })}
+          rows={2}
+          placeholder="ex.: actividade * factor"
+          className="font-mono"
+        />
+      </div>
+      <div className="max-w-xs space-y-1">
+        <Label className="text-xs">Unidade (opcional)</Label>
+        <Input
+          value={field.unit}
+          onChange={(e) => onPatch({ unit: e.target.value })}
+          placeholder="kg CO₂e, kWh…"
+        />
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Operadores suportados: <code className="font-mono">+ - * /</code> e parênteses. Os
+        identificadores devem existir no mesmo âmbito (linha principal ou sub-linha).
+      </p>
     </div>
   );
 }
@@ -550,50 +529,37 @@ function RepeatingEditor({
   availableTemplates: Array<Pick<RecordTemplate, "id" | "name" | "status" | "formSchema">>;
 }) {
   return (
-    <div
-      style={{
-        display: "grid",
-        gap: "0.5rem",
-        border: "1px dashed #b0bec5",
-        borderRadius: "0.25rem",
-        padding: "0.5rem 0.75rem",
-        background: "#f5f8fa",
-      }}
-    >
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.5rem" }}>
-        <label style={{ display: "grid", gap: "0.25rem" }}>
-          <span style={{ fontSize: "0.85rem" }}>Nome de cada linha</span>
-          <input
-            type="text"
+    <div className="space-y-3 rounded-md border border-dashed bg-muted/40 p-3">
+      <div className="grid grid-cols-3 gap-2">
+        <div className="space-y-1">
+          <Label className="text-xs">Nome de cada linha</Label>
+          <Input
             value={field.rowLabel}
             onChange={(e) => onPatch({ rowLabel: e.target.value })}
             placeholder="ex.: Veículo"
-            style={{ padding: "0.35rem", fontSize: "0.9rem" }}
           />
-        </label>
-        <label style={{ display: "grid", gap: "0.25rem" }}>
-          <span style={{ fontSize: "0.85rem" }}>Mínimo de linhas</span>
-          <input
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Mínimo de linhas</Label>
+          <Input
             type="number"
             min={0}
             value={field.minRows}
             onChange={(e) => onPatch({ minRows: e.target.value })}
-            style={{ padding: "0.35rem", fontSize: "0.9rem" }}
           />
-        </label>
-        <label style={{ display: "grid", gap: "0.25rem" }}>
-          <span style={{ fontSize: "0.85rem" }}>Máximo de linhas</span>
-          <input
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Máximo de linhas</Label>
+          <Input
             type="number"
             min={1}
             value={field.maxRows}
             onChange={(e) => onPatch({ maxRows: e.target.value })}
-            style={{ padding: "0.35rem", fontSize: "0.9rem" }}
           />
-        </label>
+        </div>
       </div>
 
-      <p style={{ margin: "0.25rem 0 0", fontSize: "0.85rem", color: "#555" }}>
+      <p className="text-xs text-muted-foreground">
         Sub-campos (não podem conter outras linhas repetidas):
       </p>
 
@@ -611,13 +577,14 @@ function RepeatingEditor({
         />
       ))}
 
-      <button
+      <Button
         type="button"
+        variant="outline"
+        size="sm"
         onClick={() => onPatch({ subFields: [...field.subFields, newField()] })}
-        style={{ justifySelf: "start", padding: "0.3rem 0.6rem", fontSize: "0.85rem" }}
       >
         + Sub-campo
-      </button>
+      </Button>
     </div>
   );
 }
@@ -641,26 +608,23 @@ function ShowIfPicker({
   }
 
   return (
-    <details style={{ borderTop: "1px dotted #ddd", paddingTop: "0.5rem" }}>
-      <summary style={{ fontSize: "0.85rem", cursor: "pointer", color: "#555" }}>
+    <details className="border-t border-dotted pt-3">
+      <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
         Condição de visibilidade {field.showIf.length > 0 && `(${field.showIf.length})`}
       </summary>
-      <div style={{ display: "grid", gap: "0.4rem", marginTop: "0.4rem" }}>
+      <div className="mt-2 space-y-2">
         {field.showIf.length > 0 && candidates.length === 0 && (
-          <p style={{ margin: 0, fontSize: "0.8rem", color: "#b00020" }}>
+          <p className="text-xs text-destructive">
             Não existem campos anteriores neste âmbito para usar como referência. Reorganize os
             campos ou remova as condições.
           </p>
         )}
         {field.showIf.map((predicate, idx) => (
-          <div
-            key={predicate.uiKey}
-            style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: "0.4rem" }}
-          >
-            <select
+          <div key={predicate.uiKey} className="grid grid-cols-[1fr_1fr_auto] gap-2">
+            <Select
               value={predicate.fieldId}
               onChange={(e) => update(idx, { fieldId: e.target.value })}
-              style={{ padding: "0.3rem", fontSize: "0.85rem" }}
+              className="h-8 text-xs"
             >
               <option value="">— campo anterior —</option>
               {candidates.map((c) => (
@@ -668,80 +632,32 @@ function ShowIfPicker({
                   {c.id.trim()} ({c.label || "?"})
                 </option>
               ))}
-            </select>
-            <input
-              type="text"
+            </Select>
+            <Input
               placeholder="valor exacto"
               value={predicate.equals}
               onChange={(e) => update(idx, { equals: e.target.value })}
-              style={{ padding: "0.3rem", fontSize: "0.85rem" }}
+              className="h-8 text-xs"
             />
-            <button
-              type="button"
-              onClick={() => remove(idx)}
-              style={{ padding: "0.3rem 0.5rem", fontSize: "0.85rem" }}
-            >
+            <Button type="button" variant="ghost" size="sm" onClick={() => remove(idx)}>
               ✕
-            </button>
+            </Button>
           </div>
         ))}
-        <button
+        <Button
           type="button"
+          variant="outline"
+          size="sm"
           onClick={() => onPatch({ showIf: [...field.showIf, newShowIf()] })}
           disabled={candidates.length === 0 && field.showIf.length === 0}
-          style={{ justifySelf: "start", padding: "0.3rem 0.6rem", fontSize: "0.85rem" }}
         >
           + Condição (E)
-        </button>
-        <p style={{ margin: 0, fontSize: "0.75rem", color: "#777" }}>
+        </Button>
+        <p className="text-xs text-muted-foreground">
           Todas as condições devem ser satisfeitas (E lógico). Campos ocultos não são validados.
         </p>
       </div>
     </details>
-  );
-}
-
-function CalculatedEditor({
-  field,
-  onPatch,
-}: {
-  field: EditorField;
-  onPatch: (patch: Partial<EditorField>) => void;
-}) {
-  return (
-    <div style={{ display: "grid", gap: "0.4rem" }}>
-      <label style={{ display: "grid", gap: "0.25rem" }}>
-        <span style={{ fontSize: "0.85rem" }}>
-          Expressão (referencie outros campos pelo identificador)
-        </span>
-        <textarea
-          value={field.expression}
-          onChange={(e) => onPatch({ expression: e.target.value })}
-          rows={2}
-          placeholder="ex.: actividade * factor"
-          style={{
-            padding: "0.4rem",
-            fontSize: "0.9rem",
-            fontFamily: "monospace",
-            resize: "vertical",
-          }}
-        />
-      </label>
-      <label style={{ display: "grid", gap: "0.25rem", maxWidth: 200 }}>
-        <span style={{ fontSize: "0.85rem" }}>Unidade (opcional)</span>
-        <input
-          type="text"
-          value={field.unit}
-          onChange={(e) => onPatch({ unit: e.target.value })}
-          placeholder="kg CO₂e, kWh…"
-          style={{ padding: "0.35rem", fontSize: "0.9rem" }}
-        />
-      </label>
-      <p style={{ margin: 0, fontSize: "0.75rem", color: "#777" }}>
-        Operadores suportados: <code>+ - * /</code> e parênteses. Os identificadores devem existir
-        no mesmo âmbito (linha principal ou sub-linha).
-      </p>
-    </div>
   );
 }
 
@@ -764,20 +680,25 @@ function SourceMappingPicker({
     : [];
 
   return (
-    <details style={{ borderTop: "1px dotted #ddd", paddingTop: "0.5rem" }}>
-      <summary style={{ fontSize: "0.85rem", cursor: "pointer", color: "#555" }}>
+    <details className="border-t border-dotted pt-3">
+      <summary
+        className={cn(
+          "cursor-pointer text-xs text-muted-foreground hover:text-foreground",
+          mapping && "text-violet-700",
+        )}
+      >
         Pré-preencher de outro modelo {mapping && "(activo)"}
       </summary>
-      <div style={{ display: "grid", gap: "0.4rem", marginTop: "0.4rem" }}>
+      <div className="mt-2 space-y-2">
         {eligibleTemplates.length === 0 ? (
-          <p style={{ margin: 0, fontSize: "0.8rem", color: "#777" }}>
+          <p className="text-xs text-muted-foreground">
             Não existem outros modelos disponíveis na organização.
           </p>
         ) : (
           <>
-            <label style={{ display: "grid", gap: "0.25rem" }}>
-              <span style={{ fontSize: "0.8rem" }}>Modelo de origem</span>
-              <select
+            <div className="space-y-1">
+              <Label className="text-xs">Modelo de origem</Label>
+              <Select
                 value={mapping?.sourceTemplateId ?? ""}
                 onChange={(e) => {
                   const sourceTemplateId = e.target.value;
@@ -787,7 +708,7 @@ function SourceMappingPicker({
                       : null,
                   });
                 }}
-                style={{ padding: "0.3rem", fontSize: "0.85rem" }}
+                className="h-8 text-xs"
               >
                 <option value="">— sem pré-preenchimento —</option>
                 {eligibleTemplates.map((t) => (
@@ -795,21 +716,21 @@ function SourceMappingPicker({
                     {t.name}
                   </option>
                 ))}
-              </select>
-            </label>
+              </Select>
+            </div>
             {mapping && selectedTemplate && (
-              <label style={{ display: "grid", gap: "0.25rem" }}>
-                <span style={{ fontSize: "0.8rem" }}>
+              <div className="space-y-1">
+                <Label className="text-xs">
                   Campo de origem (tipo deve coincidir: {field.kind})
-                </span>
-                <select
+                </Label>
+                <Select
                   value={mapping.sourceFieldId}
                   onChange={(e) =>
                     onPatch({
                       sourceMapping: { ...mapping, sourceFieldId: e.target.value },
                     })
                   }
-                  style={{ padding: "0.3rem", fontSize: "0.85rem" }}
+                  className="h-8 text-xs"
                 >
                   <option value="">— escolha um campo —</option>
                   {sourceFields.map((sf) => (
@@ -817,15 +738,15 @@ function SourceMappingPicker({
                       {sf.id} ({sf.label})
                     </option>
                   ))}
-                </select>
+                </Select>
                 {sourceFields.length === 0 && (
-                  <span style={{ fontSize: "0.75rem", color: "#b00020" }}>
+                  <p className="text-xs text-destructive">
                     O modelo "{selectedTemplate.name}" não tem campos do tipo {field.kind}.
-                  </span>
+                  </p>
                 )}
-              </label>
+              </div>
             )}
-            <p style={{ margin: 0, fontSize: "0.75rem", color: "#777" }}>
+            <p className="text-xs text-muted-foreground">
               Ao criar um novo registo, este campo é pré-preenchido com o valor do campo escolhido
               no registo submetido mais recente do modelo de origem.
             </p>

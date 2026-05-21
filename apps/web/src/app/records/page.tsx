@@ -1,3 +1,13 @@
+import { Badge, type BadgeProps } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { fetchMe, fetchMyRecords, fetchTemplates } from "@/lib/api-client";
 import type { Record as BgRecord } from "@bgreen/types";
 import { getSignInUrl, withAuth } from "@workos-inc/authkit-nextjs";
@@ -13,12 +23,12 @@ const statusLabel: Record<string, string> = {
   rejected: "Rejeitado",
 };
 
-const statusColor: Record<string, string> = {
-  draft: "#777",
-  submitted: "#01579b",
-  approved: "#1f7a3d",
-  changes_requested: "#bf6900",
-  rejected: "#b00020",
+const statusVariant: Record<string, NonNullable<BadgeProps["variant"]>> = {
+  draft: "outline",
+  submitted: "info",
+  approved: "success",
+  changes_requested: "warning",
+  rejected: "destructive",
 };
 
 export default async function RecordsListPage() {
@@ -26,9 +36,12 @@ export default async function RecordsListPage() {
   if (!auth.user) {
     const signInUrl = await getSignInUrl();
     return (
-      <main style={{ padding: "2rem", fontFamily: "system-ui, sans-serif" }}>
+      <main className="mx-auto max-w-xl p-8">
         <p>
-          <a href={signInUrl}>Iniciar sessão</a> para ver os registos.
+          <a href={signInUrl} className="text-primary underline-offset-4 hover:underline">
+            Iniciar sessão
+          </a>{" "}
+          para ver os registos.
         </p>
       </main>
     );
@@ -47,40 +60,25 @@ export default async function RecordsListPage() {
   const others = isAdmin ? records.filter((r) => r.status !== "submitted") : records;
 
   return (
-    <main style={{ padding: "2rem", fontFamily: "system-ui, sans-serif", maxWidth: 900 }}>
-      <p style={{ marginBottom: "1rem" }}>
-        <Link href="/">← Voltar</Link>
+    <main className="mx-auto max-w-5xl space-y-6 p-8">
+      <p>
+        <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
+          ← Voltar
+        </Link>
       </p>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "1rem",
-          marginBottom: "1rem",
-        }}
-      >
-        <h1 style={{ margin: 0 }}>{isAdmin ? "Registos da organização" : "Os meus registos"}</h1>
-      </div>
+      <h1 className="text-2xl font-semibold tracking-tight">
+        {isAdmin ? "Registos da organização" : "Os meus registos"}
+      </h1>
 
       {publishedTemplates.length > 0 && (
-        <section style={{ marginBottom: "1.5rem" }}>
-          <p style={{ margin: "0 0 0.4rem", fontSize: "0.9rem", color: "#555" }}>
-            Submeter um novo registo:
-          </p>
-          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+        <section className="space-y-2">
+          <p className="text-sm text-muted-foreground">Submeter um novo registo:</p>
+          <div className="flex flex-wrap gap-2">
             {publishedTemplates.map((tpl) => (
               <Link
                 key={tpl.id}
                 href={`/records/new?template=${tpl.id}`}
-                style={{
-                  padding: "0.4rem 0.7rem",
-                  background: "#e8f5e9",
-                  color: "#1f7a3d",
-                  borderRadius: "0.25rem",
-                  textDecoration: "none",
-                  fontSize: "0.9rem",
-                }}
+                className={buttonVariants({ variant: "outline", size: "sm" })}
               >
                 + {tpl.name}
               </Link>
@@ -125,73 +123,56 @@ function RecordsTable({
   actionLabel,
 }: RecordsTableProps) {
   return (
-    <section style={{ marginBottom: "1.5rem" }}>
-      <h2 style={{ margin: "0 0 0.5rem", fontSize: "1.05rem" }}>{title}</h2>
+    <section className="space-y-3">
+      <h2 className="text-lg font-medium">{title}</h2>
       {records.length === 0 ? (
-        <p style={{ color: "#666", fontSize: "0.9rem" }}>{emptyMessage}</p>
+        <p className="text-sm text-muted-foreground">{emptyMessage}</p>
       ) : (
-        <table
-          style={{
-            width: "100%",
-            borderCollapse: "collapse",
-            border: "1px solid #e0e0e0",
-            fontSize: "0.95rem",
-          }}
-        >
-          <thead style={{ background: "#fafafa", textAlign: "left" }}>
-            <tr>
-              <th style={{ padding: "0.5rem 0.75rem", borderBottom: "1px solid #e0e0e0" }}>
-                Modelo
-              </th>
-              <th style={{ padding: "0.5rem 0.75rem", borderBottom: "1px solid #e0e0e0" }}>
-                Estado
-              </th>
-              <th style={{ padding: "0.5rem 0.75rem", borderBottom: "1px solid #e0e0e0" }}>
-                Submetido
-              </th>
-              <th style={{ padding: "0.5rem 0.75rem", borderBottom: "1px solid #e0e0e0" }} />
-            </tr>
-          </thead>
-          <tbody>
-            {records.map((r) => (
-              <tr key={r.id}>
-                <td style={{ padding: "0.5rem 0.75rem", borderBottom: "1px solid #f0f0f0" }}>
-                  <Link href={`/records/${r.id}`}>
-                    {templateNameById.get(r.templateId) ?? "(modelo removido)"}
-                  </Link>
-                </td>
-                <td style={{ padding: "0.5rem 0.75rem", borderBottom: "1px solid #f0f0f0" }}>
-                  <span style={{ color: statusColor[r.status] ?? "#333" }}>
-                    {statusLabel[r.status] ?? r.status}
-                  </span>
-                </td>
-                <td
-                  style={{
-                    padding: "0.5rem 0.75rem",
-                    borderBottom: "1px solid #f0f0f0",
-                    color: "#555",
-                  }}
-                >
-                  {r.submittedAt ? new Date(r.submittedAt).toLocaleString("pt-PT") : "—"}
-                </td>
-                <td
-                  style={{
-                    padding: "0.5rem 0.75rem",
-                    borderBottom: "1px solid #f0f0f0",
-                    textAlign: "right",
-                  }}
-                >
-                  <Link href={`/records/${r.id}`}>
-                    {actionLabel ??
-                      (r.status === "draft" || r.status === "changes_requested"
-                        ? "Continuar"
-                        : "Ver")}
-                  </Link>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="rounded-lg border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Modelo</TableHead>
+                <TableHead>Estado</TableHead>
+                <TableHead>Submetido</TableHead>
+                <TableHead className="text-right" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {records.map((r) => (
+                <TableRow key={r.id}>
+                  <TableCell>
+                    <Link
+                      href={`/records/${r.id}`}
+                      className="font-medium text-primary underline-offset-4 hover:underline"
+                    >
+                      {templateNameById.get(r.templateId) ?? "(modelo removido)"}
+                    </Link>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={statusVariant[r.status] ?? "outline"}>
+                      {statusLabel[r.status] ?? r.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {r.submittedAt ? new Date(r.submittedAt).toLocaleString("pt-PT") : "—"}
+                  </TableCell>
+                  <TableCell className="text-right text-sm">
+                    <Link
+                      href={`/records/${r.id}`}
+                      className="text-primary underline-offset-4 hover:underline"
+                    >
+                      {actionLabel ??
+                        (r.status === "draft" || r.status === "changes_requested"
+                          ? "Continuar"
+                          : "Ver")}
+                    </Link>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       )}
     </section>
   );

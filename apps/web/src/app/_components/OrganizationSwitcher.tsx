@@ -1,5 +1,6 @@
 "use client";
 
+import { Select } from "@/components/ui/select";
 import { useRef } from "react";
 import { switchActiveOrganizationAction } from "../actions";
 
@@ -16,24 +17,23 @@ export function OrganizationSwitcher({
 
   return (
     <form ref={formRef} action={switchActiveOrganizationAction}>
-      <label
-        style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", fontSize: "0.9rem" }}
-      >
-        <span>Organização:</span>
-        <select
+      <label htmlFor="active-org" className="inline-flex items-center gap-2 text-sm">
+        <span className="text-muted-foreground">Organização:</span>
+        <Select
+          id="active-org"
           name="organizationId"
           defaultValue={activeOrganizationId ?? ""}
           onChange={(e) => {
             if (e.currentTarget.value) formRef.current?.requestSubmit();
           }}
-          style={{ padding: "0.35rem 0.5rem", fontSize: "0.9rem" }}
+          className="h-8 w-auto py-0 text-sm"
         >
           {organizations.map((o) => (
             <option key={o.id} value={o.id}>
               {o.name}
             </option>
           ))}
-        </select>
+        </Select>
       </label>
     </form>
   );

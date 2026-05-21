@@ -1,5 +1,8 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import type { CaeEntry } from "@/lib/api-client";
 import { useEffect, useRef, useState } from "react";
 import { searchCaeAction } from "../actions";
@@ -38,42 +41,31 @@ export function CaePicker({ name, initialEntry }: CaePickerProps) {
   }, [query]);
 
   return (
-    <div style={{ display: "grid", gap: "0.25rem", position: "relative" }}>
-      <span>CAE Rev.4 (opcional)</span>
+    <div className="relative space-y-1.5">
+      <Label>CAE Rev.4 (opcional)</Label>
       <input type="hidden" name={name} value={selected?.code ?? ""} readOnly />
       {selected ? (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "0.5rem",
-            padding: "0.5rem",
-            border: "1px solid #1f7a3d",
-            borderRadius: "0.25rem",
-            background: "#f4faf6",
-            fontSize: "0.95rem",
-          }}
-        >
-          <strong style={{ fontFamily: "monospace" }}>{selected.code}</strong>
-          <span style={{ flex: 1 }}>{selected.description}</span>
-          <button
+        <div className="flex items-center gap-2 rounded-md border border-emerald-500 bg-emerald-50/60 px-3 py-2 text-sm">
+          <strong className="font-mono">{selected.code}</strong>
+          <span className="flex-1">{selected.description}</span>
+          <Button
             type="button"
+            variant="ghost"
+            size="sm"
             onClick={() => {
               setSelected(null);
               setQuery("");
               setOpen(true);
               inputRef.current?.focus();
             }}
-            style={{ padding: "0.25rem 0.5rem", fontSize: "0.85rem" }}
           >
             Alterar
-          </button>
+          </Button>
         </div>
       ) : (
         <>
-          <input
+          <Input
             ref={inputRef}
-            type="text"
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
@@ -83,32 +75,10 @@ export function CaePicker({ name, initialEntry }: CaePickerProps) {
             onBlur={() => setTimeout(() => setOpen(false), 150)}
             placeholder="Pesquise por código (35) ou descrição (eletricidade)…"
             autoComplete="off"
-            style={{ padding: "0.5rem", fontSize: "1rem" }}
           />
           {open && (loading || matches.length > 0) && (
-            <ul
-              style={{
-                position: "absolute",
-                top: "100%",
-                left: 0,
-                right: 0,
-                maxHeight: "calc((1.6em + 0.5rem) * 8)",
-                overflowY: "auto",
-                margin: 0,
-                padding: 0,
-                listStyle: "none",
-                background: "white",
-                border: "1px solid #c5c5c5",
-                borderRadius: "0.25rem",
-                zIndex: 10,
-                boxShadow: "0 2px 6px rgba(0,0,0,0.08)",
-              }}
-            >
-              {loading && (
-                <li style={{ padding: "0.4rem 0.5rem", color: "#666", fontSize: "0.9rem" }}>
-                  A pesquisar…
-                </li>
-              )}
+            <ul className="absolute left-0 right-0 top-full z-10 mt-1 max-h-64 overflow-y-auto rounded-md border bg-popover shadow-md">
+              {loading && <li className="px-3 py-2 text-sm text-muted-foreground">A pesquisar…</li>}
               {!loading &&
                 matches.map((entry) => (
                   <li key={entry.code}>
@@ -119,17 +89,9 @@ export function CaePicker({ name, initialEntry }: CaePickerProps) {
                         setSelected(entry);
                         setOpen(false);
                       }}
-                      style={{
-                        width: "100%",
-                        textAlign: "left",
-                        padding: "0.4rem 0.5rem",
-                        background: "transparent",
-                        border: "none",
-                        cursor: "pointer",
-                        fontSize: "0.9rem",
-                      }}
+                      className="block w-full px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground"
                     >
-                      <code style={{ marginRight: "0.5rem" }}>{entry.code}</code>
+                      <code className="mr-2 font-mono">{entry.code}</code>
                       {entry.description}
                     </button>
                   </li>
@@ -137,9 +99,7 @@ export function CaePicker({ name, initialEntry }: CaePickerProps) {
             </ul>
           )}
           {open && query.trim() !== "" && !loading && matches.length === 0 && (
-            <p style={{ margin: 0, padding: "0.4rem 0", fontSize: "0.85rem", color: "#666" }}>
-              Nenhum resultado para "{query}".
-            </p>
+            <p className="text-xs text-muted-foreground">Nenhum resultado para "{query}".</p>
           )}
         </>
       )}

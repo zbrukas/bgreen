@@ -1,5 +1,7 @@
 import { RecordForm } from "@/app/_components/RecordForm";
 import { ReviewPanel } from "@/app/_components/ReviewPanel";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { fetchMe, fetchRecord, fetchTemplate } from "@/lib/api-client";
 import { getSignInUrl, withAuth } from "@workos-inc/authkit-nextjs";
 import Link from "next/link";
@@ -14,10 +16,18 @@ const statusLabel: Record<string, string> = {
   rejected: "Rejeitado",
 };
 
-const reviewCommentColor: Record<string, { bg: string; border: string; color: string }> = {
-  approved: { bg: "#e8f5e9", border: "#a5d6a7", color: "#1b5e20" },
-  changes_requested: { bg: "#fff3e0", border: "#ffcc80", color: "#bf6900" },
-  rejected: { bg: "#ffebee", border: "#ef9a9a", color: "#b00020" },
+const statusVariant: Record<string, NonNullable<BadgeProps["variant"]>> = {
+  draft: "outline",
+  submitted: "info",
+  approved: "success",
+  changes_requested: "warning",
+  rejected: "destructive",
+};
+
+const commentAlertVariant: Record<string, "success" | "warning" | "destructive"> = {
+  approved: "success",
+  changes_requested: "warning",
+  rejected: "destructive",
 };
 
 interface PageProps {
@@ -30,9 +40,12 @@ export default async function RecordDetailPage({ params }: PageProps) {
   if (!auth.user) {
     const signInUrl = await getSignInUrl();
     return (
-      <main style={{ padding: "2rem", fontFamily: "system-ui, sans-serif" }}>
+      <main className="mx-auto max-w-xl p-8">
         <p>
-          <a href={signInUrl}>Iniciar sessão</a> para ver o registo.
+          <a href={signInUrl} className="text-primary underline-offset-4 hover:underline">
+            Iniciar sessão
+          </a>{" "}
+          para ver o registo.
         </p>
       </main>
     );
@@ -41,9 +54,11 @@ export default async function RecordDetailPage({ params }: PageProps) {
   const [me, record] = await Promise.all([fetchMe(), fetchRecord(id)]);
   if (!record) {
     return (
-      <main style={{ padding: "2rem", fontFamily: "system-ui, sans-serif" }}>
-        <p style={{ marginBottom: "1rem" }}>
-          <Link href="/records">← Voltar</Link>
+      <main className="mx-auto max-w-3xl space-y-4 p-8">
+        <p>
+          <Link href="/records" className="text-sm text-muted-foreground hover:text-foreground">
+            ← Voltar
+          </Link>
         </p>
         <p>Registo não encontrado.</p>
       </main>
@@ -53,9 +68,11 @@ export default async function RecordDetailPage({ params }: PageProps) {
   const tpl = await fetchTemplate(record.templateId);
   if (!tpl) {
     return (
-      <main style={{ padding: "2rem", fontFamily: "system-ui, sans-serif" }}>
-        <p style={{ marginBottom: "1rem" }}>
-          <Link href="/records">← Voltar</Link>
+      <main className="mx-auto max-w-3xl space-y-4 p-8">
+        <p>
+          <Link href="/records" className="text-sm text-muted-foreground hover:text-foreground">
+            ← Voltar
+          </Link>
         </p>
         <p>Modelo associado não encontrado.</p>
       </main>
@@ -66,35 +83,30 @@ export default async function RecordDetailPage({ params }: PageProps) {
   const isOwner = record.submittedByUserId === me?.id;
   const editable = isOwner && (record.status === "draft" || record.status === "changes_requested");
   const canReview = isAdmin && record.status === "submitted";
-  const reviewStyle = reviewCommentColor[record.status];
+  const commentVariant = commentAlertVariant[record.status];
 
   return (
-    <main style={{ padding: "2rem", fontFamily: "system-ui, sans-serif", maxWidth: 760 }}>
-      <p style={{ marginBottom: "1rem" }}>
-        <Link href="/records">← Voltar</Link>
+    <main className="mx-auto max-w-3xl space-y-6 p-8">
+      <p>
+        <Link href="/records" className="text-sm text-muted-foreground hover:text-foreground">
+          ← Voltar
+        </Link>
       </p>
-      <h1 style={{ margin: "0 0 0.25rem" }}>{tpl.name}</h1>
-      <p style={{ margin: "0 0 1rem", color: "#666", fontSize: "0.9rem" }}>
-        Estado: <strong>{statusLabel[record.status] ?? record.status}</strong>
-      </p>
-      {tpl.description && <p style={{ margin: "0 0 1rem", color: "#555" }}>{tpl.description}</p>}
+      <div className="flex flex-wrap items-center gap-3">
+        <h1 className="text-2xl font-semibold tracking-tight">{tpl.name}</h1>
+        <Badge variant={statusVariant[record.status] ?? "outline"}>
+          {statusLabel[record.status] ?? record.status}
+        </Badge>
+      </div>
+      {tpl.description && <p className="text-sm text-muted-foreground">{tpl.description}</p>}
 
-      {record.reviewComment && reviewStyle && (
-        <aside
-          style={{
-            margin: "0 0 1rem",
-            padding: "0.75rem 1rem",
-            background: reviewStyle.bg,
-            border: `1px solid ${reviewStyle.border}`,
-            color: reviewStyle.color,
-            borderRadius: "0.25rem",
-            fontSize: "0.9rem",
-            whiteSpace: "pre-wrap",
-          }}
-        >
-          <strong>Comentário do revisor:</strong>
-          <div style={{ marginTop: "0.25rem" }}>{record.reviewComment}</div>
-        </aside>
+      {record.reviewComment && commentVariant && (
+        <Alert variant={commentVariant}>
+          <AlertTitle>Comentário do revisor</AlertTitle>
+          <AlertDescription className="whitespace-pre-wrap">
+            {record.reviewComment}
+          </AlertDescription>
+        </Alert>
       )}
 
       <RecordForm

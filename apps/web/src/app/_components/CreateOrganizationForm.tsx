@@ -1,6 +1,12 @@
 "use client";
 
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import type { PostalCodeLookupResult, ViesLookupResult } from "@/lib/api-client";
+import { cn } from "@/lib/utils";
 import { validateNif } from "@bgreen/pt-data";
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -64,8 +70,6 @@ export function CreateOrganizationForm() {
 
   const validNormalizedNif = nifFeedback?.kind === "ok" ? nifFeedback.normalized : null;
 
-  // Debounced VIES lookup whenever the NIF becomes valid. Auto-fills the
-  // name field only if the user hasn't typed into it.
   const nameTouchedRef = useRef(nameTouched);
   nameTouchedRef.current = nameTouched;
 
@@ -96,7 +100,6 @@ export function CreateOrganizationForm() {
   const nameWasAutoFilled =
     vies?.valid === true && vies.name !== null && name === vies.name && !nameTouched;
 
-  // Debounced postal-code lookup. Mirrors the VIES pattern.
   const addressTouchedRef = useRef(addressTouched);
   addressTouchedRef.current = addressTouched;
 
@@ -135,67 +138,60 @@ export function CreateOrganizationForm() {
     concelho === (postalLookup.concelho ?? "") &&
     distrito === (postalLookup.distrito ?? "");
 
-  // Auto-format postal code as user types: insert dash after 4 digits.
   function onPostalCodeChange(raw: string) {
     const digits = raw.replace(/\D/g, "").slice(0, 7);
     setPostalCode(digits.length > 4 ? `${digits.slice(0, 4)}-${digits.slice(4)}` : digits);
   }
 
   return (
-    <form action={formAction} style={{ display: "grid", gap: "1rem", maxWidth: 480 }}>
-      <h2 style={{ margin: 0 }}>Criar a sua organização</h2>
-      <p style={{ margin: 0, color: "#555" }}>
-        Indique o NIF — se a sua empresa estiver registada no VIES, preenchemos o nome
-        automaticamente.
-      </p>
+    <form action={formAction} className="max-w-lg space-y-4">
+      <div>
+        <h2 className="text-lg font-medium">Criar a sua organização</h2>
+        <p className="text-sm text-muted-foreground">
+          Indique o NIF — se a sua empresa estiver registada no VIES, preenchemos o nome
+          automaticamente.
+        </p>
+      </div>
 
-      <label style={{ display: "grid", gap: "0.25rem" }}>
-        <span>NIF</span>
-        <input
+      <div className="space-y-1.5">
+        <Label htmlFor="nif">NIF</Label>
+        <Input
+          id="nif"
           name="nif"
-          type="text"
           inputMode="numeric"
           autoComplete="off"
           maxLength={11}
           value={nif}
           onChange={(e) => setNif(e.target.value)}
-          style={{
-            padding: "0.5rem",
-            fontSize: "1rem",
-            borderColor:
-              nifFeedback?.kind === "ok"
-                ? "#1f7a3d"
-                : nifFeedback?.kind === "error"
-                  ? "#b00020"
-                  : undefined,
-            borderWidth: nifFeedback ? "2px" : undefined,
-            borderStyle: nifFeedback ? "solid" : undefined,
-          }}
+          className={cn(
+            nifFeedback?.kind === "ok" && "border-emerald-500",
+            nifFeedback?.kind === "error" && "border-destructive",
+          )}
         />
         {nifFeedback?.kind === "ok" && (
-          <span style={{ color: "#1f7a3d", fontSize: "0.85rem" }}>
+          <p className="text-xs text-emerald-700">
             ✓ NIF válido.
-            {viesLoading && <span style={{ color: "#777" }}> A consultar VIES…</span>}
+            {viesLoading && <span className="text-muted-foreground"> A consultar VIES…</span>}
             {!viesLoading && vies?.source === "unreachable" && (
-              <span style={{ color: "#a36400" }}> VIES indisponível — preencha manualmente.</span>
+              <span className="text-amber-700"> VIES indisponível — preencha manualmente.</span>
             )}
             {!viesLoading && vies?.valid === false && (
-              <span style={{ color: "#777" }}> Não registado no VIES.</span>
+              <span className="text-muted-foreground"> Não registado no VIES.</span>
             )}
-          </span>
+          </p>
         )}
         {nifFeedback?.kind === "error" && (
-          <span style={{ color: "#b00020", fontSize: "0.85rem" }}>
+          <p className="text-xs text-destructive">
             {nifReasonCopy[nifFeedback.reason] ?? "NIF inválido."}
-          </span>
+          </p>
         )}
-      </label>
+      </div>
 
-      <label style={{ display: "grid", gap: "0.25rem" }}>
-        <span>Nome</span>
-        <input
+      <div className="space-y-1.5">
+        <Label htmlFor="org-name">Nome</Label>
+        <Input
+          id="org-name"
           name="name"
-          type="text"
           required
           autoComplete="organization"
           maxLength={200}
@@ -204,110 +200,77 @@ export function CreateOrganizationForm() {
             setName(e.target.value);
             setNameTouched(true);
           }}
-          style={{
-            padding: "0.5rem",
-            fontSize: "1rem",
-            borderColor: nameWasAutoFilled ? "#1f7a3d" : undefined,
-            borderWidth: nameWasAutoFilled ? "2px" : undefined,
-            borderStyle: nameWasAutoFilled ? "solid" : undefined,
-          }}
+          className={cn(nameWasAutoFilled && "border-emerald-500")}
         />
         {nameWasAutoFilled && (
-          <span style={{ color: "#1f7a3d", fontSize: "0.85rem" }}>
+          <p className="text-xs text-emerald-700">
             ✓ Verificado via VIES — pode editar se necessário.
-          </span>
+          </p>
         )}
         {vies?.valid && vies.address && !nameTouched && (
-          <span style={{ color: "#666", fontSize: "0.8rem" }}>{vies.address}</span>
+          <p className="text-xs text-muted-foreground">{vies.address}</p>
         )}
-      </label>
+      </div>
 
       <CaePicker name="caeCode" />
 
-      <label style={{ display: "grid", gap: "0.25rem" }}>
-        <span>Forma jurídica</span>
-        <select name="legalForm" defaultValue="" style={{ padding: "0.5rem", fontSize: "1rem" }}>
+      <div className="space-y-1.5">
+        <Label htmlFor="legalForm">Forma jurídica</Label>
+        <Select id="legalForm" name="legalForm" defaultValue="">
           {legalFormOptions.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}
             </option>
           ))}
-        </select>
-      </label>
+        </Select>
+      </div>
 
-      <label style={{ display: "grid", gap: "0.25rem" }}>
-        <span>Dimensão</span>
-        <select
-          name="selfReportedSize"
-          defaultValue=""
-          style={{ padding: "0.5rem", fontSize: "1rem" }}
-        >
+      <div className="space-y-1.5">
+        <Label htmlFor="selfReportedSize">Dimensão</Label>
+        <Select id="selfReportedSize" name="selfReportedSize" defaultValue="">
           {sizeOptions.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}
             </option>
           ))}
-        </select>
-      </label>
+        </Select>
+      </div>
 
-      <fieldset
-        style={{
-          display: "grid",
-          gap: "0.75rem",
-          border: "1px solid #e0e0e0",
-          borderRadius: "0.25rem",
-          padding: "0.75rem 1rem",
-          margin: 0,
-        }}
-      >
-        <legend style={{ padding: "0 0.5rem", fontSize: "0.9rem", color: "#444" }}>
-          Endereço (opcional)
-        </legend>
+      <fieldset className="space-y-3 rounded-md border p-4">
+        <legend className="px-2 text-xs text-muted-foreground">Endereço (opcional)</legend>
 
-        <label style={{ display: "grid", gap: "0.25rem" }}>
-          <span>Código postal</span>
-          <input
+        <div className="space-y-1.5">
+          <Label htmlFor="postalCode">Código postal</Label>
+          <Input
+            id="postalCode"
             name="postalCode"
-            type="text"
             inputMode="numeric"
             autoComplete="postal-code"
             placeholder="0000-000"
             maxLength={8}
             value={postalCode}
             onChange={(e) => onPostalCodeChange(e.target.value)}
-            style={{
-              padding: "0.5rem",
-              fontSize: "1rem",
-              borderColor:
-                postalLookup?.found === true
-                  ? "#1f7a3d"
-                  : postalCode !== "" && !postalCodeValid
-                    ? "#b00020"
-                    : undefined,
-              borderWidth: postalLookup || (postalCode && !postalCodeValid) ? "2px" : undefined,
-              borderStyle: postalLookup || (postalCode && !postalCodeValid) ? "solid" : undefined,
-            }}
+            className={cn(
+              postalLookup?.found === true && "border-emerald-500",
+              postalCode !== "" && !postalCodeValid && "border-destructive",
+            )}
           />
-          {postalLoading && (
-            <span style={{ color: "#777", fontSize: "0.85rem" }}>A consultar morada…</span>
-          )}
+          {postalLoading && <p className="text-xs text-muted-foreground">A consultar morada…</p>}
           {!postalLoading && postalLookup?.found === false && (
-            <span style={{ color: "#a36400", fontSize: "0.85rem" }}>
+            <p className="text-xs text-amber-700">
               Código postal não encontrado — preencha manualmente.
-            </span>
+            </p>
           )}
           {!postalLoading && addressWasAutoFilled && (
-            <span style={{ color: "#1f7a3d", fontSize: "0.85rem" }}>
-              ✓ Morada preenchida automaticamente.
-            </span>
+            <p className="text-xs text-emerald-700">✓ Morada preenchida automaticamente.</p>
           )}
-        </label>
+        </div>
 
-        <label style={{ display: "grid", gap: "0.25rem" }}>
-          <span>Morada</span>
-          <input
+        <div className="space-y-1.5">
+          <Label htmlFor="addressLine">Morada</Label>
+          <Input
+            id="addressLine"
             name="addressLine"
-            type="text"
             autoComplete="street-address"
             placeholder="Rua, número, andar…"
             maxLength={200}
@@ -316,72 +279,64 @@ export function CreateOrganizationForm() {
               setAddressLine(e.target.value);
               setAddressTouched(true);
             }}
-            style={{ padding: "0.5rem", fontSize: "1rem" }}
           />
-        </label>
+        </div>
 
-        <div style={{ display: "grid", gap: "0.75rem", gridTemplateColumns: "1fr 1fr" }}>
-          <label style={{ display: "grid", gap: "0.25rem" }}>
-            <span>Freguesia</span>
-            <input
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="freguesia">Freguesia</Label>
+            <Input
+              id="freguesia"
               name="freguesia"
-              type="text"
               maxLength={100}
               value={freguesia}
               onChange={(e) => {
                 setFreguesia(e.target.value);
                 setAddressTouched(true);
               }}
-              style={{ padding: "0.5rem", fontSize: "1rem" }}
             />
-          </label>
-          <label style={{ display: "grid", gap: "0.25rem" }}>
-            <span>Concelho</span>
-            <input
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="concelho">Concelho</Label>
+            <Input
+              id="concelho"
               name="concelho"
-              type="text"
               maxLength={100}
               value={concelho}
               onChange={(e) => {
                 setConcelho(e.target.value);
                 setAddressTouched(true);
               }}
-              style={{ padding: "0.5rem", fontSize: "1rem" }}
             />
-          </label>
+          </div>
         </div>
 
-        <label style={{ display: "grid", gap: "0.25rem" }}>
-          <span>Distrito</span>
-          <input
+        <div className="space-y-1.5">
+          <Label htmlFor="distrito">Distrito</Label>
+          <Input
+            id="distrito"
             name="distrito"
-            type="text"
             maxLength={100}
             value={distrito}
             onChange={(e) => {
               setDistrito(e.target.value);
               setAddressTouched(true);
             }}
-            style={{ padding: "0.5rem", fontSize: "1rem" }}
           />
-        </label>
+        </div>
       </fieldset>
 
-      {state.error && (
-        <p style={{ color: "#b00020", margin: 0 }} role="alert">
-          {state.error}
-        </p>
-      )}
+      {state.error && <Alert variant="destructive">{state.error}</Alert>}
 
-      <button
+      <Button
         type="submit"
         disabled={
           isPending || nifFeedback?.kind === "error" || (postalCode !== "" && !postalCodeValid)
         }
-        style={{ padding: "0.75rem 1rem", fontSize: "1rem" }}
+        size="lg"
       >
         {isPending ? "A criar…" : "Criar organização"}
-      </button>
+      </Button>
     </form>
   );
 }

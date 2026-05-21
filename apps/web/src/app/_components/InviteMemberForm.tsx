@@ -1,5 +1,11 @@
 "use client";
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { useActionState } from "react";
 import { type CreateInviteFormState, createInviteAction } from "../actions";
 
@@ -20,85 +26,72 @@ export function InviteMemberForm({ organizationId }: InviteMemberFormProps) {
   const [state, formAction, isPending] = useActionState(actionWithOrg, initialState);
 
   return (
-    <div style={{ display: "grid", gap: "1.5rem", maxWidth: 480 }}>
-      <form action={formAction} style={{ display: "grid", gap: "1rem" }}>
-        <h2 style={{ margin: 0 }}>Convidar membro</h2>
-        <p style={{ margin: 0, color: "#555" }}>
-          O convidado tem de iniciar sessão com este email para aceitar.
-        </p>
+    <div className="max-w-lg space-y-6">
+      <form action={formAction} className="space-y-4">
+        <div>
+          <h2 className="text-lg font-medium">Convidar membro</h2>
+          <p className="text-sm text-muted-foreground">
+            O convidado tem de iniciar sessão com este email para aceitar.
+          </p>
+        </div>
 
-        <label style={{ display: "grid", gap: "0.25rem" }}>
-          <span>Email</span>
-          <input
+        <div className="space-y-1.5">
+          <Label htmlFor="invite-email">Email</Label>
+          <Input
+            id="invite-email"
             name="email"
             type="email"
             required
             autoComplete="email"
             maxLength={254}
-            style={{ padding: "0.5rem", fontSize: "1rem" }}
           />
-        </label>
+        </div>
 
-        <label style={{ display: "grid", gap: "0.25rem" }}>
-          <span>Papel</span>
-          <select name="role" defaultValue="member" style={{ padding: "0.5rem", fontSize: "1rem" }}>
+        <div className="space-y-1.5">
+          <Label htmlFor="invite-role">Papel</Label>
+          <Select id="invite-role" name="role" defaultValue="member">
             <option value="member">Membro</option>
             <option value="admin">Administrador</option>
-          </select>
-        </label>
+          </Select>
+        </div>
 
-        {state.error && (
-          <p style={{ color: "#b00020", margin: 0 }} role="alert">
-            {state.error}
-          </p>
-        )}
+        {state.error && <Alert variant="destructive">{state.error}</Alert>}
 
-        <button
-          type="submit"
-          disabled={isPending}
-          style={{ padding: "0.75rem 1rem", fontSize: "1rem" }}
-        >
+        <Button type="submit" disabled={isPending} size="lg">
           {isPending ? "A criar…" : "Criar convite"}
-        </button>
+        </Button>
       </form>
 
       {state.acceptUrl && (
-        <div
-          style={{
-            padding: "1rem",
-            border: "1px solid #cde",
-            background: "#f5fbff",
-            borderRadius: "0.25rem",
-            display: "grid",
-            gap: "0.5rem",
-          }}
-        >
-          <p style={{ margin: 0, fontWeight: 600 }}>Convite criado para {state.invitedEmail}.</p>
+        <Card>
+          <CardContent className="space-y-3 p-4">
+            <p className="font-medium">Convite criado para {state.invitedEmail}.</p>
 
-          {state.emailDelivered === true && (
-            <p style={{ margin: 0, color: "#1f7a3d", fontSize: "0.9rem" }}>✓ Email enviado.</p>
-          )}
-          {state.emailDelivered === false && (
-            <p style={{ margin: 0, color: "#a36400", fontSize: "0.9rem" }}>
-              ⚠ Email não foi enviado{state.emailReason ? ` (${state.emailReason})` : ""}. Partilhe
-              o link manualmente.
-            </p>
-          )}
+            {state.emailDelivered === true && (
+              <Alert variant="success">
+                <AlertDescription>✓ Email enviado.</AlertDescription>
+              </Alert>
+            )}
+            {state.emailDelivered === false && (
+              <Alert variant="warning">
+                <AlertTitle>Email não foi enviado</AlertTitle>
+                <AlertDescription>
+                  {state.emailReason ? `(${state.emailReason}). ` : ""}Partilhe o link manualmente.
+                </AlertDescription>
+              </Alert>
+            )}
 
-          <p style={{ margin: 0, fontSize: "0.9rem", color: "#444" }}>Link (validade: 7 dias):</p>
-          <input
-            type="text"
-            readOnly
-            value={state.acceptUrl}
-            onFocus={(e) => e.currentTarget.select()}
-            style={{
-              width: "100%",
-              padding: "0.5rem",
-              fontFamily: "monospace",
-              fontSize: "0.85rem",
-            }}
-          />
-        </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Link (validade: 7 dias)</Label>
+              <Input
+                readOnly
+                value={state.acceptUrl}
+                onFocus={(e) => e.currentTarget.select()}
+                className="font-mono text-xs"
+              />
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

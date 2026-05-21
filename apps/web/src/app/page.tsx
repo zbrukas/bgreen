@@ -1,3 +1,5 @@
+import { buttonVariants } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getActiveOrgId, setActiveOrgId } from "@/lib/active-org";
 import { fetchHealth, fetchMe, fetchMyOrganizations } from "@/lib/api-client";
 import { getSignInUrl, withAuth } from "@workos-inc/authkit-nextjs";
@@ -14,14 +16,16 @@ export default async function Home() {
   if (!auth.user) {
     const signInUrl = await getSignInUrl();
     return (
-      <main style={{ padding: "2rem", fontFamily: "system-ui, sans-serif", maxWidth: 720 }}>
-        <h1>bGreen</h1>
-        <p>Foundation (V1) + data layer (V2.1) + WorkOS sign-in (V2.2).</p>
-        <p>
-          API health: <strong>{healthLine}</strong>
+      <main className="mx-auto flex min-h-screen max-w-xl flex-col items-center justify-center gap-6 p-8">
+        <h1 className="text-4xl font-bold tracking-tight">bGreen</h1>
+        <p className="text-center text-muted-foreground">
+          Recolha de dados ESG, recomendações com IA, e relatórios prontos para o regulador.
         </p>
-        <p>
-          <a href={signInUrl}>Sign in</a>
+        <a href={signInUrl} className={buttonVariants({ size: "lg" })}>
+          Iniciar sessão
+        </a>
+        <p className="text-xs text-muted-foreground">
+          API: <span className="font-mono">{healthLine}</span>
         </p>
       </main>
     );
@@ -31,11 +35,14 @@ export default async function Home() {
 
   if (orgs.length === 0) {
     return (
-      <main style={{ padding: "2rem", fontFamily: "system-ui, sans-serif", maxWidth: 720 }}>
-        <h1>bGreen</h1>
-        <p>
-          Olá <strong>{auth.user.email}</strong>. Vamos criar a sua primeira organização.
-        </p>
+      <main className="mx-auto max-w-xl space-y-6 p-8">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">bGreen</h1>
+          <p className="text-muted-foreground">
+            Olá <strong className="text-foreground">{auth.user.email}</strong>. Vamos criar a sua
+            primeira organização.
+          </p>
+        </div>
         <CreateOrganizationForm />
       </main>
     );
@@ -61,15 +68,34 @@ export default async function Home() {
         activeOrganizationId={activeOrgId}
         activeOrganizationRole={me?.activeOrganizationRole ?? null}
       />
-      <main style={{ padding: "2rem", fontFamily: "system-ui, sans-serif", maxWidth: 720 }}>
-        <h1>{activeOrg ? activeOrg.name : "bGreen"}</h1>
-        <p>bGreen User row: {me ? `${me.id} — ${me.email}` : "sync failed"}</p>
-        <p>
-          You belong to {orgs.length} {orgs.length === 1 ? "organization" : "organizations"}.
-        </p>
-        <p>
-          API health: <strong>{healthLine}</strong>
-        </p>
+      <main className="mx-auto max-w-3xl space-y-6 p-8">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">
+            {activeOrg ? activeOrg.name : "bGreen"}
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {orgs.length === 1
+              ? "Pertence a 1 organização."
+              : `Pertence a ${orgs.length} organizações.`}
+          </p>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Estado do sistema</CardTitle>
+            <CardDescription>Diagnóstico rápido das ligações da plataforma.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-2 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Utilizador autenticado</span>
+              <span className="font-mono text-xs">{me ? `${me.email}` : "sync failed"}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">API</span>
+              <span className="font-mono text-xs">{healthLine}</span>
+            </div>
+          </CardContent>
+        </Card>
       </main>
     </>
   );

@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import type { MembershipRole } from "@bgreen/types";
 import Link from "next/link";
 import { signOutAction } from "../actions";
@@ -19,57 +20,44 @@ export function Header({
   const canInvite = activeOrganizationId !== null && activeOrganizationRole === "admin";
 
   return (
-    <header
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: "1rem",
-        padding: "0.75rem 1rem",
-        borderBottom: "1px solid #e5e5e5",
-        fontFamily: "system-ui, sans-serif",
-        flexWrap: "wrap",
-      }}
-    >
-      <strong style={{ fontSize: "1.1rem" }}>bGreen</strong>
-      <nav
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "1rem",
-          flexWrap: "wrap",
-        }}
-      >
+    <header className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 border-b bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+      <Link href="/" className="text-lg font-semibold tracking-tight text-foreground">
+        bGreen
+      </Link>
+      <nav className="flex flex-wrap items-center gap-3">
         {organizations.length >= 2 && (
           <OrganizationSwitcher
             organizations={organizations}
             activeOrganizationId={activeOrganizationId}
           />
         )}
-        <Link href="/records" style={{ fontSize: "0.9rem", textDecoration: "none" }}>
+        <Link href="/records" className="text-sm text-muted-foreground hover:text-foreground">
           Registos
         </Link>
-        <Link href="/templates" style={{ fontSize: "0.9rem", textDecoration: "none" }}>
+        <Link href="/templates" className="text-sm text-muted-foreground hover:text-foreground">
           Modelos
         </Link>
         {canInvite && activeOrganizationId && (
           <Link
             href={`/organizations/${activeOrganizationId}/invites/new`}
-            style={{ fontSize: "0.9rem", textDecoration: "none" }}
+            className="text-sm text-muted-foreground hover:text-foreground"
           >
             Convidar membro
           </Link>
         )}
         {organizations.length >= 1 && (
-          <Link href="/organizations/new" style={{ fontSize: "0.9rem", textDecoration: "none" }}>
+          <Link
+            href="/organizations/new"
+            className="text-sm text-muted-foreground hover:text-foreground"
+          >
             + Nova organização
           </Link>
         )}
-        <span style={{ fontSize: "0.9rem", color: "#555" }}>{userEmail}</span>
+        <span className="text-sm text-muted-foreground">{userEmail}</span>
         <form action={signOutAction}>
-          <button type="submit" style={{ padding: "0.35rem 0.75rem" }}>
+          <Button type="submit" variant="outline" size="sm">
             Sair
-          </button>
+          </Button>
         </form>
       </nav>
     </header>

@@ -17,20 +17,13 @@ export default async function NewInvitePage({ params }: PageProps) {
   const { orgId } = await params;
   const me = await fetchMe();
 
-  // Reject when the URL org doesn't match the user's active org, or when the
-  // active membership isn't admin. The api also enforces this; we mirror here
-  // for UX.
   if (!me || me.activeOrganizationId !== orgId || me.activeOrganizationRole !== "admin") {
     return (
-      <main
-        style={{
-          padding: "2rem",
-          fontFamily: "system-ui, sans-serif",
-          maxWidth: 720,
-        }}
-      >
-        <p style={{ marginBottom: "1.5rem" }}>
-          <Link href="/">← Voltar</Link>
+      <main className="mx-auto max-w-3xl space-y-4 p-8">
+        <p>
+          <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
+            ← Voltar
+          </Link>
         </p>
         <p>Apenas administradores da organização ativa podem convidar membros.</p>
       </main>
@@ -38,15 +31,11 @@ export default async function NewInvitePage({ params }: PageProps) {
   }
 
   return (
-    <main
-      style={{
-        padding: "2rem",
-        fontFamily: "system-ui, sans-serif",
-        maxWidth: 720,
-      }}
-    >
-      <p style={{ marginBottom: "1.5rem" }}>
-        <Link href="/">← Voltar</Link>
+    <main className="mx-auto max-w-3xl space-y-6 p-8">
+      <p>
+        <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
+          ← Voltar
+        </Link>
       </p>
       <InviteMemberForm organizationId={orgId} />
     </main>

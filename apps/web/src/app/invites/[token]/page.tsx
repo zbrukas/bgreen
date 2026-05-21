@@ -1,4 +1,6 @@
 import { acceptInviteAction } from "@/app/actions";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchInvitePreview } from "@/lib/api-client";
 import { getSignInUrl, withAuth } from "@workos-inc/authkit-nextjs";
 import Link from "next/link";
@@ -25,13 +27,15 @@ export default async function InviteAcceptPage({ params }: PageProps) {
   if (!auth.user) {
     const signInUrl = await getSignInUrl();
     return (
-      <main style={{ padding: "2rem", fontFamily: "system-ui, sans-serif", maxWidth: 720 }}>
-        <h1>Convite bGreen</h1>
-        <p>
+      <main className="mx-auto max-w-xl space-y-4 p-8">
+        <h1 className="text-2xl font-semibold tracking-tight">Convite bGreen</h1>
+        <p className="text-sm text-muted-foreground">
           Inicie sessão para ver o convite. O email da sua conta deve corresponder ao convidado.
         </p>
         <p>
-          <a href={signInUrl}>Iniciar sessão</a>
+          <a href={signInUrl} className="text-primary underline-offset-4 hover:underline">
+            Iniciar sessão
+          </a>
         </p>
       </main>
     );
@@ -41,38 +45,46 @@ export default async function InviteAcceptPage({ params }: PageProps) {
 
   if ("error" in preview) {
     return (
-      <main style={{ padding: "2rem", fontFamily: "system-ui, sans-serif", maxWidth: 720 }}>
-        <h1>Convite bGreen</h1>
+      <main className="mx-auto max-w-xl space-y-4 p-8">
+        <h1 className="text-2xl font-semibold tracking-tight">Convite bGreen</h1>
         <p>{errorCopy[preview.error] ?? `Erro: ${preview.error}`}</p>
         <p>
-          <Link href="/">Voltar à página inicial</Link>
+          <Link href="/" className="text-primary underline-offset-4 hover:underline">
+            Voltar à página inicial
+          </Link>
         </p>
       </main>
     );
   }
 
   return (
-    <main style={{ padding: "2rem", fontFamily: "system-ui, sans-serif", maxWidth: 720 }}>
-      <h1>Convite bGreen</h1>
-      <p>
-        <strong>{preview.inviterEmail}</strong> convidou-o(a) para se juntar a{" "}
-        <strong>{preview.organizationName}</strong> como{" "}
-        <strong>{preview.role === "admin" ? "administrador" : "membro"}</strong>.
-      </p>
-      <p style={{ color: "#555" }}>
-        O convite expira em{" "}
-        {new Date(preview.expiresAt).toLocaleString("pt-PT", {
-          dateStyle: "long",
-          timeStyle: "short",
-        })}
-        .
-      </p>
-      <form action={acceptInviteAction}>
-        <input type="hidden" name="token" value={token} />
-        <button type="submit" style={{ padding: "0.75rem 1rem", fontSize: "1rem" }}>
-          Aceitar convite
-        </button>
-      </form>
+    <main className="mx-auto max-w-xl space-y-6 p-8">
+      <h1 className="text-2xl font-semibold tracking-tight">Convite bGreen</h1>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{preview.organizationName}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          <p>
+            <strong>{preview.inviterEmail}</strong> convidou-o(a) para se juntar como{" "}
+            <strong>{preview.role === "admin" ? "administrador" : "membro"}</strong>.
+          </p>
+          <p className="text-muted-foreground">
+            O convite expira em{" "}
+            {new Date(preview.expiresAt).toLocaleString("pt-PT", {
+              dateStyle: "long",
+              timeStyle: "short",
+            })}
+            .
+          </p>
+          <form action={acceptInviteAction}>
+            <input type="hidden" name="token" value={token} />
+            <Button type="submit" size="lg">
+              Aceitar convite
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </main>
   );
 }

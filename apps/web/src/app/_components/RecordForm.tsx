@@ -1,5 +1,10 @@
 "use client";
 
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import type { FormError } from "@bgreen/form-engine";
 import { evaluateExpression, parseExpression, validateFormValues } from "@bgreen/form-engine";
 import type { Field, LeafField, RecordTemplate } from "@bgreen/types";
@@ -158,25 +163,11 @@ export function RecordForm({
         e.preventDefault();
         submitWith("submit");
       }}
-      style={{ display: "grid", gap: "1rem", maxWidth: 720, fontFamily: "system-ui, sans-serif" }}
+      className="space-y-4"
     >
       {template.formSchema.rows.map((row) => (
-        <fieldset
-          key={row.id}
-          style={{
-            border: "1px solid #cfd8dc",
-            borderRadius: "0.25rem",
-            padding: "0.75rem 1rem",
-            display: "grid",
-            gap: "0.75rem",
-            margin: 0,
-          }}
-        >
-          {row.label && (
-            <legend style={{ padding: "0 0.5rem", color: "#444", fontSize: "0.9rem" }}>
-              {row.label}
-            </legend>
-          )}
+        <fieldset key={row.id} className="space-y-3 rounded-lg border bg-card p-4">
+          {row.label && <legend className="px-2 text-xs text-muted-foreground">{row.label}</legend>}
           {row.fields.map((field) => (
             <FieldInput
               key={field.id}
@@ -195,35 +186,20 @@ export function RecordForm({
         </fieldset>
       ))}
 
-      {serverError && (
-        <p style={{ margin: 0, color: "#b00020" }} role="alert">
-          {serverError}
-        </p>
-      )}
+      {serverError && <Alert variant="destructive">{serverError}</Alert>}
 
-      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-        <button
+      <div className="flex flex-wrap gap-2">
+        <Button
           type="button"
+          variant="outline"
           onClick={() => submitWith("save_draft")}
           disabled={draftDisabled}
-          style={{ padding: "0.6rem 1rem", fontSize: "1rem" }}
         >
           {isPending ? "A guardar…" : "Guardar rascunho"}
-        </button>
-        <button
-          type="submit"
-          disabled={submitDisabled}
-          style={{
-            padding: "0.6rem 1rem",
-            fontSize: "1rem",
-            background: "#1f7a3d",
-            color: "white",
-            border: "none",
-            borderRadius: "0.25rem",
-          }}
-        >
+        </Button>
+        <Button type="submit" disabled={submitDisabled}>
           {isPending ? "A submeter…" : "Submeter"}
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -259,19 +235,19 @@ function FieldInput({
   const errors = errorsByPath.get(path) ?? [];
 
   return (
-    <div style={{ display: "grid", gap: "0.3rem" }}>
-      <label htmlFor={path} style={{ display: "grid", gap: "0.25rem" }}>
-        <span style={{ fontSize: "0.95rem" }}>
+    <div className="space-y-1.5">
+      <label htmlFor={path} className="block space-y-1">
+        <span className="text-sm">
           {field.label}
           {field.required && field.kind !== "repeating" ? (
-            <span style={{ color: "#b00020" }}> *</span>
+            <span className="text-destructive"> *</span>
           ) : null}
           {field.kind === "number" && field.unit && (
-            <span style={{ color: "#666", fontSize: "0.85rem" }}> ({field.unit})</span>
+            <span className="text-xs text-muted-foreground"> ({field.unit})</span>
           )}
         </span>
         {field.description && (
-          <span style={{ fontSize: "0.8rem", color: "#555" }}>{field.description}</span>
+          <span className="block text-xs text-muted-foreground">{field.description}</span>
         )}
         <FieldControl
           field={field}
@@ -287,7 +263,7 @@ function FieldInput({
         />
       </label>
       {errors.map((e) => (
-        <p key={e.uiKey} style={{ margin: 0, color: "#b00020", fontSize: "0.85rem" }} role="alert">
+        <p key={e.uiKey} className="text-xs text-destructive" role="alert">
           {e.message}
         </p>
       ))}
@@ -323,45 +299,39 @@ function FieldControl({
   switch (field.kind) {
     case "text":
       return (
-        <input
+        <Input
           id={path}
-          type="text"
           value={typeof value === "string" ? value : ""}
           maxLength={field.maxLength}
           onChange={(e) => onChange(e.target.value)}
-          style={{ padding: "0.4rem", fontSize: "0.95rem" }}
         />
       );
     case "number":
       return (
-        <input
+        <Input
           id={path}
-          type="text"
           inputMode="decimal"
           value={value === undefined || value === null ? "" : String(value)}
           onChange={(e) => onChange(e.target.value)}
-          style={{ padding: "0.4rem", fontSize: "0.95rem" }}
         />
       );
     case "date":
       return (
-        <input
+        <Input
           id={path}
           type="date"
           value={typeof value === "string" ? value : ""}
           min={field.min}
           max={field.max}
           onChange={(e) => onChange(e.target.value)}
-          style={{ padding: "0.4rem", fontSize: "0.95rem" }}
         />
       );
     case "select":
       return (
-        <select
+        <Select
           id={path}
           value={typeof value === "string" ? value : ""}
           onChange={(e) => onChange(e.target.value)}
-          style={{ padding: "0.4rem", fontSize: "0.95rem" }}
         >
           <option value="">— escolha —</option>
           {field.options.map((opt) => (
@@ -369,22 +339,14 @@ function FieldControl({
               {opt.label}
             </option>
           ))}
-        </select>
+        </Select>
       );
     case "multi_select": {
       const selected = new Set(Array.isArray(value) ? (value as string[]) : []);
       return (
-        <div style={{ display: "grid", gap: "0.2rem" }}>
+        <div className="space-y-1.5">
           {field.options.map((opt) => (
-            <label
-              key={opt.value}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.4rem",
-                fontSize: "0.9rem",
-              }}
-            >
+            <label key={opt.value} className="inline-flex w-full items-center gap-2 text-sm">
               <input
                 type="checkbox"
                 checked={selected.has(opt.value)}
@@ -394,6 +356,7 @@ function FieldControl({
                   else next.delete(opt.value);
                   onChange(Array.from(next));
                 }}
+                className="h-4 w-4 rounded border-input text-primary focus:ring-ring"
               />
               {opt.label}
             </label>
@@ -406,15 +369,10 @@ function FieldControl({
       return (
         <output
           id={path}
-          style={{
-            padding: "0.4rem 0.6rem",
-            fontSize: "0.95rem",
-            background: "#f5f5f5",
-            border: "1px solid #e0e0e0",
-            borderRadius: "0.25rem",
-            color: display.kind === "value" ? "#1f7a3d" : "#888",
-            fontFamily: "monospace",
-          }}
+          className={cn(
+            "block rounded-md border bg-muted px-3 py-2 font-mono text-sm",
+            display.kind === "value" ? "text-primary" : "text-muted-foreground",
+          )}
         >
           {display.kind === "value"
             ? `${formatNumber(display.value)}${field.unit ? ` ${field.unit}` : ""}`
@@ -428,7 +386,7 @@ function FieldControl({
       const rows = Array.isArray(value) ? (value as FormValues[]) : [];
       const keys = rowKeys ?? [];
       return (
-        <div style={{ display: "grid", gap: "0.5rem" }}>
+        <div className="space-y-2">
           {rows.map((row, idx) => (
             <RepeatingRow
               key={keys[idx] ?? `${path}-fallback-${idx}`}
@@ -442,13 +400,9 @@ function FieldControl({
             />
           ))}
           {(field.maxRows === undefined || rows.length < field.maxRows) && (
-            <button
-              type="button"
-              onClick={onAddRow}
-              style={{ justifySelf: "start", padding: "0.35rem 0.7rem", fontSize: "0.85rem" }}
-            >
+            <Button type="button" variant="outline" size="sm" onClick={onAddRow}>
               + Adicionar {field.rowLabel.toLowerCase()}
-            </button>
+            </Button>
           )}
         </div>
       );
@@ -476,18 +430,8 @@ function RepeatingRow({
   onRemove,
 }: RepeatingRowProps) {
   return (
-    <fieldset
-      style={{
-        border: "1px solid #b0bec5",
-        borderRadius: "0.25rem",
-        padding: "0.5rem 0.75rem",
-        display: "grid",
-        gap: "0.5rem",
-        margin: 0,
-        background: "#f5f8fa",
-      }}
-    >
-      <legend style={{ padding: "0 0.4rem", color: "#444", fontSize: "0.85rem" }}>
+    <fieldset className="space-y-2 rounded-md border bg-muted/40 p-3">
+      <legend className="px-1 text-xs text-muted-foreground">
         {field.rowLabel} {idx + 1}
       </legend>
       {field.fields.map((sub) => (
@@ -501,13 +445,11 @@ function RepeatingRow({
           onChange={(v) => onSubChange(sub.id, v)}
         />
       ))}
-      <button
-        type="button"
-        onClick={onRemove}
-        style={{ justifySelf: "end", padding: "0.25rem 0.5rem", fontSize: "0.8rem" }}
-      >
-        Remover linha
-      </button>
+      <div className="flex justify-end">
+        <Button type="button" variant="ghost" size="sm" onClick={onRemove}>
+          Remover linha
+        </Button>
+      </div>
     </fieldset>
   );
 }
@@ -522,23 +464,16 @@ function ReadOnlyView({
   status: string;
 }) {
   return (
-    <div
-      style={{
-        display: "grid",
-        gap: "0.75rem",
-        fontFamily: "system-ui, sans-serif",
-        maxWidth: 720,
-      }}
-    >
-      <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
-        Estado: {statusLabel[status] ?? status}
-      </p>
+    <div className="space-y-3">
+      <p className="text-xs text-muted-foreground">Estado: {statusLabel[status] ?? status}</p>
       {template.formSchema.rows.map((row) => (
-        <section key={row.id} style={{ borderTop: "1px solid #eee", paddingTop: "0.5rem" }}>
-          {row.label && <h3 style={{ margin: "0 0 0.5rem", fontSize: "1rem" }}>{row.label}</h3>}
-          {row.fields.map((f) => (
-            <ReadOnlyField key={f.id} field={f} value={values[f.id]} />
-          ))}
+        <section key={row.id} className="space-y-2 border-t pt-3 first:border-t-0 first:pt-0">
+          {row.label && <h3 className="text-sm font-medium">{row.label}</h3>}
+          <dl className="space-y-1.5">
+            {row.fields.map((f) => (
+              <ReadOnlyField key={f.id} field={f} value={values[f.id]} />
+            ))}
+          </dl>
         </section>
       ))}
     </div>
@@ -547,9 +482,9 @@ function ReadOnlyView({
 
 function ReadOnlyField({ field, value }: { field: Field | LeafField; value: unknown }) {
   return (
-    <div style={{ marginBottom: "0.4rem" }}>
-      <strong style={{ fontSize: "0.9rem" }}>{field.label}: </strong>
-      <span style={{ fontSize: "0.9rem", color: "#333" }}>{renderValue(field, value)}</span>
+    <div className="flex flex-wrap items-baseline gap-2 text-sm">
+      <dt className="font-medium">{field.label}:</dt>
+      <dd className="text-muted-foreground">{renderValue(field, value)}</dd>
     </div>
   );
 }

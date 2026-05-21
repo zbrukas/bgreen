@@ -1,5 +1,10 @@
 "use client";
 
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { type ReviewRecordActionResult, reviewRecordAction } from "../actions";
@@ -37,85 +42,65 @@ export function ReviewPanel({ recordId }: { recordId: string }) {
   }
 
   return (
-    <form
-      onSubmit={handle}
-      style={{
-        marginTop: "1.5rem",
-        padding: "1rem",
-        border: "1px solid #cfd8dc",
-        borderRadius: "0.25rem",
-        background: "#f9fbfc",
-        display: "grid",
-        gap: "0.75rem",
-        fontFamily: "system-ui, sans-serif",
-      }}
-    >
-      <h2 style={{ margin: 0, fontSize: "1.05rem" }}>Decisão de revisão</h2>
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Decisão de revisão</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handle} className="space-y-3">
+          <div className="space-y-1.5">
+            {(
+              [
+                { value: "approve", label: "Aprovar" },
+                { value: "request_changes", label: "Pedir alterações" },
+                { value: "reject", label: "Rejeitar" },
+              ] satisfies Array<{ value: Decision; label: string }>
+            ).map((opt) => (
+              <label key={opt.value} className="flex items-center gap-2 text-sm">
+                <input
+                  type="radio"
+                  name="decision"
+                  value={opt.value}
+                  checked={decision === opt.value}
+                  onChange={() => setDecision(opt.value)}
+                  className="h-4 w-4 border-input text-primary focus:ring-ring"
+                />
+                {opt.label}
+              </label>
+            ))}
+          </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-        {(
-          [
-            { value: "approve", label: "Aprovar" },
-            { value: "request_changes", label: "Pedir alterações" },
-            { value: "reject", label: "Rejeitar" },
-          ] satisfies Array<{ value: Decision; label: string }>
-        ).map((opt) => (
-          <label
-            key={opt.value}
-            style={{ display: "inline-flex", gap: "0.5rem", fontSize: "0.95rem" }}
-          >
-            <input
-              type="radio"
-              name="decision"
-              value={opt.value}
-              checked={decision === opt.value}
-              onChange={() => setDecision(opt.value)}
+          <div className="space-y-1.5">
+            <Label htmlFor="review-comment">
+              Comentário
+              {commentRequired ? (
+                <span className="text-destructive"> *</span>
+              ) : (
+                <span className="text-muted-foreground"> (opcional)</span>
+              )}
+            </Label>
+            <Textarea
+              id="review-comment"
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              rows={3}
+              maxLength={2000}
+              placeholder={
+                decision === "approve"
+                  ? "Notas para o submetedor (opcional)"
+                  : "Explique o que precisa de ser ajustado"
+              }
             />
-            {opt.label}
-          </label>
-        ))}
-      </div>
+          </div>
 
-      <label style={{ display: "grid", gap: "0.25rem" }}>
-        <span style={{ fontSize: "0.9rem" }}>
-          Comentário{commentRequired ? <span style={{ color: "#b00020" }}> *</span> : " (opcional)"}
-        </span>
-        <textarea
-          value={comment}
-          onChange={(e) => setComment(e.target.value)}
-          rows={3}
-          maxLength={2000}
-          placeholder={
-            decision === "approve"
-              ? "Notas para o submetedor (opcional)"
-              : "Explique o que precisa de ser ajustado"
-          }
-          style={{ padding: "0.5rem", fontSize: "0.95rem", fontFamily: "inherit" }}
-        />
-      </label>
+          {error && <Alert variant="destructive">{error}</Alert>}
 
-      {error && (
-        <p style={{ margin: 0, color: "#b00020", fontSize: "0.9rem" }} role="alert">
-          {error}
-        </p>
-      )}
-
-      <button
-        type="submit"
-        disabled={isPending}
-        style={{
-          justifySelf: "start",
-          padding: "0.5rem 1rem",
-          fontSize: "0.95rem",
-          background: "#1f7a3d",
-          color: "white",
-          border: "none",
-          borderRadius: "0.25rem",
-        }}
-      >
-        {isPending ? "A registar…" : "Registar decisão"}
-      </button>
-    </form>
+          <Button type="submit" disabled={isPending}>
+            {isPending ? "A registar…" : "Registar decisão"}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 }
 

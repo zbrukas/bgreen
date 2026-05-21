@@ -12,9 +12,11 @@ export default async function NewOrganizationPage() {
   }
 
   return (
-    <main style={{ padding: "2rem", fontFamily: "system-ui, sans-serif", maxWidth: 720 }}>
-      <p style={{ marginBottom: "1.5rem" }}>
-        <Link href="/">← Voltar</Link>
+    <main className="mx-auto max-w-3xl space-y-6 p-8">
+      <p>
+        <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
+          ← Voltar
+        </Link>
       </p>
       <CreateOrganizationForm />
     </main>
