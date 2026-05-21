@@ -1,5 +1,10 @@
+import type { FgaClient } from "@bgreen/auth";
 import type { CentralServicesRole, User, UserType } from "@bgreen/types";
 import type { CentralServicesDomainsRepository } from "../infrastructure/central-services-domains-repository.js";
+
+// Singleton CS workspace id (mirrors apps/api/src/auth-helpers.ts).
+// Kept duplicated here to avoid an import cycle through services.ts.
+const CS_WORKSPACE_ID = "00000000-0000-0000-0000-000000000000";
 
 export interface SyncUserInput {
   workosUserId: string;
@@ -26,17 +31,18 @@ export class UserService {
   constructor(
     private readonly repo: UserRepository,
     private readonly csDomains: CentralServicesDomainsRepository,
+    private readonly fga: FgaClient,
   ) {}
 
   // Called by the auth middleware on every WorkOS-validated request.
   // On first sight of a workosUserId we classify the new user by
   // matching the email against (1) GLOBAL_ADMIN_EMAIL and (2) the
   // central_services_domains table; otherwise they become an org user.
+  // For CS users we also seed the matching FGA warrant so subsequent
+  // privileged routes can resolve via can().
   async syncFromWorkos(input: SyncUserInput): Promise<User> {
     const existing = await this.repo.findByWorkosUserId(input.workosUserId);
     if (existing) {
-      // Pass-through update — repo ignores the classification fields on
-      // conflict.
       return this.repo.upsertFromWorkos({
         ...input,
         userType: existing.userType,
@@ -44,7 +50,30 @@ export class UserService {
       });
     }
     const classified = await this.classifyByEmail(input.email);
-    return this.repo.upsertFromWorkos({ ...input, ...classified });
+    const created = await this.repo.upsertFromWorkos({ ...input, ...classified });
+
+    if (classified.userType === "central_services" && classified.centralServicesRole !== null) {
+      // Mirror the population field as an FGA warrant on the CS workspace
+      // so can() resolves correctly for subsequent privileged calls.
+      try {
+        await this.fga.writeWarrant({
+          resource: {
+            resourceType: "central_services_workspace",
+            resourceId: CS_WORKSPACE_ID,
+          },
+          relation: classified.centralServicesRole,
+          subject: { resourceType: "user", resourceId: created.id },
+        });
+      } catch (err) {
+        // Don't fail user sync if FGA hiccups — log and continue. The
+        // global-admin boot seed retries on next restart, and admins
+        // can run `pnpm --filter @bgreen/api seed-fga` manually.
+        console.warn(
+          `userService.syncFromWorkos: failed to write FGA warrant for ${created.email} — ${(err as Error).message}`,
+        );
+      }
+    }
+    return created;
   }
 
   async getByWorkosUserId(workosUserId: string): Promise<User | null> {

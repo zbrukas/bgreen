@@ -33,7 +33,11 @@ export const repositories = {
 
 export const fgaClient = getFgaClient();
 
-export const userService = new UserService(repositories.users, repositories.centralServicesDomains);
+export const userService = new UserService(
+  repositories.users,
+  repositories.centralServicesDomains,
+  fgaClient,
+);
 
 export const auditService = new AuditService(repositories.audit);
 

@@ -1,7 +1,7 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
-import { canOrgRelation, requireOrgRelation } from "../../../auth-helpers.js";
+import { canCsWrite, canOrgRelation } from "../../../auth-helpers.js";
 import type { AppEnv } from "../../../context.js";
 import { recordService } from "../../../services.js";
 
@@ -78,7 +78,11 @@ export const recordsRoutes = new Hono<AppEnv>()
   .post("/:id/review", zValidator("json", reviewInput), async (c) => {
     const orgId = c.var.organizationId;
     if (!orgId) return c.json({ error: "no_active_org" }, 400);
-    await requireOrgRelation(c.var.user.id, orgId, "org_admin");
+    // V5.4: review responsibility lives on central services, not on org
+    // admins. Any CS admin or maintainer can act as the reviewer.
+    if (!(await canCsWrite(c.var.user.id))) {
+      return c.json({ error: "central_services_required" }, 403);
+    }
     const input = c.req.valid("json");
     const result = await recordService.review({
       organizationId: orgId,
