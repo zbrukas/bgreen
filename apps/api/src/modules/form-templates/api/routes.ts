@@ -61,6 +61,7 @@ export const recordTemplatesRoutes = new Hono<AppEnv>()
       orgId,
       c.req.param("id"),
       c.req.valid("json"),
+      c.var.user.id,
     );
     if (!updated) return c.json({ error: "not_found" }, 404);
     return c.json(updated);
@@ -71,7 +72,7 @@ export const recordTemplatesRoutes = new Hono<AppEnv>()
     if (c.var.membershipRole !== "admin") {
       return c.json({ error: "admin_required" }, 403);
     }
-    const updated = await recordTemplateService.publish(orgId, c.req.param("id"));
+    const updated = await recordTemplateService.publish(orgId, c.req.param("id"), c.var.user.id);
     if (!updated) return c.json({ error: "not_found" }, 404);
     return c.json(updated);
   })
@@ -81,7 +82,7 @@ export const recordTemplatesRoutes = new Hono<AppEnv>()
     if (c.var.membershipRole !== "admin") {
       return c.json({ error: "admin_required" }, 403);
     }
-    const updated = await recordTemplateService.archive(orgId, c.req.param("id"));
+    const updated = await recordTemplateService.archive(orgId, c.req.param("id"), c.var.user.id);
     if (!updated) return c.json({ error: "not_found" }, 404);
     return c.json(updated);
   });

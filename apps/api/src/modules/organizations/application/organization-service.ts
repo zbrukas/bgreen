@@ -1,4 +1,6 @@
 import type { OrganizationSize } from "@bgreen/types";
+import type { AuditService } from "../../audit/module.js";
+import { buildEntityDiff } from "../../audit/module.js";
 import type { LegalForm } from "../domain/legal-form.js";
 import type { MembershipRole, OrganizationMembership } from "../domain/organization-membership.js";
 import type { Organization } from "../domain/organization.js";
@@ -39,6 +41,7 @@ export class OrganizationService {
   constructor(
     private readonly orgs: OrganizationRepository,
     private readonly memberships: MembershipRepository,
+    private readonly audit: AuditService,
   ) {}
 
   async createWithOwner(
@@ -49,6 +52,14 @@ export class OrganizationService {
       userId: input.ownerUserId,
       organizationId: organization.id,
       role: "admin",
+    });
+    await this.audit.record({
+      actorUserId: input.ownerUserId,
+      organizationId: organization.id,
+      entityKind: "organization",
+      entityId: organization.id,
+      action: "organization.created",
+      payload: buildEntityDiff(null, organization as unknown as Record<string, unknown>),
     });
     return { organization, membership };
   }

@@ -15,7 +15,11 @@ import { getActiveOrgId } from "./active-org";
 
 const apiBaseUrl = process.env.API_URL ?? "http://localhost:8787";
 
-export const api = hc<AppType>(apiBaseUrl);
+// Annotate the client so the type is named through `AppType` rather than
+// being inlined. Without this TS would try to embed type references to
+// internal modules in @bgreen/api (like ./modules/audit) which it can't
+// write portably from outside the package.
+export const api: ReturnType<typeof hc<AppType>> = hc<AppType>(apiBaseUrl);
 
 async function authedHeaders(): Promise<Record<string, string>> {
   const auth = await withAuth();
@@ -496,5 +500,44 @@ export async function updateRecord(input: {
     return { ok: false, error: body.error ?? "request_failed", fieldErrors: body.errors };
   } catch {
     return { ok: false, error: "network_error" };
+  }
+}
+
+// ---------- Audit ----------
+
+export type AuditEntityKind =
+  | "record"
+  | "record_template"
+  | "organization"
+  | "organization_invite"
+  | "workflow_instance";
+
+export interface AuditEvent {
+  id: string;
+  occurredAt: string;
+  actorUserId: string | null;
+  organizationId: string;
+  entityKind: AuditEntityKind;
+  entityId: string;
+  action: string;
+  payload: unknown;
+  correlationId: string | null;
+}
+
+export async function fetchAuditTrail(
+  entityKind: AuditEntityKind,
+  entityId: string,
+): Promise<AuditEvent[]> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return [];
+    const res = await api.audit[":entityKind"][":entityId"].$get(
+      { param: { entityKind, entityId } },
+      { headers },
+    );
+    if (!res.ok) return [];
+    return (await res.json()) as AuditEvent[];
+  } catch {
+    return [];
   }
 }

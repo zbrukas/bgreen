@@ -1,6 +1,7 @@
 import type { FormError } from "@bgreen/form-engine";
 import { validateFormValues } from "@bgreen/form-engine";
 import type { Record, RecordStatus, RecordValues } from "@bgreen/types";
+import type { AuditService } from "../../audit/module.js";
 import type { RecordTemplateRepository } from "../../form-templates/application/record-template-service.js";
 
 export interface CreateRecordInput {
@@ -89,6 +90,7 @@ export class RecordService {
   constructor(
     private readonly records: RecordRepository,
     private readonly templates: RecordTemplateRepository,
+    private readonly audit: AuditService,
   ) {}
 
   async submit(input: CreateRecordInput): Promise<SubmitResult> {
@@ -112,6 +114,14 @@ export class RecordService {
       values: validated.values,
       submittedAt: input.asDraft ? null : new Date(),
       submittedByUserId: input.submitterUserId,
+    });
+    await this.audit.record({
+      actorUserId: input.submitterUserId,
+      organizationId: input.organizationId,
+      entityKind: "record",
+      entityId: record.id,
+      action: input.asDraft ? "record.draft_created" : "record.submitted",
+      payload: { templateId: record.templateId, status: record.status },
     });
     return { ok: true, record };
   }
@@ -155,6 +165,19 @@ export class RecordService {
       submittedAt,
     });
     if (!record) return { ok: false, code: "record_not_found" };
+    await this.audit.record({
+      actorUserId: input.actorUserId,
+      organizationId: input.organizationId,
+      entityKind: "record",
+      entityId: record.id,
+      action:
+        input.action === "submit"
+          ? existing.status === "changes_requested"
+            ? "record.resubmitted"
+            : "record.submitted"
+          : "record.draft_updated",
+      payload: { fromStatus: existing.status, toStatus: record.status },
+    });
     return { ok: true, record };
   }
 
@@ -185,6 +208,19 @@ export class RecordService {
       reviewedByUserId: input.reviewerUserId,
     });
     if (!record) return { ok: false, code: "record_not_found" };
+    await this.audit.record({
+      actorUserId: input.reviewerUserId,
+      organizationId: input.organizationId,
+      entityKind: "record",
+      entityId: record.id,
+      action: `record.${input.decision}`,
+      payload: {
+        decision: input.decision,
+        fromStatus: existing.status,
+        toStatus: record.status,
+        comment: trimmed === "" ? null : trimmed,
+      },
+    });
     return { ok: true, record };
   }
 

@@ -1,4 +1,5 @@
 export * from "./_schema_version";
+export * from "./audit-log";
 export * from "./legal-form";
 export * from "./organization-invites";
 export * from "./organization-memberships";

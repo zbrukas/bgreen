@@ -50,6 +50,13 @@
       "when": 1779295165141,
       "tag": "0006_absent_morlun",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1779372397317,
+      "tag": "0007_acoustic_silver_samurai",
+      "breakpoints": true
     }
   ]
 }

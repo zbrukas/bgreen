@@ -1,3 +1,4 @@
+import { AuditTrail } from "@/app/_components/AuditTrail";
 import { RecordForm } from "@/app/_components/RecordForm";
 import { ReviewPanel } from "@/app/_components/ReviewPanel";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -118,6 +119,8 @@ export default async function RecordDetailPage({ params }: PageProps) {
       />
 
       {canReview && <ReviewPanel recordId={record.id} />}
+
+      {isAdmin && <AuditTrail entityKind="record" entityId={record.id} />}
     </main>
   );
 }

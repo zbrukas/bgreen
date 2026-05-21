@@ -1,4 +1,5 @@
 import { HttpViesClient } from "@bgreen/pt-data";
+import { AuditService, DrizzleAuditRepository } from "./modules/audit/module.js";
 import {
   DrizzleRecordTemplateRepository,
   RecordTemplateService,
@@ -22,13 +23,17 @@ export const repositories = {
   invites: new DrizzleInviteRepository(),
   recordTemplates: new DrizzleRecordTemplateRepository(),
   records: new DrizzleRecordRepository(),
+  audit: new DrizzleAuditRepository(),
 };
 
 export const userService = new UserService(repositories.users);
 
+export const auditService = new AuditService(repositories.audit);
+
 export const organizationService = new OrganizationService(
   repositories.organizations,
   repositories.memberships,
+  auditService,
 );
 
 export const inviteService = new InviteService(
@@ -36,10 +41,18 @@ export const inviteService = new InviteService(
   repositories.memberships,
   repositories.organizations,
   repositories.users,
+  auditService,
 );
 
-export const recordTemplateService = new RecordTemplateService(repositories.recordTemplates);
+export const recordTemplateService = new RecordTemplateService(
+  repositories.recordTemplates,
+  auditService,
+);
 
-export const recordService = new RecordService(repositories.records, repositories.recordTemplates);
+export const recordService = new RecordService(
+  repositories.records,
+  repositories.recordTemplates,
+  auditService,
+);
 
 export const viesClient = new HttpViesClient({ timeoutMs: 4000 });

@@ -1,3 +1,4 @@
+import type { AuditService } from "../../audit/module.js";
 import type {
   FormSchema,
   RecordTemplate,
@@ -35,10 +36,22 @@ export interface RecordTemplateRepository {
 }
 
 export class RecordTemplateService {
-  constructor(private readonly repo: RecordTemplateRepository) {}
+  constructor(
+    private readonly repo: RecordTemplateRepository,
+    private readonly audit: AuditService,
+  ) {}
 
-  create(input: CreateRecordTemplateInput): Promise<RecordTemplate> {
-    return this.repo.create(input);
+  async create(input: CreateRecordTemplateInput): Promise<RecordTemplate> {
+    const template = await this.repo.create(input);
+    await this.audit.record({
+      actorUserId: input.createdByUserId,
+      organizationId: input.organizationId,
+      entityKind: "record_template",
+      entityId: template.id,
+      action: "template.created",
+      payload: { name: template.name, status: template.status },
+    });
+    return template;
   }
 
   get(organizationId: string, id: string): Promise<RecordTemplate | null> {
@@ -49,19 +62,61 @@ export class RecordTemplateService {
     return this.repo.listForOrganization(organizationId);
   }
 
-  update(
+  async update(
     organizationId: string,
     id: string,
     patch: UpdateRecordTemplateInput,
+    actorUserId: string,
   ): Promise<RecordTemplate | null> {
-    return this.repo.update(organizationId, id, patch);
+    const updated = await this.repo.update(organizationId, id, patch);
+    if (updated) {
+      await this.audit.record({
+        actorUserId,
+        organizationId,
+        entityKind: "record_template",
+        entityId: id,
+        action: "template.updated",
+        payload: { changedFields: Object.keys(patch) },
+      });
+    }
+    return updated;
   }
 
-  publish(organizationId: string, id: string): Promise<RecordTemplate | null> {
-    return this.repo.setStatus(organizationId, id, "published");
+  async publish(
+    organizationId: string,
+    id: string,
+    actorUserId: string,
+  ): Promise<RecordTemplate | null> {
+    const updated = await this.repo.setStatus(organizationId, id, "published");
+    if (updated) {
+      await this.audit.record({
+        actorUserId,
+        organizationId,
+        entityKind: "record_template",
+        entityId: id,
+        action: "template.published",
+        payload: {},
+      });
+    }
+    return updated;
   }
 
-  archive(organizationId: string, id: string): Promise<RecordTemplate | null> {
-    return this.repo.setStatus(organizationId, id, "archived");
+  async archive(
+    organizationId: string,
+    id: string,
+    actorUserId: string,
+  ): Promise<RecordTemplate | null> {
+    const updated = await this.repo.setStatus(organizationId, id, "archived");
+    if (updated) {
+      await this.audit.record({
+        actorUserId,
+        organizationId,
+        entityKind: "record_template",
+        entityId: id,
+        action: "template.archived",
+        payload: {},
+      });
+    }
+    return updated;
   }
 }

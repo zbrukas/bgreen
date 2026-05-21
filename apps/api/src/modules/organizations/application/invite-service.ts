@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import type { Invite, InviteErrorCode, InvitePreview, MembershipRole } from "@bgreen/types";
+import type { AuditService } from "../../audit/module.js";
 import type { UserRepository } from "../../identity/application/user-service.js";
 import type { MembershipRepository, OrganizationRepository } from "./organization-service.js";
 
@@ -37,12 +38,13 @@ export class InviteService {
     private readonly memberships: MembershipRepository,
     private readonly orgs: OrganizationRepository,
     private readonly users: UserRepository,
+    private readonly audit: AuditService,
   ) {}
 
   async create(input: CreateInviteInput): Promise<Invite> {
     const token = randomBytes(TOKEN_BYTES).toString("base64url");
     const expiresAt = new Date(Date.now() + INVITE_TTL_DAYS * 86_400_000);
-    return this.invites.insert({
+    const invite = await this.invites.insert({
       organizationId: input.organizationId,
       invitedEmail: input.invitedEmail.toLowerCase().trim(),
       role: input.role,
@@ -50,6 +52,19 @@ export class InviteService {
       invitedByUserId: input.invitedByUserId,
       expiresAt,
     });
+    await this.audit.record({
+      actorUserId: input.invitedByUserId,
+      organizationId: input.organizationId,
+      entityKind: "organization_invite",
+      entityId: invite.id,
+      action: "invite.created",
+      payload: {
+        invitedEmail: invite.invitedEmail,
+        role: invite.role,
+        expiresAt: invite.expiresAt,
+      },
+    });
+    return invite;
   }
 
   async preview(input: {
@@ -105,6 +120,14 @@ export class InviteService {
     }
 
     await this.invites.markAccepted({ token: input.token, acceptedByUserId: input.userId });
+    await this.audit.record({
+      actorUserId: input.userId,
+      organizationId: invite.organizationId,
+      entityKind: "organization_invite",
+      entityId: invite.id,
+      action: "invite.accepted",
+      payload: { acceptedEmail: input.userEmail, role: invite.role },
+    });
     return { organizationId: invite.organizationId };
   }
 }

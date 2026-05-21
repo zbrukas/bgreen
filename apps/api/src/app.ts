@@ -4,6 +4,7 @@ import { Inngest } from "inngest";
 import { serve as inngestServe } from "inngest/hono";
 import type { AppEnv } from "./context.js";
 import { authMiddleware } from "./middleware/auth.js";
+import { auditRoutes } from "./modules/audit/module.js";
 import { recordTemplatesRoutes } from "./modules/form-templates/module.js";
 import { identityRoutes } from "./modules/identity/module.js";
 import { lookupsRoutes } from "./modules/lookups/module.js";
@@ -26,7 +27,8 @@ const authedRoutes = new Hono<AppEnv>()
   .route("/invites", inviteRoutes)
   .route("/lookups", lookupsRoutes)
   .route("/record-templates", recordTemplatesRoutes)
-  .route("/records", recordsRoutes);
+  .route("/records", recordsRoutes)
+  .route("/audit", auditRoutes);
 
 export const app = new Hono().use("*", logger()).route("/", publicRoutes).route("/", authedRoutes);
 
