@@ -10,6 +10,8 @@ function rowToUser(row: typeof schema.users.$inferSelect): User {
     email: row.email,
     firstName: row.firstName,
     lastName: row.lastName,
+    userType: row.userType,
+    centralServicesRole: row.centralServicesRole,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };

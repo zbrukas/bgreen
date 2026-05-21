@@ -44,7 +44,7 @@ export default async function TemplatesListPage() {
   }
 
   const [me, templates] = await Promise.all([fetchMe(), fetchTemplates()]);
-  const isAdmin = me?.activeOrganizationRole === "admin";
+  const isAdmin = me?.activeOrganizationRole === "org_admin";
 
   return (
     <main className="mx-auto max-w-5xl space-y-6 p-8">

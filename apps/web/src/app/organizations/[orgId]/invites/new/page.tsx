@@ -17,7 +17,7 @@ export default async function NewInvitePage({ params }: PageProps) {
   const { orgId } = await params;
   const me = await fetchMe();
 
-  if (!me || me.activeOrganizationId !== orgId || me.activeOrganizationRole !== "admin") {
+  if (!me || me.activeOrganizationId !== orgId || me.activeOrganizationRole !== "org_admin") {
     return (
       <main className="mx-auto max-w-3xl space-y-4 p-8">
         <p>

@@ -4,6 +4,7 @@ import { Inngest } from "inngest";
 import { serve as inngestServe } from "inngest/hono";
 import type { AppEnv } from "./context.js";
 import { authMiddleware } from "./middleware/auth.js";
+import { fgaMiddleware } from "./middleware/fga.js";
 import { auditRoutes } from "./modules/audit/module.js";
 import { recordTemplatesRoutes } from "./modules/form-templates/module.js";
 import { identityRoutes } from "./modules/identity/module.js";
@@ -20,9 +21,11 @@ const publicRoutes = new Hono()
   .get("/health", (c) => c.json({ status: "ok", service: "api" } as const))
   .on(["GET", "POST", "PUT"], "/api/inngest", inngestServe({ client: inngest, functions: [] }));
 
-// Authenticated surface — every request requires a valid WorkOS access token.
+// Authenticated surface — every request requires a valid WorkOS access token
+// + an FGA cache scope. Order matters: auth populates c.var.user; fga sees it.
 const authedRoutes = new Hono<AppEnv>()
   .use("*", authMiddleware)
+  .use("*", fgaMiddleware)
   .route("/identity", identityRoutes)
   .route("/organizations", organizationsRoutes)
   .route("/invites", inviteRoutes)

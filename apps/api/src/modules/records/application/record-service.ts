@@ -94,7 +94,7 @@ export class RecordService {
   ) {}
 
   async submit(input: CreateRecordInput): Promise<SubmitResult> {
-    const template = await this.templates.findById(input.organizationId, input.templateId);
+    const template = await this.templates.findById(input.templateId);
     if (!template) return { ok: false, code: "template_not_found" };
     if (!input.asDraft && template.status !== "published") {
       return { ok: false, code: "template_not_published" };
@@ -163,7 +163,7 @@ export class RecordService {
       return { ok: false, code: "not_editable" };
     }
 
-    const template = await this.templates.findById(input.organizationId, existing.templateId);
+    const template = await this.templates.findById(existing.templateId);
     if (!template) return { ok: false, code: "template_not_found" };
     if (input.action === "submit" && template.status !== "published") {
       return { ok: false, code: "template_not_published" };
@@ -273,7 +273,7 @@ export class RecordService {
     organizationId: string,
     templateId: string,
   ): Promise<{ values: RecordValues } | { error: "template_not_found" }> {
-    const template = await this.templates.findById(organizationId, templateId);
+    const template = await this.templates.findById(templateId);
     if (!template) return { error: "template_not_found" };
 
     const out: RecordValues = {};

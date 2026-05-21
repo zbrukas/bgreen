@@ -13,7 +13,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
     "seed-cae": "tsx scripts/seed-cae.ts",
-    "seed-postal-codes": "tsx scripts/seed-postal-codes.ts"
+    "seed-postal-codes": "tsx scripts/seed-postal-codes.ts",
+    "seed-fga": "tsx scripts/seed-fga.ts"
   },
   "dependencies": {
     "@bgreen/auth": "workspace:*",

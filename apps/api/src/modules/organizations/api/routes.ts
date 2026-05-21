@@ -4,6 +4,7 @@ import { LegalFormSchema, MembershipRoleSchema, OrganizationSizeSchema } from "@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
+import { requireOrgRelation } from "../../../auth-helpers.js";
 import type { AppEnv } from "../../../context.js";
 import { inviteService, organizationService, repositories } from "../../../services.js";
 
@@ -84,9 +85,7 @@ export const organizationsRoutes = new Hono<AppEnv>()
     if (c.var.organizationId !== orgId) {
       return c.json({ error: "wrong_active_org" }, 403);
     }
-    if (c.var.membershipRole !== "admin") {
-      return c.json({ error: "admin_required" }, 403);
-    }
+    await requireOrgRelation(c.var.user.id, orgId, "org_admin");
 
     const org = await repositories.organizations.findById(orgId);
     if (!org) return c.json({ error: "org_not_found" }, 404);

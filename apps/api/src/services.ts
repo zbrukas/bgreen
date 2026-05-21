@@ -1,4 +1,5 @@
 import { HttpViesClient } from "@bgreen/pt-data";
+import { getFgaClient } from "./fga-client.js";
 import { AuditService, DrizzleAuditRepository } from "./modules/audit/module.js";
 import {
   DrizzleRecordTemplateRepository,
@@ -28,6 +29,8 @@ export const repositories = {
   workflows: new DrizzleWorkflowRepository(),
 };
 
+export const fgaClient = getFgaClient();
+
 export const userService = new UserService(repositories.users);
 
 export const auditService = new AuditService(repositories.audit);
@@ -38,6 +41,7 @@ export const organizationService = new OrganizationService(
   repositories.organizations,
   repositories.memberships,
   auditService,
+  fgaClient,
 );
 
 export const inviteService = new InviteService(
@@ -46,12 +50,10 @@ export const inviteService = new InviteService(
   repositories.organizations,
   repositories.users,
   auditService,
+  fgaClient,
 );
 
-export const recordTemplateService = new RecordTemplateService(
-  repositories.recordTemplates,
-  auditService,
-);
+export const recordTemplateService = new RecordTemplateService(repositories.recordTemplates);
 
 export const recordService = new RecordService(
   repositories.records,

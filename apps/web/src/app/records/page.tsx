@@ -54,7 +54,7 @@ export default async function RecordsListPage() {
   ]);
   const templateNameById = new Map(templates.map((t) => [t.id, t.name]));
   const publishedTemplates = templates.filter((t) => t.status === "published");
-  const isAdmin = me?.activeOrganizationRole === "admin";
+  const isAdmin = me?.activeOrganizationRole === "org_admin";
 
   const pending = isAdmin ? records.filter((r) => r.status === "submitted") : [];
   const others = isAdmin ? records.filter((r) => r.status !== "submitted") : records;

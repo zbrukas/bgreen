@@ -1,6 +1,7 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
+import { canOrgRelation, requireOrgRelation } from "../../../auth-helpers.js";
 import type { AppEnv } from "../../../context.js";
 import { recordService } from "../../../services.js";
 
@@ -37,10 +38,10 @@ export const recordsRoutes = new Hono<AppEnv>()
     const orgId = c.var.organizationId;
     if (!orgId) return c.json({ error: "no_active_org" }, 400);
     // Admins see every record in the org; members see their own submissions.
-    const list =
-      c.var.membershipRole === "admin"
-        ? await recordService.listAll(orgId)
-        : await recordService.listMine(orgId, c.var.user.id);
+    const isAdmin = await canOrgRelation(c.var.user.id, orgId, "org_admin");
+    const list = isAdmin
+      ? await recordService.listAll(orgId)
+      : await recordService.listMine(orgId, c.var.user.id);
     return c.json(list);
   })
   .get("/:id", async (c) => {
@@ -49,7 +50,8 @@ export const recordsRoutes = new Hono<AppEnv>()
     const record = await recordService.get(orgId, c.req.param("id"));
     if (!record) return c.json({ error: "not_found" }, 404);
     // Members can only fetch their own records; admins can fetch any.
-    if (c.var.membershipRole !== "admin" && record.submittedByUserId !== c.var.user.id) {
+    const isAdmin = await canOrgRelation(c.var.user.id, orgId, "org_admin");
+    if (!isAdmin && record.submittedByUserId !== c.var.user.id) {
       return c.json({ error: "forbidden" }, 403);
     }
     return c.json(record);
@@ -76,7 +78,7 @@ export const recordsRoutes = new Hono<AppEnv>()
   .post("/:id/review", zValidator("json", reviewInput), async (c) => {
     const orgId = c.var.organizationId;
     if (!orgId) return c.json({ error: "no_active_org" }, 400);
-    if (c.var.membershipRole !== "admin") return c.json({ error: "forbidden" }, 403);
+    await requireOrgRelation(c.var.user.id, orgId, "org_admin");
     const input = c.req.valid("json");
     const result = await recordService.review({
       organizationId: orgId,

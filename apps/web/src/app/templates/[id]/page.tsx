@@ -60,7 +60,7 @@ export default async function TemplateDetailPage({ params }: PageProps) {
       </main>
     );
   }
-  const isAdmin = me?.activeOrganizationRole === "admin";
+  const isAdmin = me?.activeOrganizationRole === "org_admin";
 
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-8">

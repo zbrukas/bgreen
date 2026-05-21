@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import type { FgaClient } from "@bgreen/auth";
 import type { Invite, InviteErrorCode, InvitePreview, MembershipRole } from "@bgreen/types";
 import type { AuditService } from "../../audit/module.js";
 import type { UserRepository } from "../../identity/application/user-service.js";
@@ -39,6 +40,7 @@ export class InviteService {
     private readonly orgs: OrganizationRepository,
     private readonly users: UserRepository,
     private readonly audit: AuditService,
+    private readonly fga: FgaClient,
   ) {}
 
   async create(input: CreateInviteInput): Promise<Invite> {
@@ -111,11 +113,20 @@ export class InviteService {
 
     // Idempotent: if already a member, still close out the invite.
     const existing = await this.memberships.listForUser(input.userId);
-    if (!existing.some((m) => m.organizationId === invite.organizationId)) {
+    const alreadyMember = existing.some((m) => m.organizationId === invite.organizationId);
+    if (!alreadyMember) {
       await this.memberships.add({
         userId: input.userId,
         organizationId: invite.organizationId,
         role: invite.role,
+      });
+      // Mirror the membership into FGA so subsequent privileged actions
+      // can resolve via can(). Idempotency-skip avoids duplicate warrants
+      // if the user re-clicks an invite link.
+      await this.fga.writeWarrant({
+        resource: { resourceType: "organization", resourceId: invite.organizationId },
+        relation: invite.role,
+        subject: { resourceType: "user", resourceId: input.userId },
       });
     }
 

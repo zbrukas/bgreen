@@ -16,81 +16,75 @@ const createInput = z.object({
   description: z.string().max(2000).nullable().optional(),
   formSchema: FormSchemaSchema,
   workflowDefinitionId: workflowDefinitionIdSchema.optional(),
+  topicTagId: z.string().uuid().nullable().optional(),
+  isSubTemplate: z.boolean().optional(),
 });
 
 const updateInput = z.object({
   name: z.string().min(1).max(200).optional(),
   description: z.string().max(2000).nullable().optional(),
   formSchema: FormSchemaSchema.optional(),
+  topicTagId: z.string().uuid().nullable().optional(),
+  isSubTemplate: z.boolean().optional(),
 });
 
-function requireOrg(c: { var: { organizationId?: string } }): string | null {
-  return c.var.organizationId ?? null;
+// V5.4 stop-gap: templates are CS-owned. Writes require a central-services
+// user with admin or maintainer role. V5.4d will replace this with
+// proper FGA checks on the central_services_workspace resource.
+function isCsWriter(user: { userType: string; centralServicesRole: string | null }): boolean {
+  return (
+    user.userType === "central_services" &&
+    (user.centralServicesRole === "admin" || user.centralServicesRole === "maintainer")
+  );
 }
 
 export const recordTemplatesRoutes = new Hono<AppEnv>()
   .get("/", async (c) => {
-    const orgId = requireOrg(c);
-    if (!orgId) return c.json({ error: "no_active_org" }, 400);
-    const list = await recordTemplateService.list(orgId);
+    const list = await recordTemplateService.list();
     return c.json(list);
   })
   .get("/:id", async (c) => {
-    const orgId = requireOrg(c);
-    if (!orgId) return c.json({ error: "no_active_org" }, 400);
-    const tpl = await recordTemplateService.get(orgId, c.req.param("id"));
+    const tpl = await recordTemplateService.get(c.req.param("id"));
     if (!tpl) return c.json({ error: "not_found" }, 404);
     return c.json(tpl);
   })
   .post("/", zValidator("json", createInput), async (c) => {
-    const orgId = requireOrg(c);
-    if (!orgId) return c.json({ error: "no_active_org" }, 400);
-    if (c.var.membershipRole !== "admin") {
-      return c.json({ error: "admin_required" }, 403);
+    if (!isCsWriter(c.var.user)) {
+      return c.json({ error: "central_services_required" }, 403);
     }
     const input = c.req.valid("json");
     const created = await recordTemplateService.create({
-      organizationId: orgId,
       name: input.name,
       description: input.description ?? null,
       formSchema: input.formSchema,
       createdByUserId: c.var.user.id,
       workflowDefinitionId: input.workflowDefinitionId,
+      topicTagId: input.topicTagId ?? null,
+      isSubTemplate: input.isSubTemplate ?? false,
     });
     return c.json(created, 201);
   })
   .patch("/:id", zValidator("json", updateInput), async (c) => {
-    const orgId = requireOrg(c);
-    if (!orgId) return c.json({ error: "no_active_org" }, 400);
-    if (c.var.membershipRole !== "admin") {
-      return c.json({ error: "admin_required" }, 403);
+    if (!isCsWriter(c.var.user)) {
+      return c.json({ error: "central_services_required" }, 403);
     }
-    const updated = await recordTemplateService.update(
-      orgId,
-      c.req.param("id"),
-      c.req.valid("json"),
-      c.var.user.id,
-    );
+    const updated = await recordTemplateService.update(c.req.param("id"), c.req.valid("json"));
     if (!updated) return c.json({ error: "not_found" }, 404);
     return c.json(updated);
   })
   .post("/:id/publish", async (c) => {
-    const orgId = requireOrg(c);
-    if (!orgId) return c.json({ error: "no_active_org" }, 400);
-    if (c.var.membershipRole !== "admin") {
-      return c.json({ error: "admin_required" }, 403);
+    if (!isCsWriter(c.var.user)) {
+      return c.json({ error: "central_services_required" }, 403);
     }
-    const updated = await recordTemplateService.publish(orgId, c.req.param("id"), c.var.user.id);
+    const updated = await recordTemplateService.publish(c.req.param("id"));
     if (!updated) return c.json({ error: "not_found" }, 404);
     return c.json(updated);
   })
   .post("/:id/archive", async (c) => {
-    const orgId = requireOrg(c);
-    if (!orgId) return c.json({ error: "no_active_org" }, 400);
-    if (c.var.membershipRole !== "admin") {
-      return c.json({ error: "admin_required" }, 403);
+    if (!isCsWriter(c.var.user)) {
+      return c.json({ error: "central_services_required" }, 403);
     }
-    const updated = await recordTemplateService.archive(orgId, c.req.param("id"), c.var.user.id);
+    const updated = await recordTemplateService.archive(c.req.param("id"));
     if (!updated) return c.json({ error: "not_found" }, 404);
     return c.json(updated);
   });

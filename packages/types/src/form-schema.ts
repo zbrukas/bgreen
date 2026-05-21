@@ -171,12 +171,15 @@ export type WorkflowDefinitionId = z.infer<typeof WorkflowDefinitionIdSchema>;
 
 export const RecordTemplateSchema = z.object({
   id: z.string().uuid(),
-  organizationId: z.string().uuid(),
+  // V5.4: templates are central-services owned. No organizationId.
   name: z.string().min(1),
   description: z.string().nullable(),
   formSchema: FormSchemaSchema,
   status: RecordTemplateStatusSchema,
   workflowDefinitionId: WorkflowDefinitionIdSchema,
+  // V5.5 placeholders.
+  topicTagId: z.string().uuid().nullable(),
+  isSubTemplate: z.boolean(),
   createdByUserId: z.string().uuid(),
   createdAt: z.string().datetime({ offset: true }),
   updatedAt: z.string().datetime({ offset: true }),

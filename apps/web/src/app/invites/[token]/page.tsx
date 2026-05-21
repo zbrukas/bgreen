@@ -67,7 +67,7 @@ export default async function InviteAcceptPage({ params }: PageProps) {
         <CardContent className="space-y-3 text-sm">
           <p>
             <strong>{preview.inviterEmail}</strong> convidou-o(a) para se juntar como{" "}
-            <strong>{preview.role === "admin" ? "administrador" : "membro"}</strong>.
+            <strong>{preview.role === "org_admin" ? "administrador" : "membro"}</strong>.
           </p>
           <p className="text-muted-foreground">
             O convite expira em{" "}

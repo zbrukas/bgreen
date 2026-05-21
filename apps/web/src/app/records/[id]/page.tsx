@@ -80,7 +80,7 @@ export default async function RecordDetailPage({ params }: PageProps) {
     );
   }
 
-  const isAdmin = me?.activeOrganizationRole === "admin";
+  const isAdmin = me?.activeOrganizationRole === "org_admin";
   const isOwner = record.submittedByUserId === me?.id;
   const editable = isOwner && (record.status === "draft" || record.status === "changes_requested");
   const canReview = isAdmin && record.status === "submitted";

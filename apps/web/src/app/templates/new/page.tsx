@@ -11,7 +11,7 @@ export default async function NewTemplatePage() {
   if (!auth.user) redirect("/");
 
   const me = await fetchMe();
-  if (me?.activeOrganizationRole !== "admin") {
+  if (me?.activeOrganizationRole !== "org_admin") {
     return (
       <main className="mx-auto max-w-3xl space-y-4 p-8">
         <p>

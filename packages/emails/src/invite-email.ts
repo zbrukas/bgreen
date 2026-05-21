@@ -4,7 +4,7 @@ export interface InviteEmailInput {
   to: string;
   organizationName: string;
   inviterEmail: string;
-  role: "admin" | "member";
+  role: "org_admin" | "org_user_write" | "org_user_read";
   acceptUrl: string;
 }
 
@@ -13,7 +13,11 @@ export interface InviteEmailResult {
   reason?: string;
 }
 
-const roleCopy = { admin: "administrador", member: "membro" } as const;
+const roleCopy = {
+  org_admin: "administrador",
+  org_user_write: "membro",
+  org_user_read: "membro com acesso de leitura",
+} as const;
 
 function escapeHtml(value: string): string {
   return value

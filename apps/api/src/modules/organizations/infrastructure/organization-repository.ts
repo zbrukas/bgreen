@@ -35,6 +35,7 @@ function rowToMembership(
     userId: row.userId,
     organizationId: row.organizationId,
     role: row.role,
+    topicScope: row.topicScope ?? [],
     createdAt: row.createdAt.toISOString(),
   };
 }

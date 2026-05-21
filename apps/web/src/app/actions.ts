@@ -178,7 +178,7 @@ export async function createInviteAction(
     return { ...emptyInviteState, error: "Indique um email." };
   }
 
-  let role: MembershipRole = "member";
+  let role: MembershipRole = "org_user_write";
   if (typeof rawRole === "string") {
     const parsed = MembershipRoleSchema.safeParse(rawRole);
     if (!parsed.success) {

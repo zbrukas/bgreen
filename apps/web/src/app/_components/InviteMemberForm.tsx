@@ -49,9 +49,9 @@ export function InviteMemberForm({ organizationId }: InviteMemberFormProps) {
 
         <div className="space-y-1.5">
           <Label htmlFor="invite-role">Papel</Label>
-          <Select id="invite-role" name="role" defaultValue="member">
-            <option value="member">Membro</option>
-            <option value="admin">Administrador</option>
+          <Select id="invite-role" name="role" defaultValue="org_user_write">
+            <option value="org_user_write">Membro</option>
+            <option value="org_admin">Administrador</option>
           </Select>
         </div>
 
