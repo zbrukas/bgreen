@@ -1,5 +1,5 @@
 import { db, orgScope, schema } from "@bgreen/db";
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import type { WorkflowRepository } from "../application/workflow-service.js";
 import type { WorkflowInstance, WorkflowState } from "../domain/workflow-instance.js";
 import {
@@ -97,6 +97,17 @@ export class DrizzleWorkflowRepository implements WorkflowRepository {
       .select()
       .from(schema.workflowInstances)
       .where(orgScope(schema.workflowInstances, organizationId));
+    return rows.map(rowToInstance);
+  }
+
+  async listByState(state: string): Promise<WorkflowInstance[]> {
+    // current_state is a jsonb scalar (a quoted string for atomic states).
+    // Compare against the JSON string so we match `"submitted"`, not `submitted`.
+    const rows = await db
+      .select()
+      .from(schema.workflowInstances)
+      .where(sql`${schema.workflowInstances.currentState}::text = ${JSON.stringify(state)}`)
+      .orderBy(desc(schema.workflowInstances.updatedAt));
     return rows.map(rowToInstance);
   }
 }

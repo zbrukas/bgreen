@@ -1,12 +1,17 @@
 import type { AppType } from "@bgreen/api/rpc";
-import type { CentralServicesRole, UserType } from "@bgreen/types";
+import type {
+  Record as BgRecord,
+  CentralServicesRole,
+  FormSchema,
+  RecordTemplate,
+  UserType,
+  WorkflowDefinitionId,
+} from "@bgreen/types";
 import { withAuth } from "@workos-inc/authkit-nextjs";
 import { hc } from "hono/client";
 
 const apiBaseUrl = process.env.API_URL ?? "http://localhost:8787";
 
-// Hono RPC client. Same trick as apps/web: type-annotate so the inferred
-// RPC shape doesn't try to reach into @bgreen/api's internal modules.
 export const api: ReturnType<typeof hc<AppType>> = hc<AppType>(apiBaseUrl);
 
 async function authedHeaders(): Promise<Record<string, string>> {
@@ -24,8 +29,6 @@ export interface MeResponse {
   centralServicesRole: CentralServicesRole | null;
 }
 
-// The CS console uses /identity/me to figure out whether the signed-in
-// user is allowed in. Org users get bounced to the web URL.
 export async function fetchMe(): Promise<MeResponse | null> {
   try {
     const headers = await authedHeaders();
@@ -38,13 +41,222 @@ export async function fetchMe(): Promise<MeResponse | null> {
       email: data.email,
       firstName: data.firstName,
       lastName: data.lastName,
-      // /me already exposes these fields once V5.4f extends the
-      // identity route; until then we cast and tolerate undefined.
       userType: (data as { userType?: UserType }).userType ?? "organization",
       centralServicesRole:
         (data as { centralServicesRole?: CentralServicesRole | null }).centralServicesRole ?? null,
     };
   } catch {
     return null;
+  }
+}
+
+// ---------- Templates (CS owns these) ----------
+
+export async function fetchTemplates(): Promise<RecordTemplate[]> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return [];
+    const res = await api["record-templates"].$get(undefined, { headers });
+    if (!res.ok) return [];
+    return (await res.json()) as RecordTemplate[];
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchTemplate(id: string): Promise<RecordTemplate | null> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return null;
+    const res = await api["record-templates"][":id"].$get({ param: { id } }, { headers });
+    if (!res.ok) return null;
+    return (await res.json()) as RecordTemplate;
+  } catch {
+    return null;
+  }
+}
+
+export async function createTemplate(input: {
+  name: string;
+  description: string | null;
+  formSchema: FormSchema;
+  workflowDefinitionId?: WorkflowDefinitionId;
+}): Promise<RecordTemplate | { error: string }> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return { error: "not_signed_in" };
+    const res = await api["record-templates"].$post(
+      {
+        json: {
+          name: input.name,
+          description: input.description,
+          formSchema: input.formSchema,
+          ...(input.workflowDefinitionId
+            ? { workflowDefinitionId: input.workflowDefinitionId }
+            : {}),
+        },
+      },
+      { headers },
+    );
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({ error: "request_failed" }))) as {
+        error?: string;
+      };
+      return { error: body.error ?? "request_failed" };
+    }
+    return (await res.json()) as RecordTemplate;
+  } catch {
+    return { error: "network_error" };
+  }
+}
+
+export async function publishTemplate(id: string): Promise<RecordTemplate | { error: string }> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return { error: "not_signed_in" };
+    const res = await api["record-templates"][":id"].publish.$post({ param: { id } }, { headers });
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({ error: "request_failed" }))) as {
+        error?: string;
+      };
+      return { error: body.error ?? "request_failed" };
+    }
+    return (await res.json()) as RecordTemplate;
+  } catch {
+    return { error: "network_error" };
+  }
+}
+
+export async function archiveTemplate(id: string): Promise<RecordTemplate | { error: string }> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return { error: "not_signed_in" };
+    const res = await api["record-templates"][":id"].archive.$post({ param: { id } }, { headers });
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({ error: "request_failed" }))) as {
+        error?: string;
+      };
+      return { error: body.error ?? "request_failed" };
+    }
+    return (await res.json()) as RecordTemplate;
+  } catch {
+    return { error: "network_error" };
+  }
+}
+
+// ---------- CS-namespaced (cross-org) ----------
+
+export interface WorkflowInstance {
+  id: string;
+  organizationId: string;
+  entityKind: "record";
+  entityId: string;
+  definitionId: WorkflowDefinitionId;
+  currentState: string | Record<string, unknown>;
+  updatedAt: string;
+}
+
+export async function fetchCsInbox(): Promise<WorkflowInstance[]> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return [];
+    const res = await api.cs.inbox.$get(undefined, { headers });
+    if (!res.ok) return [];
+    return (await res.json()) as WorkflowInstance[];
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchCsRecord(id: string): Promise<BgRecord | null> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return null;
+    const res = await api.cs.records[":id"].$get({ param: { id } }, { headers });
+    if (!res.ok) return null;
+    return (await res.json()) as BgRecord;
+  } catch {
+    return null;
+  }
+}
+
+export type ReviewDecision = "approve" | "request_changes" | "reject";
+
+export async function reviewCsRecord(input: {
+  id: string;
+  decision: ReviewDecision;
+  comment: string | null;
+}): Promise<{ ok: true; record: BgRecord } | { ok: false; error: string }> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return { ok: false, error: "not_signed_in" };
+    const res = await api.cs.records[":id"].review.$post(
+      { param: { id: input.id }, json: { decision: input.decision, comment: input.comment } },
+      { headers },
+    );
+    if (res.ok) return { ok: true, record: (await res.json()) as BgRecord };
+    const body = (await res.json().catch(() => ({}))) as { error?: string };
+    return { ok: false, error: body.error ?? "request_failed" };
+  } catch {
+    return { ok: false, error: "network_error" };
+  }
+}
+
+// ---------- CS domains ----------
+
+export interface CsDomain {
+  id: string;
+  domain: string;
+  note: string | null;
+  createdAt: string;
+}
+
+export async function fetchCsDomains(): Promise<CsDomain[]> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return [];
+    const res = await api.cs.domains.$get(undefined, { headers });
+    if (!res.ok) return [];
+    return (await res.json()) as CsDomain[];
+  } catch {
+    return [];
+  }
+}
+
+export async function addCsDomain(input: {
+  domain: string;
+  note: string | null;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return { ok: false, error: "not_signed_in" };
+    const res = await api.cs.domains.$post(
+      { json: { domain: input.domain, note: input.note } },
+      { headers },
+    );
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({}))) as { error?: string };
+      return { ok: false, error: body.error ?? "request_failed" };
+    }
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "network_error" };
+  }
+}
+
+export async function deleteCsDomain(
+  id: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return { ok: false, error: "not_signed_in" };
+    const res = await api.cs.domains[":id"].$delete({ param: { id } }, { headers });
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({}))) as { error?: string };
+      return { ok: false, error: body.error ?? "request_failed" };
+    }
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "network_error" };
   }
 }

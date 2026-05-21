@@ -6,6 +6,7 @@ import type { AppEnv } from "./context.js";
 import { authMiddleware } from "./middleware/auth.js";
 import { fgaMiddleware } from "./middleware/fga.js";
 import { auditRoutes } from "./modules/audit/module.js";
+import { csRoutes } from "./modules/cs/api/routes.js";
 import { recordTemplatesRoutes } from "./modules/form-templates/module.js";
 import { identityRoutes } from "./modules/identity/module.js";
 import { lookupsRoutes } from "./modules/lookups/module.js";
@@ -33,7 +34,8 @@ const authedRoutes = new Hono<AppEnv>()
   .route("/record-templates", recordTemplatesRoutes)
   .route("/records", recordsRoutes)
   .route("/audit", auditRoutes)
-  .route("/workflows", workflowsRoutes);
+  .route("/workflows", workflowsRoutes)
+  .route("/cs", csRoutes);
 
 export const app = new Hono().use("*", logger()).route("/", publicRoutes).route("/", authedRoutes);
 

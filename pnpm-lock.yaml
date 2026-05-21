@@ -90,6 +90,9 @@ importers:
       '@bgreen/api':
         specifier: workspace:*
         version: link:../api
+      '@bgreen/form-engine':
+        specifier: workspace:*
+        version: link:../../packages/form-engine
       '@bgreen/types':
         specifier: workspace:*
         version: link:../../packages/types

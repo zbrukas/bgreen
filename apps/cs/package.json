@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@bgreen/api": "workspace:*",
+    "@bgreen/form-engine": "workspace:*",
     "@bgreen/types": "workspace:*",
     "@tailwindcss/postcss": "^4",
     "@workos-inc/authkit-nextjs": "^2.0.0",

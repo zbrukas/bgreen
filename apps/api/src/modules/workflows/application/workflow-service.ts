@@ -31,6 +31,8 @@ export interface WorkflowRepository {
     entityId: string,
   ): Promise<WorkflowInstance | null>;
   listForOrganization(organizationId: string): Promise<WorkflowInstance[]>;
+  // V5.4: cross-org listing for the CS reviewer inbox.
+  listByState(state: string): Promise<WorkflowInstance[]>;
 }
 
 export type StartResult = { ok: true; instance: WorkflowInstance };
@@ -135,6 +137,13 @@ export class WorkflowService {
 
   listAll(organizationId: string): Promise<WorkflowInstance[]> {
     return this.repo.listForOrganization(organizationId);
+  }
+
+  // CS reviewer inbox: every workflow instance in the "submitted" state,
+  // across all orgs. Returned ordered by updated_at descending so the
+  // freshest submissions land at the top.
+  listAllSubmitted(): Promise<WorkflowInstance[]> {
+    return this.repo.listByState("submitted");
   }
 
   // Returns workflow instances whose current state expects an action from

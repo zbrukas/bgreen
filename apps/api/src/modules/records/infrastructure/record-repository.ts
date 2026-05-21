@@ -150,6 +150,12 @@ export class DrizzleRecordRepository implements RecordRepository {
     return row ? rowToRecord(row) : null;
   }
 
+  async findAnyById(id: string): Promise<Record | null> {
+    const rows = await recordsWithStatus().where(eq(schema.records.id, id)).limit(1);
+    const row = rows[0];
+    return row ? rowToRecord(row) : null;
+  }
+
   async findLatestSubmitted(organizationId: string, templateId: string): Promise<Record | null> {
     // Cross-template prefill consumes any "submitted" or "approved" state.
     // Filtering happens against the workflow state via the JSONB column.
