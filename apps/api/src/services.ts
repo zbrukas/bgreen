@@ -2,6 +2,7 @@ import { HttpViesClient } from "@bgreen/pt-data";
 import { getFgaClient } from "./fga-client.js";
 import { AuditService, DrizzleAuditRepository } from "./modules/audit/module.js";
 import {
+  DrizzleCompositionRepository,
   DrizzleRecordTemplateRepository,
   RecordTemplateService,
 } from "./modules/form-templates/module.js";
@@ -15,6 +16,7 @@ import {
   OrganizationService,
 } from "./modules/organizations/module.js";
 import { DrizzleRecordRepository, RecordService } from "./modules/records/module.js";
+import { DrizzleTopicRepository, TopicService } from "./modules/topics/module.js";
 import { DrizzleWorkflowRepository, WorkflowService } from "./modules/workflows/module.js";
 
 // Process-wide service instances. Repositories are cheap (no I/O at construction);
@@ -29,6 +31,8 @@ export const repositories = {
   audit: new DrizzleAuditRepository(),
   workflows: new DrizzleWorkflowRepository(),
   centralServicesDomains: new DrizzleCentralServicesDomainsRepository(),
+  topics: new DrizzleTopicRepository(),
+  compositions: new DrizzleCompositionRepository(),
 };
 
 export const fgaClient = getFgaClient();
@@ -59,7 +63,12 @@ export const inviteService = new InviteService(
   fgaClient,
 );
 
-export const recordTemplateService = new RecordTemplateService(repositories.recordTemplates);
+export const topicService = new TopicService(repositories.topics);
+
+export const recordTemplateService = new RecordTemplateService(
+  repositories.recordTemplates,
+  repositories.compositions,
+);
 
 export const recordService = new RecordService(
   repositories.records,

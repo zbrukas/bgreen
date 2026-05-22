@@ -7,6 +7,10 @@ export type {
 } from "./application/record-template-service.js";
 export { DrizzleRecordTemplateRepository } from "./infrastructure/record-template-repository.js";
 export {
+  DrizzleCompositionRepository,
+  type CompositionRepository,
+} from "./infrastructure/composition-repository.js";
+export {
   FormSchemaSchema,
   type FormSchema,
   type RecordTemplate,

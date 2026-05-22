@@ -19,6 +19,7 @@ const createInput = z.object({
   workflowDefinitionId: workflowDefinitionIdSchema.optional(),
   topicTagId: z.string().uuid().nullable().optional(),
   isSubTemplate: z.boolean().optional(),
+  composedSubTemplateIds: z.array(z.string().uuid()).optional(),
 });
 
 const updateInput = z.object({
@@ -27,6 +28,7 @@ const updateInput = z.object({
   formSchema: FormSchemaSchema.optional(),
   topicTagId: z.string().uuid().nullable().optional(),
   isSubTemplate: z.boolean().optional(),
+  composedSubTemplateIds: z.array(z.string().uuid()).optional(),
 });
 
 async function requireCsWriter(userId: string): Promise<Response | null> {
@@ -49,7 +51,7 @@ export const recordTemplatesRoutes = new Hono<AppEnv>()
     const denied = await requireCsWriter(c.var.user.id);
     if (denied) return denied;
     const input = c.req.valid("json");
-    const created = await recordTemplateService.create({
+    const result = await recordTemplateService.create({
       name: input.name,
       description: input.description ?? null,
       formSchema: input.formSchema,
@@ -57,15 +59,18 @@ export const recordTemplatesRoutes = new Hono<AppEnv>()
       workflowDefinitionId: input.workflowDefinitionId,
       topicTagId: input.topicTagId ?? null,
       isSubTemplate: input.isSubTemplate ?? false,
+      composedSubTemplateIds: input.composedSubTemplateIds ?? [],
     });
-    return c.json(created, 201);
+    if (!result.ok) return c.json({ error: result.code }, 400);
+    return c.json(result.template, 201);
   })
   .patch("/:id", zValidator("json", updateInput), async (c) => {
     const denied = await requireCsWriter(c.var.user.id);
     if (denied) return denied;
-    const updated = await recordTemplateService.update(c.req.param("id"), c.req.valid("json"));
-    if (!updated) return c.json({ error: "not_found" }, 404);
-    return c.json(updated);
+    const result = await recordTemplateService.update(c.req.param("id"), c.req.valid("json"));
+    if (result === null) return c.json({ error: "not_found" }, 404);
+    if (!result.ok) return c.json({ error: result.code }, 400);
+    return c.json(result.template);
   })
   .post("/:id/publish", async (c) => {
     const denied = await requireCsWriter(c.var.user.id);
