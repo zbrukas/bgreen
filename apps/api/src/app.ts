@@ -6,6 +6,7 @@ import type { AppEnv } from "./context.js";
 import { authMiddleware } from "./middleware/auth.js";
 import { fgaMiddleware } from "./middleware/fga.js";
 import { auditRoutes } from "./modules/audit/module.js";
+import { csAuthRoutes } from "./modules/cs-auth/module.js";
 import { csRoutes } from "./modules/cs/api/routes.js";
 import { recordTemplatesRoutes } from "./modules/form-templates/module.js";
 import { identityRoutes } from "./modules/identity/module.js";
@@ -17,11 +18,13 @@ import { workflowsRoutes } from "./modules/workflows/module.js";
 
 const inngest = new Inngest({ id: "bgreen-api" });
 
-// Public surface — no auth required. /health and the Inngest function endpoint
-// (Inngest signs its own webhook calls; auth would block it).
+// Public surface — no auth required. /health, /cs/auth/* (login flow),
+// and the Inngest function endpoint (Inngest signs its own webhook calls;
+// auth would block it).
 const publicRoutes = new Hono()
   .get("/health", (c) => c.json({ status: "ok", service: "api" } as const))
-  .on(["GET", "POST", "PUT"], "/api/inngest", inngestServe({ client: inngest, functions: [] }));
+  .on(["GET", "POST", "PUT"], "/api/inngest", inngestServe({ client: inngest, functions: [] }))
+  .route("/cs/auth", csAuthRoutes);
 
 // Authenticated surface — every request requires a valid WorkOS access token
 // + an FGA cache scope. Order matters: auth populates c.var.user; fga sees it.

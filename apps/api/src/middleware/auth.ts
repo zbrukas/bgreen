@@ -2,6 +2,7 @@ import { JoseWorkosJwtVerifier, type WorkosJwtVerifier } from "@bgreen/auth";
 import { WorkOS } from "@workos-inc/node";
 import { createMiddleware } from "hono/factory";
 import { ACTIVE_ORGANIZATION_HEADER, type AppEnv } from "../context.js";
+import { looksLikeCsSession, verifyCsSession } from "../modules/cs-auth/module.js";
 import { repositories, userService } from "../services.js";
 
 let _verifier: WorkosJwtVerifier | null = null;
@@ -27,12 +28,30 @@ function getWorkos(): WorkOS {
   return _workos;
 }
 
+// V5.7: the API accepts two token shapes on the same Authorization header:
+//   * WorkOS JWT (3-segment dot-separated, used by apps/web org users)
+//   * CS session token (prefix "cs.", HMAC-signed, used by apps/cs)
+// Both resolve to the same `c.var.user` shape downstream; no caller needs
+// to know which path was taken.
 export const authMiddleware = createMiddleware<AppEnv>(async (c, next) => {
   const authHeader = c.req.header("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
     return c.json({ error: "missing_token" }, 401);
   }
   const token = authHeader.slice("Bearer ".length).trim();
+
+  if (looksLikeCsSession(token)) {
+    const verified = verifyCsSession(token);
+    if (!verified.ok) return c.json({ error: "invalid_token", reason: verified.reason }, 401);
+    const user = await repositories.users.findById(verified.payload.sub);
+    if (!user || user.userType !== "central_services") {
+      return c.json({ error: "invalid_token" }, 401);
+    }
+    c.set("user", user);
+    // CS users have no active org context — the CS routes don't read it.
+    await next();
+    return;
+  }
 
   const claims = await getVerifier().verify(token);
   if (!claims) {

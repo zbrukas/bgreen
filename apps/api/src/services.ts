@@ -1,6 +1,7 @@
 import { HttpViesClient } from "@bgreen/pt-data";
 import { getFgaClient } from "./fga-client.js";
 import { AuditService, DrizzleAuditRepository } from "./modules/audit/module.js";
+import { CsAuthService } from "./modules/cs-auth/module.js";
 import {
   DrizzleCompositionRepository,
   DrizzleRecordTemplateRepository,
@@ -78,3 +79,5 @@ export const recordService = new RecordService(
 );
 
 export const viesClient = new HttpViesClient({ timeoutMs: 4000 });
+
+export const csAuthService = new CsAuthService();
