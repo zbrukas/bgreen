@@ -1,20 +1,14 @@
 import { Header } from "@/app/_components/Header";
 import { TemplateEditor } from "@/app/_components/TemplateEditor";
 import { fetchMe, fetchTemplates, fetchTopics } from "@/lib/api-client";
-import { withAuth } from "@workos-inc/authkit-nextjs";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-const ORG_APP_URL = process.env.APP_PUBLIC_URL ?? "http://localhost:3000";
-
 export default async function NewTemplatePage() {
-  const auth = await withAuth();
-  if (!auth.user) redirect("/");
-
   const me = await fetchMe();
-  if (!me || me.userType !== "central_services") redirect(ORG_APP_URL);
+  if (!me) redirect("/login");
 
   const [templates, topics] = await Promise.all([fetchTemplates(), fetchTopics()]);
   // Source for prefill mappings: any template's fields.

@@ -6,13 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchMe, fetchTemplate, fetchTemplates, fetchTopics } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 import type { Field, LeafField } from "@bgreen/types";
-import { withAuth } from "@workos-inc/authkit-nextjs";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
-
-const ORG_APP_URL = process.env.APP_PUBLIC_URL ?? "http://localhost:3000";
 
 const statusLabel: Record<string, string> = {
   draft: "Rascunho",
@@ -42,11 +39,8 @@ interface PageProps {
 
 export default async function TemplateDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const auth = await withAuth();
-  if (!auth.user) redirect("/");
-
   const me = await fetchMe();
-  if (!me || me.userType !== "central_services") redirect(ORG_APP_URL);
+  if (!me) redirect("/login");
 
   const [tpl, allTemplates, topics] = await Promise.all([
     fetchTemplate(id),

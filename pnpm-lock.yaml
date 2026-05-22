@@ -99,9 +99,6 @@ importers:
       '@tailwindcss/postcss':
         specifier: ^4
         version: 4.3.0
-      '@workos-inc/authkit-nextjs':
-        specifier: ^2.0.0
-        version: 2.17.0(next@15.5.18(@opentelemetry/api@1.9.1)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1

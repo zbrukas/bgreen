@@ -8,17 +8,20 @@ import type {
   UserType,
   WorkflowDefinitionId,
 } from "@bgreen/types";
-import { withAuth } from "@workos-inc/authkit-nextjs";
 import { hc } from "hono/client";
+import { cookies } from "next/headers";
 
 const apiBaseUrl = process.env.API_URL ?? "http://localhost:8787";
 
 export const api: ReturnType<typeof hc<AppType>> = hc<AppType>(apiBaseUrl);
 
+export const CS_SESSION_COOKIE = "cs_session";
+
 async function authedHeaders(): Promise<Record<string, string>> {
-  const auth = await withAuth();
-  if (!auth.user || !auth.accessToken) return {};
-  return { Authorization: `Bearer ${auth.accessToken}` };
+  const store = await cookies();
+  const token = store.get(CS_SESSION_COOKIE)?.value;
+  if (!token) return {};
+  return { Authorization: `Bearer ${token}` };
 }
 
 export interface MeResponse {

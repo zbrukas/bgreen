@@ -1,6 +1,7 @@
 "use server";
 
 import {
+  CS_SESSION_COOKIE,
   type ReviewDecision,
   addCsDomain,
   archiveTemplate,
@@ -13,11 +14,118 @@ import {
 } from "@/lib/api-client";
 import type { FormSchema, RecordTemplate, WorkflowDefinitionId } from "@bgreen/types";
 import { FormSchemaSchema, TopicSlugSchema } from "@bgreen/types";
-import { signOut } from "@workos-inc/authkit-nextjs";
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+
+const apiBaseUrl = process.env.API_URL ?? "http://localhost:8787";
+
+// V5.7: cs_session cookie is httpOnly, sameSite=lax, 7-day life.
+async function setSessionCookie(token: string): Promise<void> {
+  const store = await cookies();
+  store.set(CS_SESSION_COOKIE, token, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 7,
+  });
+}
+
+async function clearSessionCookie(): Promise<void> {
+  const store = await cookies();
+  store.delete(CS_SESSION_COOKIE);
+}
 
 export async function signOutAction(): Promise<void> {
-  await signOut();
+  await clearSessionCookie();
+  redirect("/login");
+}
+
+// ---------- Auth: sign in + setup password ----------
+
+export interface SignInFormState {
+  error: string | null;
+  redirectToSetupForEmail: string | null;
+}
+
+export async function signInAction(
+  _prev: SignInFormState,
+  formData: FormData,
+): Promise<SignInFormState> {
+  const emailRaw = formData.get("email");
+  const passwordRaw = formData.get("password");
+  const email = typeof emailRaw === "string" ? emailRaw.trim() : "";
+  const password = typeof passwordRaw === "string" ? passwordRaw : "";
+  if (!email || !password) {
+    return { error: "Indique email e palavra-passe.", redirectToSetupForEmail: null };
+  }
+  let res: Response;
+  try {
+    res = await fetch(`${apiBaseUrl}/cs/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+      cache: "no-store",
+    });
+  } catch {
+    return { error: "Erro de rede ao contactar o servidor.", redirectToSetupForEmail: null };
+  }
+  if (res.status === 409) {
+    return { error: null, redirectToSetupForEmail: email };
+  }
+  if (!res.ok) {
+    return { error: "Credenciais inválidas.", redirectToSetupForEmail: null };
+  }
+  const data = (await res.json().catch(() => ({}))) as { token?: string };
+  if (!data.token) {
+    return { error: "Resposta inesperada do servidor.", redirectToSetupForEmail: null };
+  }
+  await setSessionCookie(data.token);
+  redirect("/");
+}
+
+export interface SetupPasswordFormState {
+  error: string | null;
+}
+
+export async function setupPasswordAction(
+  _prev: SetupPasswordFormState,
+  formData: FormData,
+): Promise<SetupPasswordFormState> {
+  const emailRaw = formData.get("email");
+  const newPasswordRaw = formData.get("newPassword");
+  const confirmRaw = formData.get("confirm");
+  const email = typeof emailRaw === "string" ? emailRaw.trim() : "";
+  const newPassword = typeof newPasswordRaw === "string" ? newPasswordRaw : "";
+  const confirm = typeof confirmRaw === "string" ? confirmRaw : "";
+  if (!email || !newPassword) return { error: "Indique email e palavra-passe." };
+  if (newPassword.length < 12) return { error: "Palavra-passe demasiado curta (mínimo 12)." };
+  if (newPassword !== confirm) return { error: "As palavras-passe não coincidem." };
+  let res: Response;
+  try {
+    res = await fetch(`${apiBaseUrl}/cs/auth/setup-password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, newPassword }),
+      cache: "no-store",
+    });
+  } catch {
+    return { error: "Erro de rede ao contactar o servidor." };
+  }
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { error?: string };
+    if (body.error === "user_not_found") return { error: "Utilizador desconhecido." };
+    if (body.error === "password_already_set") {
+      return { error: "Palavra-passe já definida — use o ecrã de início de sessão." };
+    }
+    if (body.error === "not_a_cs_user") return { error: "Esta conta não é Central Services." };
+    return { error: "Não foi possível definir a palavra-passe." };
+  }
+  const data = (await res.json().catch(() => ({}))) as { token?: string };
+  if (!data.token) return { error: "Resposta inesperada do servidor." };
+  await setSessionCookie(data.token);
+  redirect("/");
 }
 
 // ---------- Templates ----------

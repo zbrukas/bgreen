@@ -10,13 +10,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { fetchMe, fetchTemplates } from "@/lib/api-client";
-import { getSignInUrl, withAuth } from "@workos-inc/authkit-nextjs";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
-
-const ORG_APP_URL = process.env.APP_PUBLIC_URL ?? "http://localhost:3000";
 
 const statusLabel: Record<string, string> = {
   draft: "Rascunho",
@@ -31,19 +28,8 @@ const statusVariant: Record<string, "default" | "secondary" | "outline" | "succe
 };
 
 export default async function CsTemplatesListPage() {
-  const auth = await withAuth();
-  if (!auth.user) {
-    const signInUrl = await getSignInUrl();
-    return (
-      <main className="mx-auto max-w-xl p-8">
-        <a href={signInUrl} className="text-primary underline-offset-4 hover:underline">
-          Iniciar sessão
-        </a>
-      </main>
-    );
-  }
   const me = await fetchMe();
-  if (!me || me.userType !== "central_services") redirect(ORG_APP_URL);
+  if (!me) redirect("/login");
 
   const templates = await fetchTemplates();
 
