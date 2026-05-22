@@ -3,7 +3,7 @@ import { archiveTemplateAction, publishTemplateAction } from "@/app/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { fetchMe, fetchTemplate } from "@/lib/api-client";
+import { fetchMe, fetchTemplate, fetchTemplates, fetchTopics } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 import type { Field, LeafField } from "@bgreen/types";
 import { withAuth } from "@workos-inc/authkit-nextjs";
@@ -48,7 +48,11 @@ export default async function TemplateDetailPage({ params }: PageProps) {
   const me = await fetchMe();
   if (!me || me.userType !== "central_services") redirect(ORG_APP_URL);
 
-  const tpl = await fetchTemplate(id);
+  const [tpl, allTemplates, topics] = await Promise.all([
+    fetchTemplate(id),
+    fetchTemplates(),
+    fetchTopics(),
+  ]);
   if (!tpl) {
     return (
       <>
@@ -66,6 +70,15 @@ export default async function TemplateDetailPage({ params }: PageProps) {
   }
 
   const canWrite = me.centralServicesRole === "admin" || me.centralServicesRole === "maintainer";
+
+  const topicName = tpl.topicTagId
+    ? (topics.find((t) => t.id === tpl.topicTagId)?.name ?? "tópico desconhecido")
+    : null;
+  const templateNameById = new Map(allTemplates.map((t) => [t.id, t.name]));
+  const composedNames = tpl.composedSubTemplateIds.map((subId) => ({
+    id: subId,
+    name: templateNameById.get(subId) ?? "sub-template removido",
+  }));
 
   return (
     <>
@@ -89,6 +102,12 @@ export default async function TemplateDetailPage({ params }: PageProps) {
                 <>
                   <span className="mx-2">·</span>
                   <Badge variant="info">Sub-template</Badge>
+                </>
+              )}
+              {topicName && (
+                <>
+                  <span className="mx-2">·</span>
+                  <Badge variant="purple">Tópico: {topicName}</Badge>
                 </>
               )}
             </p>
@@ -116,6 +135,28 @@ export default async function TemplateDetailPage({ params }: PageProps) {
         </div>
 
         {tpl.description && <p className="text-sm text-muted-foreground">{tpl.description}</p>}
+
+        {composedNames.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Sub-templates incluídos</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ol className="list-decimal space-y-1 pl-5 text-sm">
+                {composedNames.map((c) => (
+                  <li key={c.id}>
+                    <Link
+                      href={`/templates/${c.id}`}
+                      className="text-primary underline-offset-4 hover:underline"
+                    >
+                      {c.name}
+                    </Link>
+                  </li>
+                ))}
+              </ol>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>

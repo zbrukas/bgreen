@@ -1,6 +1,6 @@
 import { Header } from "@/app/_components/Header";
 import { TemplateEditor } from "@/app/_components/TemplateEditor";
-import { fetchMe, fetchTemplates } from "@/lib/api-client";
+import { fetchMe, fetchTemplates, fetchTopics } from "@/lib/api-client";
 import { withAuth } from "@workos-inc/authkit-nextjs";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -16,13 +16,18 @@ export default async function NewTemplatePage() {
   const me = await fetchMe();
   if (!me || me.userType !== "central_services") redirect(ORG_APP_URL);
 
-  const templates = await fetchTemplates();
+  const [templates, topics] = await Promise.all([fetchTemplates(), fetchTopics()]);
+  // Source for prefill mappings: any template's fields.
   const available = templates.map((t) => ({
     id: t.id,
     name: t.name,
     status: t.status,
     formSchema: t.formSchema,
   }));
+  // Candidates for composition: only published sub-templates can be embedded.
+  const subTemplates = templates
+    .filter((t) => t.isSubTemplate && t.status === "published")
+    .map((t) => ({ id: t.id, name: t.name, topicTagId: t.topicTagId }));
 
   return (
     <>
@@ -33,7 +38,11 @@ export default async function NewTemplatePage() {
             ← Voltar
           </Link>
         </p>
-        <TemplateEditor availableTemplates={available} />
+        <TemplateEditor
+          availableTemplates={available}
+          subTemplates={subTemplates}
+          topics={topics}
+        />
       </main>
     </>
   );

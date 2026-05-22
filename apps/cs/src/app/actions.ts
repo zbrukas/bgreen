@@ -5,12 +5,14 @@ import {
   addCsDomain,
   archiveTemplate,
   createTemplate,
+  createTopic,
   deleteCsDomain,
+  deleteTopic,
   publishTemplate,
   reviewCsRecord,
 } from "@/lib/api-client";
 import type { FormSchema, RecordTemplate, WorkflowDefinitionId } from "@bgreen/types";
-import { FormSchemaSchema } from "@bgreen/types";
+import { FormSchemaSchema, TopicSlugSchema } from "@bgreen/types";
 import { signOut } from "@workos-inc/authkit-nextjs";
 import { revalidatePath } from "next/cache";
 
@@ -25,6 +27,9 @@ export interface CreateTemplateInput {
   description: string | null;
   formSchema: unknown;
   workflowDefinitionId?: WorkflowDefinitionId;
+  topicTagId?: string | null;
+  isSubTemplate?: boolean;
+  composedSubTemplateIds?: string[];
 }
 
 export interface CreateTemplateFormState {
@@ -53,6 +58,9 @@ export async function createTemplateAction(
     description: input.description ? input.description.trim() : null,
     formSchema: parsed.data as FormSchema,
     workflowDefinitionId: input.workflowDefinitionId,
+    topicTagId: input.topicTagId ?? null,
+    isSubTemplate: input.isSubTemplate ?? false,
+    composedSubTemplateIds: input.composedSubTemplateIds ?? [],
   });
   if ("error" in result) {
     return { error: `Não foi possível criar o modelo (${result.error}).`, created: null };
@@ -126,4 +134,36 @@ export async function deleteDomainAction(formData: FormData): Promise<void> {
   if (typeof id !== "string" || id === "") return;
   await deleteCsDomain(id);
   revalidatePath("/domains");
+}
+
+// ---------- Topics ----------
+
+export interface AddTopicFormState {
+  error: string | null;
+}
+
+export async function addTopicAction(
+  _prev: AddTopicFormState,
+  formData: FormData,
+): Promise<AddTopicFormState> {
+  const slugRaw = formData.get("slug");
+  const nameRaw = formData.get("name");
+  const slug = typeof slugRaw === "string" ? slugRaw.trim().toLowerCase() : "";
+  const name = typeof nameRaw === "string" ? nameRaw.trim() : "";
+  if (!slug || !name) return { error: "Indique slug e nome." };
+  const slugParsed = TopicSlugSchema.safeParse(slug);
+  if (!slugParsed.success) {
+    return { error: "Slug inválido — use letras minúsculas, dígitos, '-' ou '_'." };
+  }
+  const result = await createTopic({ slug: slugParsed.data, name });
+  if ("error" in result) return { error: `Erro: ${result.error}` };
+  revalidatePath("/topics");
+  return { error: null };
+}
+
+export async function deleteTopicAction(formData: FormData): Promise<void> {
+  const id = formData.get("id");
+  if (typeof id !== "string" || id === "") return;
+  await deleteTopic(id);
+  revalidatePath("/topics");
 }

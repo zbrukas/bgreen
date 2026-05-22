@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import type { RecordTemplate } from "@bgreen/types";
+import type { RecordTemplate, Topic } from "@bgreen/types";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { createTemplateAction } from "../actions";
@@ -46,6 +46,10 @@ const MAPPABLE_KINDS: ReadonlySet<EditorFieldKind> = new Set(["text", "number", 
 
 interface TemplateEditorProps {
   availableTemplates: Array<Pick<RecordTemplate, "id" | "name" | "status" | "formSchema">>;
+  // V5.5: catalogue inputs. subTemplates are the templates this main template
+  // can compose; topics are the tags available to attach.
+  subTemplates: Array<Pick<RecordTemplate, "id" | "name" | "topicTagId">>;
+  topics: Topic[];
 }
 
 type WorkflowOption = "single-step-submit" | "two-step-review" | "three-step-certify";
@@ -68,15 +72,34 @@ const WORKFLOW_OPTIONS: Array<{ value: WorkflowOption; label: string; hint: stri
   },
 ];
 
-export function TemplateEditor({ availableTemplates }: TemplateEditorProps) {
+export function TemplateEditor({ availableTemplates, subTemplates, topics }: TemplateEditorProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [workflowDefinitionId, setWorkflowDefinitionId] =
     useState<WorkflowOption>("two-step-review");
+  const [topicTagId, setTopicTagId] = useState<string>("");
+  const [isSubTemplate, setIsSubTemplate] = useState(false);
+  const [composedIds, setComposedIds] = useState<string[]>([]);
   const [rows, setRows] = useState<EditorRow[]>([newRow()]);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+
+  function toggleSub(id: string) {
+    setComposedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
+
+  function moveSub(id: string, direction: -1 | 1) {
+    setComposedIds((prev) => {
+      const idx = prev.indexOf(id);
+      if (idx < 0) return prev;
+      const target = idx + direction;
+      if (target < 0 || target >= prev.length) return prev;
+      const next = [...prev];
+      [next[idx], next[target]] = [next[target] as string, next[idx] as string];
+      return next;
+    });
+  }
 
   function patchField(rowIdx: number, fieldIdx: number, patch: Partial<EditorField>) {
     setRows((prev) =>
@@ -125,6 +148,10 @@ export function TemplateEditor({ availableTemplates }: TemplateEditorProps) {
       setError(built.message);
       return;
     }
+    if (isSubTemplate && composedIds.length > 0) {
+      setError("Um sub-template não pode compor outros sub-templates.");
+      return;
+    }
     startTransition(async () => {
       const result = await createTemplateAction(
         { error: null, created: null },
@@ -133,6 +160,9 @@ export function TemplateEditor({ availableTemplates }: TemplateEditorProps) {
           description: description.trim() || null,
           formSchema: built.schema,
           workflowDefinitionId,
+          topicTagId: topicTagId === "" ? null : topicTagId,
+          isSubTemplate,
+          composedSubTemplateIds: isSubTemplate ? [] : composedIds,
         },
       );
       if (result.error) {
@@ -188,6 +218,94 @@ export function TemplateEditor({ availableTemplates }: TemplateEditorProps) {
           {WORKFLOW_OPTIONS.find((o) => o.value === workflowDefinitionId)?.hint}
         </p>
       </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="tpl-topic">Tópico (opcional)</Label>
+        <Select id="tpl-topic" value={topicTagId} onChange={(e) => setTopicTagId(e.target.value)}>
+          <option value="">— sem tópico —</option>
+          {topics.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.name} ({t.slug})
+            </option>
+          ))}
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          Etiqueta para filtrar e segmentar este modelo por área (HR, financeiro, …).
+        </p>
+      </div>
+
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={isSubTemplate}
+          onChange={(e) => {
+            setIsSubTemplate(e.target.checked);
+            if (e.target.checked) setComposedIds([]);
+          }}
+          className="h-4 w-4 rounded border-input text-primary focus:ring-ring"
+        />
+        <span>É sub-template (não submetido directamente; embebido noutros modelos)</span>
+      </label>
+
+      {!isSubTemplate && subTemplates.length > 0 && (
+        <section className="space-y-3 rounded-lg border bg-card p-4">
+          <div>
+            <h2 className="text-lg font-medium">Sub-templates incluídos</h2>
+            <p className="text-xs text-muted-foreground">
+              Os campos do sub-template aparecem no formulário, depois dos campos deste modelo.
+              Reordenar afecta a ordem de apresentação.
+            </p>
+          </div>
+          <ol className="space-y-2">
+            {subTemplates.map((sub) => {
+              const idx = composedIds.indexOf(sub.id);
+              const selected = idx >= 0;
+              return (
+                <li
+                  key={sub.id}
+                  className={cn(
+                    "flex items-center justify-between gap-3 rounded-md border bg-muted/30 p-2 text-sm",
+                    selected && "border-primary/50 bg-primary/5",
+                  )}
+                >
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={selected}
+                      onChange={() => toggleSub(sub.id)}
+                      className="h-4 w-4 rounded border-input text-primary focus:ring-ring"
+                    />
+                    <span>{sub.name}</span>
+                  </label>
+                  {selected && (
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs text-muted-foreground">posição {idx + 1}</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => moveSub(sub.id, -1)}
+                        disabled={idx === 0}
+                      >
+                        ↑
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => moveSub(sub.id, 1)}
+                        disabled={idx === composedIds.length - 1}
+                      >
+                        ↓
+                      </Button>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ol>
+        </section>
+      )}
 
       <section className="space-y-4">
         <h2 className="text-lg font-medium">Linhas e campos</h2>

@@ -4,6 +4,7 @@ import type {
   CentralServicesRole,
   FormSchema,
   RecordTemplate,
+  Topic,
   UserType,
   WorkflowDefinitionId,
 } from "@bgreen/types";
@@ -81,6 +82,9 @@ export async function createTemplate(input: {
   description: string | null;
   formSchema: FormSchema;
   workflowDefinitionId?: WorkflowDefinitionId;
+  topicTagId?: string | null;
+  isSubTemplate?: boolean;
+  composedSubTemplateIds?: string[];
 }): Promise<RecordTemplate | { error: string }> {
   try {
     const headers = await authedHeaders();
@@ -93,6 +97,11 @@ export async function createTemplate(input: {
           formSchema: input.formSchema,
           ...(input.workflowDefinitionId
             ? { workflowDefinitionId: input.workflowDefinitionId }
+            : {}),
+          ...(input.topicTagId !== undefined ? { topicTagId: input.topicTagId } : {}),
+          ...(input.isSubTemplate !== undefined ? { isSubTemplate: input.isSubTemplate } : {}),
+          ...(input.composedSubTemplateIds !== undefined
+            ? { composedSubTemplateIds: input.composedSubTemplateIds }
             : {}),
         },
       },
@@ -251,6 +260,60 @@ export async function deleteCsDomain(
     const headers = await authedHeaders();
     if (!headers.Authorization) return { ok: false, error: "not_signed_in" };
     const res = await api.cs.domains[":id"].$delete({ param: { id } }, { headers });
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({}))) as { error?: string };
+      return { ok: false, error: body.error ?? "request_failed" };
+    }
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "network_error" };
+  }
+}
+
+// ---------- Topics ----------
+
+export async function fetchTopics(): Promise<Topic[]> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return [];
+    const res = await api.topics.$get(undefined, { headers });
+    if (!res.ok) return [];
+    return (await res.json()) as Topic[];
+  } catch {
+    return [];
+  }
+}
+
+export async function createTopic(input: {
+  slug: string;
+  name: string;
+}): Promise<Topic | { error: string }> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return { error: "not_signed_in" };
+    const res = await api.topics.$post(
+      { json: { slug: input.slug, name: input.name } },
+      { headers },
+    );
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({ error: "request_failed" }))) as {
+        error?: string;
+      };
+      return { error: body.error ?? "request_failed" };
+    }
+    return (await res.json()) as Topic;
+  } catch {
+    return { error: "network_error" };
+  }
+}
+
+export async function deleteTopic(
+  id: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return { ok: false, error: "not_signed_in" };
+    const res = await api.topics[":id"].$delete({ param: { id } }, { headers });
     if (!res.ok) {
       const body = (await res.json().catch(() => ({}))) as { error?: string };
       return { ok: false, error: body.error ?? "request_failed" };

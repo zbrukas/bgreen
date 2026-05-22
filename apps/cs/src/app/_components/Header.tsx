@@ -35,6 +35,9 @@ export function Header({ userEmail, role }: HeaderProps) {
         <Link href="/domains" className="text-sm text-muted-foreground hover:text-foreground">
           Domínios
         </Link>
+        <Link href="/topics" className="text-sm text-muted-foreground hover:text-foreground">
+          Tópicos
+        </Link>
         <span className="text-sm text-muted-foreground">
           {userEmail}
           {role ? <span className="ml-1 text-xs">({roleLabel[role] ?? role})</span> : null}
