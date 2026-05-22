@@ -4,4 +4,6 @@ export * from "./legal-form";
 export * from "./organization-membership";
 export * from "./organization-size";
 export * from "./organization";
+export * from "./template-composition";
+export * from "./topic";
 export * from "./user";

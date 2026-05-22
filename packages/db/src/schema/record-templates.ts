@@ -1,4 +1,5 @@
 import { boolean, jsonb, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { topics } from "./topics";
 import { users } from "./users";
 
 export const recordTemplateStatusEnum = pgEnum("record_template_status", [
@@ -11,9 +12,6 @@ export const recordTemplateStatusEnum = pgEnum("record_template_status", [
 // template now belongs to the singleton CS catalogue; `created_by_user_id`
 // references a users.user_type='central_services' row (enforced at the
 // service layer).
-//
-// V5.5 will add topic_tag_id + is_sub_template + embeddedTemplateIds to
-// support composition; the placeholders go in now to avoid two migrations.
 
 export const recordTemplates = pgTable("record_templates", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -22,7 +20,7 @@ export const recordTemplates = pgTable("record_templates", {
   formSchema: jsonb("form_schema").notNull(),
   status: recordTemplateStatusEnum("status").notNull().default("draft"),
   workflowDefinitionId: text("workflow_definition_id").notNull().default("two-step-review"),
-  topicTagId: uuid("topic_tag_id"),
+  topicTagId: uuid("topic_tag_id").references(() => topics.id, { onDelete: "set null" }),
   isSubTemplate: boolean("is_sub_template").notNull().default(false),
   createdByUserId: uuid("created_by_user_id")
     .notNull()

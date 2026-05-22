@@ -177,9 +177,12 @@ export const RecordTemplateSchema = z.object({
   formSchema: FormSchemaSchema,
   status: RecordTemplateStatusSchema,
   workflowDefinitionId: WorkflowDefinitionIdSchema,
-  // V5.5 placeholders.
+  // V5.5: topic tag + composition. composedSubTemplateIds is ordered (by
+  // template_compositions.position asc) and may be empty for leaf templates
+  // and sub-templates themselves.
   topicTagId: z.string().uuid().nullable(),
   isSubTemplate: z.boolean(),
+  composedSubTemplateIds: z.array(z.string().uuid()).default([]),
   createdByUserId: z.string().uuid(),
   createdAt: z.string().datetime({ offset: true }),
   updatedAt: z.string().datetime({ offset: true }),

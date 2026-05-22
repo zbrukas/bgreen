@@ -15,7 +15,10 @@ import type {
 // V5.4: templates are central-services-owned, no longer scoped to an
 // organisation. Queries drop the orgScope helper.
 
-function rowToTemplate(row: typeof schema.recordTemplates.$inferSelect): RecordTemplate {
+function rowToTemplate(
+  row: typeof schema.recordTemplates.$inferSelect,
+  composedSubTemplateIds: string[] = [],
+): RecordTemplate {
   return {
     id: row.id,
     name: row.name,
@@ -25,6 +28,7 @@ function rowToTemplate(row: typeof schema.recordTemplates.$inferSelect): RecordT
     workflowDefinitionId: row.workflowDefinitionId as WorkflowDefinitionId,
     topicTagId: row.topicTagId,
     isSubTemplate: row.isSubTemplate,
+    composedSubTemplateIds,
     createdByUserId: row.createdByUserId,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
@@ -63,7 +67,7 @@ export class DrizzleRecordTemplateRepository implements RecordTemplateRepository
 
   async listAll(): Promise<RecordTemplate[]> {
     const rows = await db.select().from(schema.recordTemplates);
-    return rows.map(rowToTemplate);
+    return rows.map((row) => rowToTemplate(row));
   }
 
   async update(id: string, patch: UpdateRecordTemplateInput): Promise<RecordTemplate | null> {
