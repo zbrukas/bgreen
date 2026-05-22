@@ -13,6 +13,8 @@ function makeUser(over: Partial<User> = {}): User {
     lastName: null,
     userType: "organization",
     centralServicesRole: null,
+    passwordHash: null,
+    lastLoginAt: null,
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000Z",
     ...over,
@@ -53,6 +55,7 @@ class FakeUserRepo implements UserRepository {
     return user;
   }
   seedExisting(user: User) {
+    if (!user.workosUserId) throw new Error("seedExisting: requires a workosUserId");
     this.byWorkos.set(user.workosUserId, user);
   }
 }

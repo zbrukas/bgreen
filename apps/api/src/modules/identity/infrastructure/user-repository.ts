@@ -12,6 +12,8 @@ function rowToUser(row: typeof schema.users.$inferSelect): User {
     lastName: row.lastName,
     userType: row.userType,
     centralServicesRole: row.centralServicesRole,
+    passwordHash: row.passwordHash,
+    lastLoginAt: row.lastLoginAt ? row.lastLoginAt.toISOString() : null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
