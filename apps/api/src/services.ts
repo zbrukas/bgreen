@@ -67,6 +67,7 @@ export const recordService = new RecordService(
   repositories.recordTemplates,
   auditService,
   workflowService,
+  repositories.topics,
 );
 
 export const viesClient = new HttpViesClient({ timeoutMs: 4000 });

@@ -3,6 +3,7 @@ import { validateComposedFormValues, validateFormValues } from "@bgreen/form-eng
 import type { Record, RecordTemplate, RecordValues } from "@bgreen/types";
 import type { AuditService } from "../../audit/module.js";
 import type { RecordTemplateRepository } from "../../form-templates/application/record-template-service.js";
+import type { TopicRepository } from "../../topics/module.js";
 import type { WorkflowService } from "../../workflows/module.js";
 import { defaultWorkflowDefinitionId } from "../../workflows/module.js";
 
@@ -12,6 +13,10 @@ export interface CreateRecordInput {
   rawValues: unknown;
   submitterUserId: string;
   asDraft?: boolean;
+  // V5.6: actor's topic scope. Empty array = no restriction. Non-empty
+  // filters which composed sub-templates the actor may write to and
+  // which require validation here.
+  actorTopicScope?: string[];
 }
 
 export interface UpdateRecordInput {
@@ -21,6 +26,8 @@ export interface UpdateRecordInput {
   actorUserId: string;
   // "save_draft" leaves the record in draft state; "submit" promotes it.
   action: "save_draft" | "submit";
+  // V5.6: actor's topic scope (same semantics as CreateRecordInput).
+  actorTopicScope?: string[];
 }
 
 export interface RecordRepository {
@@ -91,6 +98,9 @@ export class RecordService {
     private readonly templates: RecordTemplateRepository,
     private readonly audit: AuditService,
     private readonly workflows: WorkflowService,
+    // V5.6: needed to resolve sub-template topicTagId → slug for scope
+    // filtering. List() is called at most once per submit/update.
+    private readonly topics: TopicRepository,
   ) {}
 
   async submit(input: CreateRecordInput): Promise<SubmitResult> {
@@ -101,7 +111,12 @@ export class RecordService {
     }
 
     const mode: ValidationMode = input.asDraft ? "draft" : "submit";
-    const validated = await this.validateAgainstTemplate(template, input.rawValues, mode);
+    const validated = await this.validateAgainstTemplate(
+      template,
+      input.rawValues,
+      mode,
+      input.actorTopicScope ?? [],
+    );
     if (!validated.ok) {
       return { ok: false, code: "validation_failed", errors: validated.errors };
     }
@@ -170,10 +185,23 @@ export class RecordService {
     }
 
     const mode: ValidationMode = input.action === "submit" ? "submit" : "draft";
-    const validated = await this.validateAgainstTemplate(template, input.rawValues, mode);
+    const validated = await this.validateAgainstTemplate(
+      template,
+      input.rawValues,
+      mode,
+      input.actorTopicScope ?? [],
+    );
     if (!validated.ok) {
       return { ok: false, code: "validation_failed", errors: validated.errors };
     }
+
+    // V5.6: out-of-scope subs on the existing record are preserved as-is.
+    // The actor can't see or write them; merging here is the only way to
+    // avoid clobbering work by collaborators with the matching scope.
+    const valuesToStore =
+      validated.outOfScopeSubIds.length > 0
+        ? mergePreservedSubs(validated.values, existing.values, validated.outOfScopeSubIds)
+        : validated.values;
 
     const submittedAt =
       input.action === "submit"
@@ -184,7 +212,7 @@ export class RecordService {
     const record = await this.records.updateValues({
       organizationId: input.organizationId,
       recordId: input.recordId,
-      values: validated.values,
+      values: valuesToStore,
       submittedAt,
     });
     if (!record) return { ok: false, code: "record_not_found" };
@@ -319,29 +347,109 @@ export class RecordService {
   // declares any sub-templates. Sub-template schemas are fetched lazily;
   // a missing one is skipped silently — the composition row is the
   // source of truth, and a stale id won't block a submission.
+  //
+  // V5.6: actorTopicScope filters which sub-templates the actor can
+  // touch. Out-of-scope subs are dropped from the validation set; if
+  // the incoming payload references one, we 422 with a clear error so
+  // a topic-scoped UI never silently overwrites someone else's data.
+  // outOfScopeSubIds is reported back so the caller can merge the
+  // existing record's values for those slots on update.
   private async validateAgainstTemplate(
     template: RecordTemplate,
     rawValues: unknown,
     mode: ValidationMode,
-  ): Promise<{ ok: true; values: RecordValues } | { ok: false; errors: FormError[] }> {
+    actorTopicScope: string[],
+  ): Promise<
+    | { ok: true; values: RecordValues; outOfScopeSubIds: string[] }
+    | { ok: false; errors: FormError[] }
+  > {
     const subIds = template.composedSubTemplateIds;
     if (!subIds || subIds.length === 0) {
-      return validateFormValues(template.formSchema, rawValues, { mode });
+      const r = validateFormValues(template.formSchema, rawValues, { mode });
+      if (!r.ok) return r;
+      return { ok: true, values: r.values, outOfScopeSubIds: [] };
     }
-    const subs: Array<{ id: string; schema: typeof template.formSchema }> = [];
+
+    // Fetch every declared sub-template (id, schema, topicTagId). A
+    // missing template still gets skipped silently — composition rows
+    // are the source of truth, but stale ids shouldn't block work.
+    const subs: Array<{
+      id: string;
+      schema: typeof template.formSchema;
+      topicTagId: string | null;
+    }> = [];
     for (const subId of subIds) {
       const sub = await this.templates.findById(subId);
       if (!sub) continue;
-      subs.push({ id: sub.id, schema: sub.formSchema });
+      subs.push({ id: sub.id, schema: sub.formSchema, topicTagId: sub.topicTagId });
     }
+
+    // Resolve scope. Empty scope = no restriction; otherwise build a
+    // single topic-id → slug map and partition.
+    const scopeSet = new Set(actorTopicScope);
+    let topicSlugById = new Map<string, string>();
+    if (scopeSet.size > 0) {
+      const allTopics = await this.topics.list();
+      topicSlugById = new Map(allTopics.map((t) => [t.id, t.slug]));
+    }
+    const inScope = subs.filter((s) => {
+      if (scopeSet.size === 0) return true;
+      if (!s.topicTagId) return true;
+      const slug = topicSlugById.get(s.topicTagId);
+      return slug !== undefined && scopeSet.has(slug);
+    });
+    const inScopeIds = new Set(inScope.map((s) => s.id));
+    const outOfScopeSubIds = subs.filter((s) => !inScopeIds.has(s.id)).map((s) => s.id);
+
+    // Guard: incoming subs payload must only reference in-scope ids.
+    const rawSubs = isObject(rawValues) ? (rawValues as { subs?: unknown }).subs : undefined;
+    if (isObject(rawSubs)) {
+      for (const key of Object.keys(rawSubs)) {
+        if (!inScopeIds.has(key)) {
+          return {
+            ok: false,
+            errors: [
+              {
+                fieldId: `subs.${key}`,
+                code: "unknown_field",
+                message: "Sub-modelo fora do âmbito do utilizador.",
+              },
+            ],
+          };
+        }
+      }
+    }
+
     const composed = validateComposedFormValues(
-      { main: template.formSchema, subTemplates: subs },
+      {
+        main: template.formSchema,
+        subTemplates: inScope.map(({ id, schema }) => ({ id, schema })),
+      },
       rawValues,
       { mode },
     );
     if (!composed.ok) return composed;
-    // Cast: ComposedRecordValues is RecordValues + { subs?: ... } which
-    // is structurally a RecordValues for the storage layer.
-    return { ok: true, values: composed.values as RecordValues };
+    return { ok: true, values: composed.values as RecordValues, outOfScopeSubIds };
   }
+}
+
+function isObject(v: unknown): v is { [k: string]: unknown } {
+  return v !== null && typeof v === "object" && !Array.isArray(v);
+}
+
+// Merges existing.values.subs[outOfScope] into the validated values so an
+// out-of-scope sub-template's data survives an update by a topic-scoped
+// actor that couldn't see it.
+function mergePreservedSubs(
+  validatedValues: RecordValues,
+  existingValues: RecordValues,
+  outOfScopeSubIds: string[],
+): RecordValues {
+  const existingSubs = isObject(existingValues.subs) ? existingValues.subs : {};
+  const validatedSubs = isObject(validatedValues.subs) ? validatedValues.subs : {};
+  const merged: { [k: string]: unknown } = { ...validatedSubs };
+  for (const subId of outOfScopeSubIds) {
+    if (existingSubs[subId] !== undefined) merged[subId] = existingSubs[subId];
+  }
+  return { ...validatedValues, subs: merged };
 }

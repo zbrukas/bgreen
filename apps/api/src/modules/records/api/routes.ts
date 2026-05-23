@@ -66,6 +66,7 @@ export const recordsRoutes = new Hono<AppEnv>()
       rawValues: input.values,
       submitterUserId: c.var.user.id,
       asDraft: input.asDraft,
+      actorTopicScope: c.var.topicScope ?? [],
     });
     if (!result.ok) {
       if (result.code === "validation_failed") {
@@ -107,6 +108,7 @@ export const recordsRoutes = new Hono<AppEnv>()
       rawValues: input.values,
       actorUserId: c.var.user.id,
       action: input.action,
+      actorTopicScope: c.var.topicScope ?? [],
     });
     if (!result.ok) {
       if (result.code === "validation_failed") {
