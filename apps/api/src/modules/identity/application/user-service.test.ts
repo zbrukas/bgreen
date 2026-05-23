@@ -1,4 +1,3 @@
-import type { FgaClient } from "@bgreen/auth";
 import type { CentralServicesRole, User, UserType } from "@bgreen/types";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { CentralServicesDomainsRepository } from "../infrastructure/central-services-domains-repository.js";
@@ -75,16 +74,6 @@ class FakeCsDomains implements CentralServicesDomainsRepository {
   }
 }
 
-class FakeFga implements FgaClient {
-  warrants: Array<{ relation: string; subject: { resourceId: string } }> = [];
-  async check() {
-    return true;
-  }
-  async writeWarrant(input: Parameters<FgaClient["writeWarrant"]>[0]) {
-    this.warrants.push({ relation: input.relation, subject: input.subject });
-  }
-}
-
 describe("UserService.syncFromWorkos classification", () => {
   const originalEnv = process.env.GLOBAL_ADMIN_EMAIL;
   beforeEach(() => {
@@ -98,7 +87,7 @@ describe("UserService.syncFromWorkos classification", () => {
   it("classifies a brand new user as 'organization' by default", async () => {
     const repo = new FakeUserRepo();
     const cs = new FakeCsDomains();
-    const service = new UserService(repo, cs, new FakeFga());
+    const service = new UserService(repo, cs);
     await service.syncFromWorkos({
       workosUserId: "w-1",
       email: "alice@somewhere.com",
@@ -113,7 +102,7 @@ describe("UserService.syncFromWorkos classification", () => {
     process.env.GLOBAL_ADMIN_EMAIL = "boss@bgreen.io";
     const repo = new FakeUserRepo();
     const cs = new FakeCsDomains();
-    const service = new UserService(repo, cs, new FakeFga());
+    const service = new UserService(repo, cs);
     await service.syncFromWorkos({
       workosUserId: "w-1",
       email: "Boss@bgreen.io",
@@ -128,7 +117,7 @@ describe("UserService.syncFromWorkos classification", () => {
     const repo = new FakeUserRepo();
     const cs = new FakeCsDomains();
     cs.register("nomad.consulting");
-    const service = new UserService(repo, cs, new FakeFga());
+    const service = new UserService(repo, cs);
     await service.syncFromWorkos({
       workosUserId: "w-1",
       email: "consultant@nomad.consulting",
@@ -152,7 +141,7 @@ describe("UserService.syncFromWorkos classification", () => {
         centralServicesRole: null,
       }),
     );
-    const service = new UserService(repo, cs, new FakeFga());
+    const service = new UserService(repo, cs);
     await service.syncFromWorkos({
       workosUserId: "w-1",
       email: "consultant@nomad.consulting",
@@ -168,7 +157,7 @@ describe("UserService.syncFromWorkos classification", () => {
     const repo = new FakeUserRepo();
     const cs = new FakeCsDomains();
     cs.register("bgreen.io"); // also a CS domain
-    const service = new UserService(repo, cs, new FakeFga());
+    const service = new UserService(repo, cs);
     await service.syncFromWorkos({
       workosUserId: "w-1",
       email: "boss@bgreen.io",
@@ -176,35 +165,5 @@ describe("UserService.syncFromWorkos classification", () => {
       lastName: null,
     });
     expect(repo.upserts[0]?.centralServicesRole).toBe("admin");
-  });
-
-  it("writes a CS-workspace warrant for new CS users", async () => {
-    const repo = new FakeUserRepo();
-    const cs = new FakeCsDomains();
-    cs.register("nomad.consulting");
-    const fga = new FakeFga();
-    const service = new UserService(repo, cs, fga);
-    await service.syncFromWorkos({
-      workosUserId: "w-1",
-      email: "consultant@nomad.consulting",
-      firstName: null,
-      lastName: null,
-    });
-    expect(fga.warrants).toHaveLength(1);
-    expect(fga.warrants[0]?.relation).toBe("maintainer");
-  });
-
-  it("does not write FGA warrants for org users", async () => {
-    const repo = new FakeUserRepo();
-    const cs = new FakeCsDomains();
-    const fga = new FakeFga();
-    const service = new UserService(repo, cs, fga);
-    await service.syncFromWorkos({
-      workosUserId: "w-1",
-      email: "alice@somewhere.com",
-      firstName: null,
-      lastName: null,
-    });
-    expect(fga.warrants).toHaveLength(0);
   });
 });

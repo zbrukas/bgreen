@@ -1,5 +1,4 @@
 import { randomBytes } from "node:crypto";
-import type { FgaClient } from "@bgreen/auth";
 import type { Invite, InviteErrorCode, InvitePreview, MembershipRole } from "@bgreen/types";
 import type { AuditService } from "../../audit/module.js";
 import type { UserRepository } from "../../identity/application/user-service.js";
@@ -40,7 +39,6 @@ export class InviteService {
     private readonly orgs: OrganizationRepository,
     private readonly users: UserRepository,
     private readonly audit: AuditService,
-    private readonly fga: FgaClient,
   ) {}
 
   async create(input: CreateInviteInput): Promise<Invite> {
@@ -119,14 +117,6 @@ export class InviteService {
         userId: input.userId,
         organizationId: invite.organizationId,
         role: invite.role,
-      });
-      // Mirror the membership into FGA so subsequent privileged actions
-      // can resolve via can(). Idempotency-skip avoids duplicate warrants
-      // if the user re-clicks an invite link.
-      await this.fga.writeWarrant({
-        resource: { resourceType: "organization", resourceId: invite.organizationId },
-        relation: invite.role,
-        subject: { resourceType: "user", resourceId: input.userId },
       });
     }
 

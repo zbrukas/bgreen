@@ -1,5 +1,4 @@
 import { HttpViesClient } from "@bgreen/pt-data";
-import { getFgaClient } from "./fga-client.js";
 import { AuditService, DrizzleAuditRepository } from "./modules/audit/module.js";
 import { CsAuthService } from "./modules/cs-auth/module.js";
 import {
@@ -36,13 +35,7 @@ export const repositories = {
   compositions: new DrizzleCompositionRepository(),
 };
 
-export const fgaClient = getFgaClient();
-
-export const userService = new UserService(
-  repositories.users,
-  repositories.centralServicesDomains,
-  fgaClient,
-);
+export const userService = new UserService(repositories.users, repositories.centralServicesDomains);
 
 export const auditService = new AuditService(repositories.audit);
 
@@ -52,7 +45,6 @@ export const organizationService = new OrganizationService(
   repositories.organizations,
   repositories.memberships,
   auditService,
-  fgaClient,
 );
 
 export const inviteService = new InviteService(
@@ -61,7 +53,6 @@ export const inviteService = new InviteService(
   repositories.organizations,
   repositories.users,
   auditService,
-  fgaClient,
 );
 
 export const topicService = new TopicService(repositories.topics);

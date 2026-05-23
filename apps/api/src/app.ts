@@ -4,7 +4,6 @@ import { Inngest } from "inngest";
 import { serve as inngestServe } from "inngest/hono";
 import type { AppEnv } from "./context.js";
 import { authMiddleware } from "./middleware/auth.js";
-import { fgaMiddleware } from "./middleware/fga.js";
 import { auditRoutes } from "./modules/audit/module.js";
 import { csAuthRoutes } from "./modules/cs-auth/module.js";
 import { csRoutes } from "./modules/cs/api/routes.js";
@@ -26,11 +25,12 @@ const publicRoutes = new Hono()
   .on(["GET", "POST", "PUT"], "/api/inngest", inngestServe({ client: inngest, functions: [] }))
   .route("/cs/auth", csAuthRoutes);
 
-// Authenticated surface — every request requires a valid WorkOS access token
-// + an FGA cache scope. Order matters: auth populates c.var.user; fga sees it.
+// Authenticated surface — every request requires either a valid WorkOS
+// JWT (org users) or a CS session token (CS users). Auth populates
+// c.var.user. Authorization gates live inline in each route via
+// canOrgRelation / canCsRelation against the DB.
 const authedRoutes = new Hono<AppEnv>()
   .use("*", authMiddleware)
-  .use("*", fgaMiddleware)
   .route("/identity", identityRoutes)
   .route("/organizations", organizationsRoutes)
   .route("/invites", inviteRoutes)

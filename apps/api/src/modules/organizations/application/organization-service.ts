@@ -1,4 +1,3 @@
-import type { FgaClient } from "@bgreen/auth";
 import type { OrganizationSize } from "@bgreen/types";
 import type { AuditService } from "../../audit/module.js";
 import { buildEntityDiff } from "../../audit/module.js";
@@ -43,7 +42,6 @@ export class OrganizationService {
     private readonly orgs: OrganizationRepository,
     private readonly memberships: MembershipRepository,
     private readonly audit: AuditService,
-    private readonly fga: FgaClient,
   ) {}
 
   async createWithOwner(
@@ -54,12 +52,6 @@ export class OrganizationService {
       userId: input.ownerUserId,
       organizationId: organization.id,
       role: "org_admin",
-    });
-    // Seed the FGA relationship — the owner becomes org_admin on the new org.
-    await this.fga.writeWarrant({
-      resource: { resourceType: "organization", resourceId: organization.id },
-      relation: "org_admin",
-      subject: { resourceType: "user", resourceId: input.ownerUserId },
     });
     await this.audit.record({
       actorUserId: input.ownerUserId,
