@@ -23,6 +23,9 @@ export const organizationInvites = pgTable("organization_invites", {
     .references(() => users.id),
   status: inviteStatusEnum("status").notNull().default("pending"),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  // V5.6c: topic scope assigned to the membership on accept. Empty
+  // array = no restriction (matches organization_memberships).
+  topicScope: text("topic_scope").array().notNull().default([]),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   acceptedAt: timestamp("accepted_at", { withTimezone: true }),
   acceptedByUserId: uuid("accepted_by_user_id").references(() => users.id),

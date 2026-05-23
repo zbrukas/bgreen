@@ -23,6 +23,15 @@ export interface AddMembershipInput {
   userId: string;
   organizationId: string;
   role: MembershipRole;
+  // V5.6c: optional at the API boundary; empty array means no restriction.
+  topicScope?: string[];
+}
+
+export interface UpdateMembershipInput {
+  userId: string;
+  organizationId: string;
+  role?: MembershipRole;
+  topicScope?: string[];
 }
 
 export interface OrganizationRepository {
@@ -33,8 +42,10 @@ export interface OrganizationRepository {
 
 export interface MembershipRepository {
   add(input: AddMembershipInput): Promise<OrganizationMembership>;
+  update(input: UpdateMembershipInput): Promise<OrganizationMembership | null>;
   listForUser(userId: string): Promise<OrganizationMembership[]>;
   listForOrganization(organizationId: string): Promise<OrganizationMembership[]>;
+  findByUserAndOrg(userId: string, organizationId: string): Promise<OrganizationMembership | null>;
 }
 
 export class OrganizationService {

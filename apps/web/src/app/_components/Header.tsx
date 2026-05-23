@@ -41,12 +41,20 @@ export function Header({
           Modelos
         </Link>
         {canInvite && activeOrganizationId && (
-          <Link
-            href={`/organizations/${activeOrganizationId}/invites/new`}
-            className="text-sm text-muted-foreground hover:text-foreground"
-          >
-            Convidar membro
-          </Link>
+          <>
+            <Link
+              href={`/organizations/${activeOrganizationId}/members`}
+              className="text-sm text-muted-foreground hover:text-foreground"
+            >
+              Membros
+            </Link>
+            <Link
+              href={`/organizations/${activeOrganizationId}/invites/new`}
+              className="text-sm text-muted-foreground hover:text-foreground"
+            >
+              Convidar membro
+            </Link>
+          </>
         )}
         {organizations.length >= 1 && (
           <Link

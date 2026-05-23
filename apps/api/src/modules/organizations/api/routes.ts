@@ -40,6 +40,12 @@ const createOrganizationInput = z.object({
 const createInviteInput = z.object({
   email: z.string().email().max(254),
   role: MembershipRoleSchema,
+  topicScope: z.array(z.string()).default([]),
+});
+
+const updateMembershipInput = z.object({
+  role: MembershipRoleSchema.optional(),
+  topicScope: z.array(z.string()).optional(),
 });
 
 function appPublicUrl(): string {
@@ -96,6 +102,7 @@ export const organizationsRoutes = new Hono<AppEnv>()
       invitedEmail: input.email,
       role: input.role,
       invitedByUserId: c.var.user.id,
+      topicScope: input.topicScope,
     });
 
     const acceptUrl = `${appPublicUrl()}/invites/${invite.token}`;
@@ -119,4 +126,44 @@ export const organizationsRoutes = new Hono<AppEnv>()
       },
       201,
     );
+  })
+  .get("/:orgId/members", async (c) => {
+    const orgId = c.req.param("orgId");
+    if (!orgId) return c.json({ error: "missing_org_id" }, 400);
+    if (c.var.organizationId !== orgId) {
+      return c.json({ error: "wrong_active_org" }, 403);
+    }
+    await requireOrgRelation(c.var.user.id, orgId, "org_admin");
+    const memberships = await repositories.memberships.listForOrganization(orgId);
+    const userIds = memberships.map((m) => m.userId);
+    const users = await Promise.all(userIds.map((id) => repositories.users.findById(id)));
+    const userById = new Map(users.filter((u) => u !== null).map((u) => [u.id, u]));
+    const out = memberships.map((m) => ({
+      ...m,
+      user: userById.get(m.userId) ?? null,
+    }));
+    return c.json(out);
+  })
+  .patch("/:orgId/members/:userId", zValidator("json", updateMembershipInput), async (c) => {
+    const orgId = c.req.param("orgId");
+    const targetUserId = c.req.param("userId");
+    if (!orgId || !targetUserId) return c.json({ error: "missing_param" }, 400);
+    if (c.var.organizationId !== orgId) {
+      return c.json({ error: "wrong_active_org" }, 403);
+    }
+    await requireOrgRelation(c.var.user.id, orgId, "org_admin");
+    const input = c.req.valid("json");
+    // Guard: an admin can't demote themselves below admin and lock out
+    // the organization. They can still demote *other* admins.
+    if (c.var.user.id === targetUserId && input.role && input.role !== "org_admin") {
+      return c.json({ error: "cannot_demote_self" }, 400);
+    }
+    const updated = await repositories.memberships.update({
+      userId: targetUserId,
+      organizationId: orgId,
+      role: input.role,
+      topicScope: input.topicScope,
+    });
+    if (!updated) return c.json({ error: "membership_not_found" }, 404);
+    return c.json(updated);
   });

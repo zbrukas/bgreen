@@ -92,6 +92,13 @@
       "when": 1779570000000,
       "tag": "0012_cs_local_auth",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1779660000000,
+      "tag": "0013_invite_topic_scope",
+      "breakpoints": true
     }
   ]
 }

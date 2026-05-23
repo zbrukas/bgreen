@@ -139,6 +139,7 @@ export async function createInvite(input: {
   organizationId: string;
   email: string;
   role: MembershipRole;
+  topicScope: string[];
 }): Promise<
   | { acceptUrl: string; invitedEmail: string; emailDelivered: boolean; emailReason: string | null }
   | { error: string }
@@ -149,7 +150,7 @@ export async function createInvite(input: {
     const res = await api.organizations[":orgId"].invites.$post(
       {
         param: { orgId: input.organizationId },
-        json: { email: input.email, role: input.role },
+        json: { email: input.email, role: input.role, topicScope: input.topicScope },
       },
       { headers },
     );
@@ -168,6 +169,63 @@ export async function createInvite(input: {
     };
   } catch {
     return { error: "network_error" };
+  }
+}
+
+// ---------- Members ----------
+
+export interface MemberRow {
+  userId: string;
+  organizationId: string;
+  role: MembershipRole;
+  topicScope: string[];
+  createdAt: string;
+  user: {
+    id: string;
+    email: string;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
+}
+
+export async function fetchMembers(organizationId: string): Promise<MemberRow[]> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return [];
+    const res = await api.organizations[":orgId"].members.$get(
+      { param: { orgId: organizationId } },
+      { headers },
+    );
+    if (!res.ok) return [];
+    return (await res.json()) as MemberRow[];
+  } catch {
+    return [];
+  }
+}
+
+export async function updateMember(input: {
+  organizationId: string;
+  userId: string;
+  role?: MembershipRole;
+  topicScope?: string[];
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return { ok: false, error: "not_signed_in" };
+    const json: { role?: MembershipRole; topicScope?: string[] } = {};
+    if (input.role !== undefined) json.role = input.role;
+    if (input.topicScope !== undefined) json.topicScope = input.topicScope;
+    const res = await api.organizations[":orgId"].members[":userId"].$patch(
+      { param: { orgId: input.organizationId, userId: input.userId }, json },
+      { headers },
+    );
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({}))) as { error?: string };
+      return { ok: false, error: body.error ?? "request_failed" };
+    }
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "network_error" };
   }
 }
 

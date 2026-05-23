@@ -1,10 +1,12 @@
 import { db, orgScope, schema } from "@bgreen/db";
-import { eq } from "drizzle-orm";
+import type { MembershipRole } from "@bgreen/types";
+import { and, eq } from "drizzle-orm";
 import type {
   AddMembershipInput,
   CreateOrganizationInput,
   MembershipRepository,
   OrganizationRepository,
+  UpdateMembershipInput,
 } from "../application/organization-service.js";
 import type { OrganizationMembership } from "../domain/organization-membership.js";
 import type { Organization } from "../domain/organization.js";
@@ -95,12 +97,51 @@ export class DrizzleMembershipRepository implements MembershipRepository {
         userId: input.userId,
         organizationId: input.organizationId,
         role: input.role,
+        topicScope: input.topicScope ?? [],
       })
       .returning();
     if (!row) {
       throw new Error("add membership: unexpected empty returning() result");
     }
     return rowToMembership(row);
+  }
+
+  async update(input: UpdateMembershipInput): Promise<OrganizationMembership | null> {
+    const set: { role?: MembershipRole; topicScope?: string[] } = {};
+    if (input.role !== undefined) set.role = input.role;
+    if (input.topicScope !== undefined) set.topicScope = input.topicScope;
+    if (Object.keys(set).length === 0) {
+      return this.findByUserAndOrg(input.userId, input.organizationId);
+    }
+    const [row] = await db
+      .update(schema.organizationMemberships)
+      .set(set)
+      .where(
+        and(
+          eq(schema.organizationMemberships.userId, input.userId),
+          eq(schema.organizationMemberships.organizationId, input.organizationId),
+        ),
+      )
+      .returning();
+    return row ? rowToMembership(row) : null;
+  }
+
+  async findByUserAndOrg(
+    userId: string,
+    organizationId: string,
+  ): Promise<OrganizationMembership | null> {
+    const rows = await db
+      .select()
+      .from(schema.organizationMemberships)
+      .where(
+        and(
+          eq(schema.organizationMemberships.userId, userId),
+          eq(schema.organizationMemberships.organizationId, organizationId),
+        ),
+      )
+      .limit(1);
+    const row = rows[0];
+    return row ? rowToMembership(row) : null;
   }
 
   async listForUser(userId: string): Promise<OrganizationMembership[]> {

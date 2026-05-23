@@ -12,6 +12,9 @@ export interface CreateInviteInput {
   invitedEmail: string;
   role: MembershipRole;
   invitedByUserId: string;
+  // V5.6c: topic scope assigned to the resulting membership. Empty = no
+  // restriction.
+  topicScope?: string[];
 }
 
 export interface InviteRepository {
@@ -22,6 +25,7 @@ export interface InviteRepository {
     token: string;
     invitedByUserId: string;
     expiresAt: Date;
+    topicScope: string[];
   }): Promise<Invite>;
   findByToken(token: string): Promise<Invite | null>;
   markAccepted(input: { token: string; acceptedByUserId: string }): Promise<Invite>;
@@ -51,6 +55,7 @@ export class InviteService {
       token,
       invitedByUserId: input.invitedByUserId,
       expiresAt,
+      topicScope: input.topicScope ?? [],
     });
     await this.audit.record({
       actorUserId: input.invitedByUserId,
@@ -61,6 +66,7 @@ export class InviteService {
       payload: {
         invitedEmail: invite.invitedEmail,
         role: invite.role,
+        topicScope: invite.topicScope,
         expiresAt: invite.expiresAt,
       },
     });
@@ -93,6 +99,7 @@ export class InviteService {
         inviterEmail: inviter.email,
         invitedEmail: invite.invitedEmail,
         role: invite.role,
+        topicScope: invite.topicScope,
         status: invite.status,
         expiresAt: invite.expiresAt,
       },
@@ -117,6 +124,7 @@ export class InviteService {
         userId: input.userId,
         organizationId: invite.organizationId,
         role: invite.role,
+        topicScope: invite.topicScope,
       });
     }
 

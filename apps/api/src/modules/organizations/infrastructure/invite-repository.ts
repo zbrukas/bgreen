@@ -9,6 +9,7 @@ function rowToInvite(row: typeof schema.organizationInvites.$inferSelect): Invit
     organizationId: row.organizationId,
     invitedEmail: row.invitedEmail,
     role: row.role,
+    topicScope: row.topicScope ?? [],
     token: row.token,
     invitedByUserId: row.invitedByUserId,
     status: row.status,
@@ -27,6 +28,7 @@ export class DrizzleInviteRepository implements InviteRepository {
     token: string;
     invitedByUserId: string;
     expiresAt: Date;
+    topicScope: string[];
   }): Promise<Invite> {
     const [row] = await db
       .insert(schema.organizationInvites)
@@ -37,6 +39,7 @@ export class DrizzleInviteRepository implements InviteRepository {
         token: input.token,
         invitedByUserId: input.invitedByUserId,
         expiresAt: input.expiresAt,
+        topicScope: input.topicScope,
       })
       .returning();
     if (!row) {

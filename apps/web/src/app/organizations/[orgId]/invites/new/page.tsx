@@ -1,5 +1,5 @@
 import { InviteMemberForm } from "@/app/_components/InviteMemberForm";
-import { fetchMe } from "@/lib/api-client";
+import { fetchMe, fetchTopics } from "@/lib/api-client";
 import { withAuth } from "@workos-inc/authkit-nextjs";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -30,6 +30,8 @@ export default async function NewInvitePage({ params }: PageProps) {
     );
   }
 
+  const topics = await fetchTopics();
+
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-8">
       <p>
@@ -37,7 +39,7 @@ export default async function NewInvitePage({ params }: PageProps) {
           ← Voltar
         </Link>
       </p>
-      <InviteMemberForm organizationId={orgId} />
+      <InviteMemberForm organizationId={orgId} topics={topics} />
     </main>
   );
 }

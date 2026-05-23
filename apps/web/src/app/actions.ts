@@ -14,6 +14,7 @@ import {
   lookupPostalCode,
   lookupVies,
   searchCae,
+  updateMember,
   updateRecord,
 } from "@/lib/api-client";
 import { validateNif } from "@bgreen/pt-data";
@@ -171,7 +172,12 @@ export async function createInviteAction(
     role = parsed.data;
   }
 
-  const result = await createInvite({ organizationId, email, role });
+  // V5.6c: topic scope arrives as one form field per checked topic.
+  const topicScope = formData
+    .getAll("topicScope")
+    .filter((v): v is string => typeof v === "string" && v.length > 0);
+
+  const result = await createInvite({ organizationId, email, role, topicScope });
   if ("error" in result) {
     return {
       ...emptyInviteState,
@@ -250,4 +256,39 @@ export async function submitRecordAction(
   revalidatePath("/records");
   revalidatePath(`/records/${result.record.id}`);
   return { ok: true, id: result.record.id };
+}
+
+// ---------- Members ----------
+
+export interface UpdateMemberFormState {
+  error: string | null;
+  saved: boolean;
+}
+
+export async function updateMemberAction(
+  organizationId: string,
+  userId: string,
+  _prev: UpdateMemberFormState,
+  formData: FormData,
+): Promise<UpdateMemberFormState> {
+  const rawRole = formData.get("role");
+  let role: MembershipRole | undefined;
+  if (typeof rawRole === "string" && rawRole !== "") {
+    const parsed = MembershipRoleSchema.safeParse(rawRole);
+    if (!parsed.success) return { error: "Papel inválido.", saved: false };
+    role = parsed.data;
+  }
+  const topicScope = formData
+    .getAll("topicScope")
+    .filter((v): v is string => typeof v === "string" && v.length > 0);
+  const result = await updateMember({ organizationId, userId, role, topicScope });
+  if (!result.ok) {
+    if (result.error === "cannot_demote_self") {
+      return { error: "Não pode rebaixar-se a si próprio.", saved: false };
+    }
+    return { error: `Não foi possível atualizar o membro (${result.error}).`, saved: false };
+  }
+  revalidatePath(`/organizations/${organizationId}/members`);
+  revalidatePath(`/organizations/${organizationId}/members/${userId}`);
+  return { error: null, saved: true };
 }

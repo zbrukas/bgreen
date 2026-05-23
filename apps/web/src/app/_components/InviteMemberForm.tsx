@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import type { Topic } from "@bgreen/types";
 import { useActionState } from "react";
 import { type CreateInviteFormState, createInviteAction } from "../actions";
 
@@ -19,9 +20,10 @@ const initialState: CreateInviteFormState = {
 
 interface InviteMemberFormProps {
   organizationId: string;
+  topics: Topic[];
 }
 
-export function InviteMemberForm({ organizationId }: InviteMemberFormProps) {
+export function InviteMemberForm({ organizationId, topics }: InviteMemberFormProps) {
   const actionWithOrg = createInviteAction.bind(null, organizationId);
   const [state, formAction, isPending] = useActionState(actionWithOrg, initialState);
 
@@ -54,6 +56,32 @@ export function InviteMemberForm({ organizationId }: InviteMemberFormProps) {
             <option value="org_admin">Administrador</option>
           </Select>
         </div>
+
+        {topics.length > 0 && (
+          <fieldset className="space-y-1.5 rounded-md border p-3">
+            <legend className="px-1 text-sm font-medium">Âmbito de tópicos</legend>
+            <p className="text-xs text-muted-foreground">
+              Deixe sem seleção para visibilidade total. Marque tópicos para restringir o que o
+              membro consegue ver e editar.
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {topics.map((t) => (
+                <label key={t.id} className="inline-flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    name="topicScope"
+                    value={t.slug}
+                    className="h-4 w-4 rounded border-input text-primary focus:ring-ring"
+                  />
+                  <span>
+                    {t.name}{" "}
+                    <span className="font-mono text-xs text-muted-foreground">({t.slug})</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        )}
 
         {state.error && <Alert variant="destructive">{state.error}</Alert>}
 

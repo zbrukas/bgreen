@@ -9,6 +9,9 @@ export const InviteSchema = z.object({
   organizationId: z.string().uuid(),
   invitedEmail: z.string().email(),
   role: MembershipRoleSchema,
+  // V5.6c: topic scope assigned at invite-time, carried into the
+  // membership on accept. Empty array = no restriction.
+  topicScope: z.array(z.string()).default([]),
   token: z.string().min(1),
   invitedByUserId: z.string().uuid(),
   status: InviteStatusSchema,
@@ -27,6 +30,7 @@ export const InvitePreviewSchema = z.object({
   inviterEmail: z.string().email(),
   invitedEmail: z.string().email(),
   role: MembershipRoleSchema,
+  topicScope: z.array(z.string()).default([]),
   status: InviteStatusSchema,
   expiresAt: z.string().datetime({ offset: true }),
 });
