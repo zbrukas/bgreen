@@ -1,6 +1,6 @@
 import { RecordForm } from "@/app/_components/RecordForm";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { fetchRecordPrefill, fetchTemplate } from "@/lib/api-client";
+import { fetchMe, fetchRecordPrefill, fetchTemplate, fetchTopics } from "@/lib/api-client";
 import { getSignInUrl, withAuth } from "@workos-inc/authkit-nextjs";
 import Link from "next/link";
 
@@ -66,16 +66,31 @@ export default async function NewRecordPage({ searchParams }: PageProps) {
     );
   }
 
-  const prefill = await fetchRecordPrefill(templateId);
+  const [prefill, me, topics] = await Promise.all([
+    fetchRecordPrefill(templateId),
+    fetchMe(),
+    fetchTopics(),
+  ]);
   const prefillCount = Object.keys(prefill).length;
 
   // V5.5: hydrate composed sub-templates in the order the catalogue
-  // declared them. Drafts created from this page will get the
-  // sub-template sections rendered inline.
-  const subTemplates = (
-    await Promise.all(tpl.composedSubTemplateIds.map((subId) => fetchTemplate(subId)))
-  )
+  // declared them. V5.6: filter by member's topic scope — empty scope
+  // means no restriction; otherwise we drop subs whose topic isn't in
+  // the actor's scope. Sub-templates without a topic tag are always
+  // visible (untagged = unscoped).
+  const topicSlugById = new Map(topics.map((t) => [t.id, t.slug]));
+  const scope = new Set(me?.activeTopicScope ?? []);
+  const allSubs = await Promise.all(
+    tpl.composedSubTemplateIds.map((subId) => fetchTemplate(subId)),
+  );
+  const subTemplates = allSubs
     .filter((s): s is NonNullable<typeof s> => s !== null)
+    .filter((s) => {
+      if (scope.size === 0) return true;
+      if (!s.topicTagId) return true;
+      const slug = topicSlugById.get(s.topicTagId);
+      return slug !== undefined && scope.has(slug);
+    })
     .map((s) => ({ id: s.id, name: s.name, formSchema: s.formSchema }));
 
   return (

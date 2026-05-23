@@ -89,6 +89,7 @@ export const authMiddleware = createMiddleware<AppEnv>(async (c, next) => {
     }
     c.set("organizationId", match.organizationId);
     c.set("membershipRole", match.role);
+    c.set("topicScope", match.topicScope ?? []);
   }
 
   await next();

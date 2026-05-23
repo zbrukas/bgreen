@@ -2,7 +2,7 @@ import { AuditTrail } from "@/app/_components/AuditTrail";
 import { RecordForm } from "@/app/_components/RecordForm";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
-import { fetchMe, fetchRecord, fetchTemplate } from "@/lib/api-client";
+import { fetchMe, fetchRecord, fetchTemplate, fetchTopics } from "@/lib/api-client";
 import { getSignInUrl, withAuth } from "@workos-inc/authkit-nextjs";
 import Link from "next/link";
 
@@ -80,11 +80,23 @@ export default async function RecordDetailPage({ params }: PageProps) {
   }
 
   // V5.5: hydrate sub-templates so RecordForm can render their sections
-  // and route validation errors back to them.
-  const subTemplates = (
-    await Promise.all(tpl.composedSubTemplateIds.map((subId) => fetchTemplate(subId)))
-  )
+  // and route validation errors back to them. V5.6: drop subs whose
+  // topic isn't in the actor's scope (empty scope = no restriction;
+  // untagged subs are always visible).
+  const [allSubs, topics] = await Promise.all([
+    Promise.all(tpl.composedSubTemplateIds.map((subId) => fetchTemplate(subId))),
+    fetchTopics(),
+  ]);
+  const topicSlugById = new Map(topics.map((t) => [t.id, t.slug]));
+  const scope = new Set(me?.activeTopicScope ?? []);
+  const subTemplates = allSubs
     .filter((s): s is NonNullable<typeof s> => s !== null)
+    .filter((s) => {
+      if (scope.size === 0) return true;
+      if (!s.topicTagId) return true;
+      const slug = topicSlugById.get(s.topicTagId);
+      return slug !== undefined && scope.has(slug);
+    })
     .map((s) => ({ id: s.id, name: s.name, formSchema: s.formSchema }));
 
   const isAdmin = me?.activeOrganizationRole === "org_admin";

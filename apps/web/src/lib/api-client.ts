@@ -7,6 +7,7 @@ import type {
   MembershipRole,
   OrganizationSize,
   RecordTemplate,
+  Topic,
 } from "@bgreen/types";
 import { withAuth } from "@workos-inc/authkit-nextjs";
 import { hc } from "hono/client";
@@ -48,6 +49,8 @@ export interface MeResponse {
   lastName: string | null;
   activeOrganizationId: string | null;
   activeOrganizationRole: MembershipRole | null;
+  // V5.6: topic slugs the member can see/edit. Empty = no restriction.
+  activeTopicScope: string[];
   userType: "central_services" | "organization";
 }
 
@@ -65,6 +68,7 @@ export async function fetchMe(): Promise<MeResponse | null> {
       lastName: data.lastName,
       activeOrganizationId: data.activeOrganizationId,
       activeOrganizationRole: data.activeOrganizationRole,
+      activeTopicScope: (data as { activeTopicScope?: string[] }).activeTopicScope ?? [],
       userType:
         (data as { userType?: "central_services" | "organization" }).userType ?? "organization",
     };
@@ -278,6 +282,20 @@ export async function acceptInvite(
     return await res.json();
   } catch {
     return { error: "network_error" };
+  }
+}
+
+// ---------- Topics ----------
+
+export async function fetchTopics(): Promise<Topic[]> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return [];
+    const res = await api.topics.$get(undefined, { headers });
+    if (!res.ok) return [];
+    return (await res.json()) as Topic[];
+  } catch {
+    return [];
   }
 }
 

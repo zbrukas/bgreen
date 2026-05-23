@@ -6,5 +6,6 @@ export const identityRoutes = new Hono<AppEnv>().get("/me", (c) => {
     ...c.var.user,
     activeOrganizationId: c.var.organizationId ?? null,
     activeOrganizationRole: c.var.membershipRole ?? null,
+    activeTopicScope: c.var.topicScope ?? [],
   });
 });
