@@ -2,7 +2,10 @@ import { JoseWorkosJwtVerifier, type WorkosJwtVerifier } from "@bgreen/auth";
 import { WorkOS } from "@workos-inc/node";
 import { createMiddleware } from "hono/factory";
 import { ACTIVE_ORGANIZATION_HEADER, type AppEnv } from "../context.js";
-import { looksLikeCsSession, verifyCsSession } from "../modules/cs-auth/module.js";
+// Import directly from the leaf file rather than the module barrel. The
+// barrel re-exports routes.ts, which transitively pulls in services.ts —
+// the same file that needs CsAuthService — and we'd hit a TDZ cycle.
+import { looksLikeCsSession, verifyCsSession } from "../modules/cs-auth/application/cs-session.js";
 import { repositories, userService } from "../services.js";
 
 let _verifier: WorkosJwtVerifier | null = null;

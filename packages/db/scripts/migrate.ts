@@ -65,8 +65,7 @@ function parseArgs(argv: string[]): { markUpTo: string | null; status: boolean }
 
 async function main(): Promise<void> {
   const { markUpTo, status } = parseArgs(process.argv.slice(2));
-  const url =
-    process.env.DATABASE_URL ?? "postgres://bgreen:bgreen_dev@localhost:5432/bgreen";
+  const url = process.env.DATABASE_URL ?? "postgres://bgreen:bgreen_dev@localhost:5432/bgreen";
   const journal = JSON.parse(readFileSync(JOURNAL_PATH, "utf8")) as Journal;
   const entries = [...journal.entries].sort((a, b) => a.idx - b.idx);
 
@@ -140,11 +139,7 @@ async function listApplied(pool: pg.Pool): Promise<Set<string>> {
   return new Set(res.rows.map((r) => r.tag));
 }
 
-async function applyMigration(
-  pool: pg.Pool,
-  entry: JournalEntry,
-  sql: string,
-): Promise<void> {
+async function applyMigration(pool: pg.Pool, entry: JournalEntry, sql: string): Promise<void> {
   // Split on drizzle's statement-breakpoint marker. Empty / whitespace-only
   // chunks are dropped so a trailing breakpoint doesn't trigger an empty
   // query.
