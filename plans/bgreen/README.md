@@ -10,7 +10,7 @@ Eleven vertical slices. Each independently deployable. Each loadable as a single
 | 2 | [02-identity-organizations.md](02-identity-organizations.md) | WorkOS AuthKit, multi-tenancy | Not started |
 | 3 | [03-pt-data-onboarding.md](03-pt-data-onboarding.md) | NIF, VIES, CAE seeds, signup wizard | Not started |
 | 4 | [04-form-templates-records.md](04-form-templates-records.md) | RecordTemplate / FormSchema + Records submission | Not started |
-| 5 | [05-workflows-audit-fga.md](05-workflows-audit-fga.md) | XState workflows, AuditLog, WorkOS FGA | Not started |
+| 5 | [05-workflows-audit-fga.md](05-workflows-audit-fga.md) | XState workflows, AuditLog, ~~WorkOS FGA~~ row-based authz | Shipped (FGA reversed in V5.8) |
 | 6 | [06-ai-foundation-ies.md](06-ai-foundation-ies.md) | AnthropicAiClient, Inngest, S3, IES extraction | Not started |
 | 7 | [07-economic-profile-benchmarks.md](07-economic-profile-benchmarks.md) | EconomicProfile, sector benchmarks, size classification | Not started |
 | 8 | [08-scoring-dashboards.md](08-scoring-dashboards.md) | ESG scoring engine + record scores + dashboard | Not started |
