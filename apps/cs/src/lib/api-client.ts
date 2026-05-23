@@ -326,3 +326,87 @@ export async function deleteTopic(
     return { ok: false, error: "network_error" };
   }
 }
+
+// ---------- CS users (admin only) ----------
+
+export interface CsUserRow {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  centralServicesRole: CentralServicesRole | null;
+  passwordSet: boolean;
+  lastLoginAt: string | null;
+  createdAt: string;
+}
+
+export async function fetchCsUsers(): Promise<CsUserRow[]> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return [];
+    const res = await api.cs.users.$get(undefined, { headers });
+    if (!res.ok) return [];
+    return (await res.json()) as CsUserRow[];
+  } catch {
+    return [];
+  }
+}
+
+export async function createCsUser(input: {
+  email: string;
+  role: CentralServicesRole;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return { ok: false, error: "not_signed_in" };
+    const res = await api.cs.users.$post(
+      { json: { email: input.email, role: input.role } },
+      { headers },
+    );
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({}))) as { error?: string };
+      return { ok: false, error: body.error ?? "request_failed" };
+    }
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "network_error" };
+  }
+}
+
+export async function updateCsUserRole(input: {
+  id: string;
+  role: CentralServicesRole;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return { ok: false, error: "not_signed_in" };
+    const res = await api.cs.users[":id"].$patch(
+      { param: { id: input.id }, json: { role: input.role } },
+      { headers },
+    );
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({}))) as { error?: string };
+      return { ok: false, error: body.error ?? "request_failed" };
+    }
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "network_error" };
+  }
+}
+
+export async function deleteCsUser(
+  id: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return { ok: false, error: "not_signed_in" };
+    const res = await api.cs.users[":id"].$delete({ param: { id } }, { headers });
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({}))) as { error?: string };
+      return { ok: false, error: body.error ?? "request_failed" };
+    }
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "network_error" };
+  }
+}

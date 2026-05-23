@@ -5,15 +5,23 @@ import {
   type ReviewDecision,
   addCsDomain,
   archiveTemplate,
+  createCsUser,
   createTemplate,
   createTopic,
   deleteCsDomain,
+  deleteCsUser,
   deleteTopic,
   publishTemplate,
   reviewCsRecord,
+  updateCsUserRole,
 } from "@/lib/api-client";
-import type { FormSchema, RecordTemplate, WorkflowDefinitionId } from "@bgreen/types";
-import { FormSchemaSchema, TopicSlugSchema } from "@bgreen/types";
+import type {
+  CentralServicesRole,
+  FormSchema,
+  RecordTemplate,
+  WorkflowDefinitionId,
+} from "@bgreen/types";
+import { CentralServicesRoleSchema, FormSchemaSchema, TopicSlugSchema } from "@bgreen/types";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -275,3 +283,64 @@ export async function deleteTopicAction(formData: FormData): Promise<void> {
   await deleteTopic(id);
   revalidatePath("/topics");
 }
+
+// ---------- CS users (admin only) ----------
+
+export interface AddCsUserFormState {
+  error: string | null;
+}
+
+function translateCsUserError(code: string): string {
+  switch (code) {
+    case "email_taken":
+      return "Já existe um utilizador CS com este email.";
+    case "email_belongs_to_org_user":
+      return "Este email pertence a um utilizador de organização.";
+    case "cannot_demote_self":
+      return "Não pode rebaixar-se a si próprio.";
+    case "cannot_delete_self":
+      return "Não pode remover a sua própria conta.";
+    case "central_services_admin_required":
+      return "Apenas administradores CS podem fazer isto.";
+    case "not_found":
+      return "Utilizador não encontrado.";
+    default:
+      return `Erro: ${code}`;
+  }
+}
+
+export async function addCsUserAction(
+  _prev: AddCsUserFormState,
+  formData: FormData,
+): Promise<AddCsUserFormState> {
+  const emailRaw = formData.get("email");
+  const roleRaw = formData.get("role");
+  const email = typeof emailRaw === "string" ? emailRaw.trim().toLowerCase() : "";
+  if (!email) return { error: "Indique um email." };
+  const roleParsed = CentralServicesRoleSchema.safeParse(roleRaw);
+  if (!roleParsed.success) return { error: "Papel inválido." };
+  const result = await createCsUser({ email, role: roleParsed.data });
+  if (!result.ok) return { error: translateCsUserError(result.error) };
+  revalidatePath("/users");
+  return { error: null };
+}
+
+export async function updateCsUserRoleAction(formData: FormData): Promise<void> {
+  const id = formData.get("id");
+  const roleRaw = formData.get("role");
+  if (typeof id !== "string" || id === "") return;
+  const roleParsed = CentralServicesRoleSchema.safeParse(roleRaw);
+  if (!roleParsed.success) return;
+  await updateCsUserRole({ id, role: roleParsed.data });
+  revalidatePath("/users");
+}
+
+export async function deleteCsUserAction(formData: FormData): Promise<void> {
+  const id = formData.get("id");
+  if (typeof id !== "string" || id === "") return;
+  await deleteCsUser(id);
+  revalidatePath("/users");
+}
+
+// Re-export so the page can narrow when displaying labels.
+export type { CentralServicesRole };
