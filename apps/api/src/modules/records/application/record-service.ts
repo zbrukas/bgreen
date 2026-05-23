@@ -1,6 +1,6 @@
-import type { FormError } from "@bgreen/form-engine";
-import { validateFormValues } from "@bgreen/form-engine";
-import type { Record, RecordValues } from "@bgreen/types";
+import type { FormError, ValidationMode } from "@bgreen/form-engine";
+import { validateComposedFormValues, validateFormValues } from "@bgreen/form-engine";
+import type { Record, RecordTemplate, RecordValues } from "@bgreen/types";
 import type { AuditService } from "../../audit/module.js";
 import type { RecordTemplateRepository } from "../../form-templates/application/record-template-service.js";
 import type { WorkflowService } from "../../workflows/module.js";
@@ -100,8 +100,8 @@ export class RecordService {
       return { ok: false, code: "template_not_published" };
     }
 
-    const mode = input.asDraft ? "draft" : "submit";
-    const validated = validateFormValues(template.formSchema, input.rawValues, { mode });
+    const mode: ValidationMode = input.asDraft ? "draft" : "submit";
+    const validated = await this.validateAgainstTemplate(template, input.rawValues, mode);
     if (!validated.ok) {
       return { ok: false, code: "validation_failed", errors: validated.errors };
     }
@@ -169,8 +169,8 @@ export class RecordService {
       return { ok: false, code: "template_not_published" };
     }
 
-    const mode = input.action === "submit" ? "submit" : "draft";
-    const validated = validateFormValues(template.formSchema, input.rawValues, { mode });
+    const mode: ValidationMode = input.action === "submit" ? "submit" : "draft";
+    const validated = await this.validateAgainstTemplate(template, input.rawValues, mode);
     if (!validated.ok) {
       return { ok: false, code: "validation_failed", errors: validated.errors };
     }
@@ -313,5 +313,35 @@ export class RecordService {
 
   listAll(organizationId: string): Promise<Record[]> {
     return this.records.listForOrganization(organizationId);
+  }
+
+  // Picks the plain or composed validator based on whether the template
+  // declares any sub-templates. Sub-template schemas are fetched lazily;
+  // a missing one is skipped silently — the composition row is the
+  // source of truth, and a stale id won't block a submission.
+  private async validateAgainstTemplate(
+    template: RecordTemplate,
+    rawValues: unknown,
+    mode: ValidationMode,
+  ): Promise<{ ok: true; values: RecordValues } | { ok: false; errors: FormError[] }> {
+    const subIds = template.composedSubTemplateIds;
+    if (!subIds || subIds.length === 0) {
+      return validateFormValues(template.formSchema, rawValues, { mode });
+    }
+    const subs: Array<{ id: string; schema: typeof template.formSchema }> = [];
+    for (const subId of subIds) {
+      const sub = await this.templates.findById(subId);
+      if (!sub) continue;
+      subs.push({ id: sub.id, schema: sub.formSchema });
+    }
+    const composed = validateComposedFormValues(
+      { main: template.formSchema, subTemplates: subs },
+      rawValues,
+      { mode },
+    );
+    if (!composed.ok) return composed;
+    // Cast: ComposedRecordValues is RecordValues + { subs?: ... } which
+    // is structurally a RecordValues for the storage layer.
+    return { ok: true, values: composed.values as RecordValues };
   }
 }

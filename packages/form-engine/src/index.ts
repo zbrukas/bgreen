@@ -9,6 +9,14 @@ export {
 } from "./interpreter";
 
 export {
+  type ComposedRecordValues,
+  type ComposedSchema,
+  type ComposedValidationResult,
+  validateAnyFormValues,
+  validateComposedFormValues,
+} from "./composed";
+
+export {
   type EvaluateError,
   type EvaluateResult,
   type ExpressionAst,
