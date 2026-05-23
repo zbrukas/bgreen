@@ -19,8 +19,10 @@ services:
   gotenberg:
     image: gotenberg/gotenberg:8
     container_name: bgreen-gotenberg
+    # Host 3001 belongs to apps/cs (next dev). Gotenberg listens on 3010
+    # to keep them from racing for the same port at startup.
     ports:
-      - "3001:3000"
+      - "3010:3000"
     command:
       - "gotenberg"
       - "--api-port=3000"

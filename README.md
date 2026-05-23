@@ -45,10 +45,11 @@ pnpm dev
 
 Services:
 - `apps/web` → http://localhost:3000
+- `apps/cs` → http://localhost:3001
 - `apps/api` → http://localhost:8787
 - `apps/pdf` → http://localhost:8788
 - Postgres → localhost:5432 (user `bgreen`, password `bgreen_dev`, db `bgreen`)
-- Gotenberg → localhost:3001
+- Gotenberg → localhost:3010
 - Inngest dev UI → http://localhost:8288
 
 ## Scripts
