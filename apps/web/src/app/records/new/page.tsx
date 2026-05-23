@@ -69,6 +69,15 @@ export default async function NewRecordPage({ searchParams }: PageProps) {
   const prefill = await fetchRecordPrefill(templateId);
   const prefillCount = Object.keys(prefill).length;
 
+  // V5.5: hydrate composed sub-templates in the order the catalogue
+  // declared them. Drafts created from this page will get the
+  // sub-template sections rendered inline.
+  const subTemplates = (
+    await Promise.all(tpl.composedSubTemplateIds.map((subId) => fetchTemplate(subId)))
+  )
+    .filter((s): s is NonNullable<typeof s> => s !== null)
+    .map((s) => ({ id: s.id, name: s.name, formSchema: s.formSchema }));
+
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-8">
       <p>
@@ -90,7 +99,12 @@ export default async function NewRecordPage({ searchParams }: PageProps) {
           </AlertDescription>
         </Alert>
       )}
-      <RecordForm template={tpl} recordId={null} initialValues={prefill} />
+      <RecordForm
+        template={tpl}
+        recordId={null}
+        initialValues={prefill}
+        subTemplates={subTemplates}
+      />
     </main>
   );
 }

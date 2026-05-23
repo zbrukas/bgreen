@@ -79,6 +79,14 @@ export default async function RecordDetailPage({ params }: PageProps) {
     );
   }
 
+  // V5.5: hydrate sub-templates so RecordForm can render their sections
+  // and route validation errors back to them.
+  const subTemplates = (
+    await Promise.all(tpl.composedSubTemplateIds.map((subId) => fetchTemplate(subId)))
+  )
+    .filter((s): s is NonNullable<typeof s> => s !== null)
+    .map((s) => ({ id: s.id, name: s.name, formSchema: s.formSchema }));
+
   const isAdmin = me?.activeOrganizationRole === "org_admin";
   const isOwner = record.submittedByUserId === me?.id;
   const editable = isOwner && (record.status === "draft" || record.status === "changes_requested");
@@ -114,6 +122,7 @@ export default async function RecordDetailPage({ params }: PageProps) {
         initialValues={record.values}
         readOnly={!editable}
         initialStatus={record.status}
+        subTemplates={subTemplates}
       />
 
       {isAdmin && <AuditTrail entityKind="record" entityId={record.id} />}

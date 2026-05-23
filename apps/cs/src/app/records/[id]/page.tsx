@@ -58,6 +58,17 @@ export default async function CsRecordPage({ params }: PageProps) {
     );
   }
   const tpl = await fetchTemplate(record.templateId);
+  // V5.5: hydrate composed sub-templates so the reviewer sees them
+  // grouped by sub-template name, mirroring the org-side form.
+  const subTemplates = tpl
+    ? (await Promise.all(tpl.composedSubTemplateIds.map((subId) => fetchTemplate(subId)))).filter(
+        (s): s is NonNullable<typeof s> => s !== null,
+      )
+    : [];
+  const subValues =
+    record.values && typeof record.values === "object"
+      ? ((record.values as { subs?: Record<string, Record<string, unknown>> }).subs ?? {})
+      : {};
   const canReview =
     record.status === "submitted" &&
     (me.centralServicesRole === "admin" || me.centralServicesRole === "maintainer");
@@ -108,6 +119,24 @@ export default async function CsRecordPage({ params }: PageProps) {
                       <ReadOnlyField key={f.id} field={f} value={record.values[f.id]} />
                     ))}
                   </dl>
+                </section>
+              ))}
+              {subTemplates.map((sub) => (
+                <section
+                  key={sub.id}
+                  className="space-y-2 rounded-md border border-primary/30 bg-primary/5 p-3"
+                >
+                  <h3 className="text-sm font-semibold">{sub.name}</h3>
+                  {sub.formSchema.rows.map((row) => (
+                    <div key={row.id} className="space-y-1">
+                      {row.label && <h4 className="text-xs font-medium">{row.label}</h4>}
+                      <dl className="space-y-1.5">
+                        {row.fields.map((f) => (
+                          <ReadOnlyField key={f.id} field={f} value={subValues[sub.id]?.[f.id]} />
+                        ))}
+                      </dl>
+                    </div>
+                  ))}
                 </section>
               ))}
             </CardContent>

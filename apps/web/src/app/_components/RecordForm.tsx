@@ -5,9 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import type { FormError } from "@bgreen/form-engine";
-import { evaluateExpression, parseExpression, validateFormValues } from "@bgreen/form-engine";
-import type { Field, LeafField, RecordTemplate } from "@bgreen/types";
+import type { ComposedSchema, FormError } from "@bgreen/form-engine";
+import {
+  evaluateExpression,
+  parseExpression,
+  validateComposedFormValues,
+  validateFormValues,
+} from "@bgreen/form-engine";
+import type { Field, FormSchema, LeafField, RecordTemplate } from "@bgreen/types";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { submitRecordAction } from "../actions";
@@ -30,12 +35,23 @@ function attachKeys(errors: FormError[]): KeyedError[] {
   return errors.map((e) => ({ ...e, uiKey: crypto.randomUUID() }));
 }
 
+// V5.5: a sub-template the main template embeds. Rendered inline after
+// the main rows in its own bordered section.
+export interface SubTemplateSection {
+  id: string;
+  name: string;
+  formSchema: FormSchema;
+}
+
 interface RecordFormProps {
   template: RecordTemplate;
   recordId: string | null;
   initialValues?: FormValues;
   readOnly?: boolean;
   initialStatus?: "draft" | "submitted" | "approved" | "changes_requested" | "rejected";
+  // V5.5: ordered list of sub-templates this main template composes.
+  // Pass an empty array (or omit) for non-composed templates.
+  subTemplates?: SubTemplateSection[];
 }
 
 export function RecordForm({
@@ -44,14 +60,38 @@ export function RecordForm({
   initialValues,
   readOnly = false,
   initialStatus,
+  subTemplates = [],
 }: RecordFormProps) {
   const router = useRouter();
-  const [values, setValues] = useState<FormValues>(() =>
-    buildInitialValues(template.formSchema, initialValues),
-  );
-  const [rowKeys, setRowKeys] = useState<RowKeysByField>(() =>
-    buildInitialRowKeys(template.formSchema, initialValues),
-  );
+
+  // The useState initialisers run once on mount, so it's safe to do the
+  // splitting + per-sub build there without memoization. Stored shape:
+  // { ...mainFields, subs?: { [subId]: {...subFields} } }
+  const [values, setValues] = useState<FormValues>(() => {
+    const split = splitComposedInitial(initialValues, subTemplates);
+    return buildInitialValues(template.formSchema, split.main);
+  });
+  const [rowKeys, setRowKeys] = useState<RowKeysByField>(() => {
+    const split = splitComposedInitial(initialValues, subTemplates);
+    return buildInitialRowKeys(template.formSchema, split.main);
+  });
+  const [subValues, setSubValues] = useState<Record<string, FormValues>>(() => {
+    const split = splitComposedInitial(initialValues, subTemplates);
+    const out: Record<string, FormValues> = {};
+    for (const sub of subTemplates) {
+      out[sub.id] = buildInitialValues(sub.formSchema, split.subs[sub.id]);
+    }
+    return out;
+  });
+  const [subRowKeys, setSubRowKeys] = useState<Record<string, RowKeysByField>>(() => {
+    const split = splitComposedInitial(initialValues, subTemplates);
+    const out: Record<string, RowKeysByField> = {};
+    for (const sub of subTemplates) {
+      out[sub.id] = buildInitialRowKeys(sub.formSchema, split.subs[sub.id]);
+    }
+    return out;
+  });
+
   const [serverError, setServerError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<KeyedError[]>([]);
   const [isPending, startTransition] = useTransition();
@@ -66,11 +106,13 @@ export function RecordForm({
     return map;
   }, [fieldErrors]);
 
+  // ---------- Top-level (main) state mutators ----------
+
   function setTopValue(fieldId: string, value: unknown) {
     setValues((prev) => ({ ...prev, [fieldId]: value }));
   }
 
-  function setSubValue(parentId: string, idx: number, fieldId: string, value: unknown) {
+  function setSubRowValue(parentId: string, idx: number, fieldId: string, value: unknown) {
     setValues((prev) => {
       const rows = Array.isArray(prev[parentId]) ? [...(prev[parentId] as FormValues[])] : [];
       const row = { ...(rows[idx] ?? {}), [fieldId]: value };
@@ -79,7 +121,7 @@ export function RecordForm({
     });
   }
 
-  function addSubRow(parentId: string, fields: LeafField[]) {
+  function addRepeatingRow(parentId: string, fields: LeafField[]) {
     setValues((prev) => {
       const rows = Array.isArray(prev[parentId]) ? [...(prev[parentId] as FormValues[])] : [];
       rows.push(newSubRow(fields));
@@ -91,7 +133,7 @@ export function RecordForm({
     }));
   }
 
-  function removeSubRow(parentId: string, idx: number) {
+  function removeRepeatingRow(parentId: string, idx: number) {
     setValues((prev) => {
       const rows = Array.isArray(prev[parentId]) ? [...(prev[parentId] as FormValues[])] : [];
       rows.splice(idx, 1);
@@ -103,13 +145,85 @@ export function RecordForm({
     }));
   }
 
+  // ---------- Sub-template scoped mutators ----------
+
+  function setSubFieldValue(subId: string, fieldId: string, value: unknown) {
+    setSubValues((prev) => ({
+      ...prev,
+      [subId]: { ...(prev[subId] ?? {}), [fieldId]: value },
+    }));
+  }
+
+  function setSubRepeatingRowValue(
+    subId: string,
+    parentId: string,
+    idx: number,
+    fieldId: string,
+    value: unknown,
+  ) {
+    setSubValues((prev) => {
+      const scope = prev[subId] ?? {};
+      const rows = Array.isArray(scope[parentId]) ? [...(scope[parentId] as FormValues[])] : [];
+      const row = { ...(rows[idx] ?? {}), [fieldId]: value };
+      rows[idx] = row;
+      return { ...prev, [subId]: { ...scope, [parentId]: rows } };
+    });
+  }
+
+  function addSubRepeatingRow(subId: string, parentId: string, fields: LeafField[]) {
+    setSubValues((prev) => {
+      const scope = prev[subId] ?? {};
+      const rows = Array.isArray(scope[parentId]) ? [...(scope[parentId] as FormValues[])] : [];
+      rows.push(newSubRow(fields));
+      return { ...prev, [subId]: { ...scope, [parentId]: rows } };
+    });
+    setSubRowKeys((prev) => {
+      const scope = prev[subId] ?? {};
+      return {
+        ...prev,
+        [subId]: { ...scope, [parentId]: [...(scope[parentId] ?? []), crypto.randomUUID()] },
+      };
+    });
+  }
+
+  function removeSubRepeatingRow(subId: string, parentId: string, idx: number) {
+    setSubValues((prev) => {
+      const scope = prev[subId] ?? {};
+      const rows = Array.isArray(scope[parentId]) ? [...(scope[parentId] as FormValues[])] : [];
+      rows.splice(idx, 1);
+      return { ...prev, [subId]: { ...scope, [parentId]: rows } };
+    });
+    setSubRowKeys((prev) => {
+      const scope = prev[subId] ?? {};
+      return {
+        ...prev,
+        [subId]: { ...scope, [parentId]: (scope[parentId] ?? []).filter((_, i) => i !== idx) },
+      };
+    });
+  }
+
+  // ---------- Submit ----------
+
   function submitWith(action: "save_draft" | "submit") {
     setServerError(null);
     setFieldErrors([]);
 
-    // Client-side preview validation. Server is authoritative.
     const mode = action === "submit" ? "submit" : "draft";
-    const local = validateFormValues(template.formSchema, values, { mode });
+    const combined: FormValues = { ...values };
+    if (subTemplates.length > 0) combined.subs = subValues;
+
+    const local =
+      subTemplates.length > 0
+        ? validateComposedFormValues(
+            {
+              main: template.formSchema,
+              subTemplates: subTemplates.map((s) => ({ id: s.id, schema: s.formSchema })),
+            } satisfies ComposedSchema,
+            combined,
+            { mode },
+          )
+        : validateFormValues(template.formSchema, values, { mode });
+
     if (!local.ok) {
       setFieldErrors(attachKeys(local.errors));
       setServerError("Corrija os campos assinalados antes de continuar.");
@@ -135,7 +249,6 @@ export function RecordForm({
         if (action === "submit") {
           router.push(`/records/${result.id}`);
         } else if (!recordId) {
-          // First save-as-draft → land on the draft's edit page.
           router.push(`/records/${result.id}`);
         } else {
           router.refresh();
@@ -150,12 +263,15 @@ export function RecordForm({
 
   if (readOnly) {
     return (
-      <ReadOnlyView template={template} values={values} status={initialStatus ?? "submitted"} />
+      <ReadOnlyView
+        template={template}
+        values={values}
+        subTemplates={subTemplates}
+        subValues={subValues}
+        status={initialStatus ?? "submitted"}
+      />
     );
   }
-
-  const draftDisabled = isPending;
-  const submitDisabled = isPending;
 
   return (
     <form
@@ -178,12 +294,52 @@ export function RecordForm({
               errorsByPath={errorsByPath}
               rowKeys={field.kind === "repeating" ? (rowKeys[field.id] ?? []) : undefined}
               onChange={(v) => setTopValue(field.id, v)}
-              onSubChange={(idx, subId, v) => setSubValue(field.id, idx, subId, v)}
-              onAddRow={() => field.kind === "repeating" && addSubRow(field.id, field.fields)}
-              onRemoveRow={(idx) => removeSubRow(field.id, idx)}
+              onSubChange={(idx, subId, v) => setSubRowValue(field.id, idx, subId, v)}
+              onAddRow={() => field.kind === "repeating" && addRepeatingRow(field.id, field.fields)}
+              onRemoveRow={(idx) => removeRepeatingRow(field.id, idx)}
             />
           ))}
         </fieldset>
+      ))}
+
+      {subTemplates.map((sub) => (
+        <section
+          key={sub.id}
+          className="space-y-3 rounded-lg border border-primary/30 bg-primary/5 p-4"
+        >
+          <header>
+            <h2 className="text-base font-semibold">{sub.name}</h2>
+            <p className="text-xs text-muted-foreground">Secção do sub-modelo</p>
+          </header>
+          {sub.formSchema.rows.map((row) => (
+            <fieldset key={row.id} className="space-y-3 rounded-md border bg-background p-3">
+              {row.label && (
+                <legend className="px-2 text-xs text-muted-foreground">{row.label}</legend>
+              )}
+              {row.fields.map((field) => (
+                <FieldInput
+                  key={field.id}
+                  field={field}
+                  scopeValues={subValues[sub.id] ?? {}}
+                  value={subValues[sub.id]?.[field.id]}
+                  pathPrefix={`subs.${sub.id}.`}
+                  errorsByPath={errorsByPath}
+                  rowKeys={
+                    field.kind === "repeating" ? (subRowKeys[sub.id]?.[field.id] ?? []) : undefined
+                  }
+                  onChange={(v) => setSubFieldValue(sub.id, field.id, v)}
+                  onSubChange={(idx, subFieldId, v) =>
+                    setSubRepeatingRowValue(sub.id, field.id, idx, subFieldId, v)
+                  }
+                  onAddRow={() =>
+                    field.kind === "repeating" && addSubRepeatingRow(sub.id, field.id, field.fields)
+                  }
+                  onRemoveRow={(idx) => removeSubRepeatingRow(sub.id, field.id, idx)}
+                />
+              ))}
+            </fieldset>
+          ))}
+        </section>
       ))}
 
       {serverError && <Alert variant="destructive">{serverError}</Alert>}
@@ -193,17 +349,19 @@ export function RecordForm({
           type="button"
           variant="outline"
           onClick={() => submitWith("save_draft")}
-          disabled={draftDisabled}
+          disabled={isPending}
         >
           {isPending ? "A guardar…" : "Guardar rascunho"}
         </Button>
-        <Button type="submit" disabled={submitDisabled}>
+        <Button type="submit" disabled={isPending}>
           {isPending ? "A submeter…" : "Submeter"}
         </Button>
       </div>
     </form>
   );
 }
+
+// ---------- Field rendering (shared with sub-template scopes) ----------
 
 interface FieldInputProps {
   field: Field | LeafField;
@@ -454,13 +612,19 @@ function RepeatingRow({
   );
 }
 
+// ---------- Read-only rendering ----------
+
 function ReadOnlyView({
   template,
   values,
+  subTemplates,
+  subValues,
   status,
 }: {
   template: RecordTemplate;
   values: FormValues;
+  subTemplates: SubTemplateSection[];
+  subValues: Record<string, FormValues>;
   status: string;
 }) {
   return (
@@ -474,6 +638,24 @@ function ReadOnlyView({
               <ReadOnlyField key={f.id} field={f} value={values[f.id]} />
             ))}
           </dl>
+        </section>
+      ))}
+      {subTemplates.map((sub) => (
+        <section
+          key={sub.id}
+          className="space-y-2 rounded-md border border-primary/30 bg-primary/5 p-3"
+        >
+          <h3 className="text-sm font-semibold">{sub.name}</h3>
+          {sub.formSchema.rows.map((row) => (
+            <div key={row.id} className="space-y-1">
+              {row.label && <h4 className="text-xs font-medium">{row.label}</h4>}
+              <dl className="space-y-1.5">
+                {row.fields.map((f) => (
+                  <ReadOnlyField key={f.id} field={f} value={subValues[sub.id]?.[f.id]} />
+                ))}
+              </dl>
+            </div>
+          ))}
         </section>
       ))}
     </div>
@@ -541,7 +723,6 @@ function computeCalculatedDisplay(expression: string, scope: FormValues): Calcul
 }
 
 function formatNumber(value: number): string {
-  // Up to 4 decimals, trailing zeros trimmed, pt-PT separators.
   return value.toLocaleString("pt-PT", { maximumFractionDigits: 4 });
 }
 
@@ -568,4 +749,27 @@ function translateError(code: string): string {
     default:
       return `Erro: ${code}`;
   }
+}
+
+// Splits a stored ComposedRecordValues blob into the main values map and a
+// per-sub-template values map, dropping any sub-template ids the caller
+// didn't include in `subTemplates` (e.g., composition changed after the
+// record was first saved). `subs` is removed from `main` so the main
+// builder doesn't treat it as an unknown field.
+function splitComposedInitial(
+  stored: FormValues | undefined,
+  subTemplates: ReadonlyArray<SubTemplateSection>,
+): { main: FormValues | undefined; subs: Record<string, FormValues | undefined> } {
+  if (!stored) return { main: undefined, subs: {} };
+  const { subs: rawSubs, ...main } = stored;
+  const subs: Record<string, FormValues | undefined> = {};
+  const allowed = new Set(subTemplates.map((s) => s.id));
+  if (rawSubs && typeof rawSubs === "object" && !Array.isArray(rawSubs)) {
+    for (const [key, val] of Object.entries(rawSubs as Record<string, unknown>)) {
+      if (allowed.has(key) && val && typeof val === "object" && !Array.isArray(val)) {
+        subs[key] = val as FormValues;
+      }
+    }
+  }
+  return { main, subs };
 }
