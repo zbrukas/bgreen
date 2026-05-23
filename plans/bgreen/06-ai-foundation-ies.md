@@ -1,9 +1,18 @@
 # V6 — AI Foundation + IES Extraction
 
-> **Status:** Not started
+> **Status:** In progress — V6.1 shipped (AnthropicAiClient).
 > **Depends on:** [V5 — Workflows + Audit + FGA](05-workflows-audit-fga.md)
 > **Parent PRD:** [../bgreen-greenfield-rewrite.md](../bgreen-greenfield-rewrite.md)
 > **User stories covered:** PRD §40–47 (IES upload + extraction), §75–78 (failure modes), and the AI-infra prerequisites for §54+ in later verticals
+
+## Sub-slice progress
+
+- **V6.1 (shipped):** `packages/ai` — `AnthropicAiClient` with zod-driven tool registry, forced `tool_choice`, pt-PT system-prompt prefix, prompt-cache markers on system + tool definitions, SDK exception → `AiError` mapping (no exceptions escape the package), Bedrock EU adapter scaffolded behind `BGREEN_AI_TRANSPORT`. Default model `claude-sonnet-4-6`.
+- **V6.2 (next):** S3Uploader + MinIO dev target + `EconomicProfile` schemas + `PerfilEconomicoValidator`.
+- **V6.3:** Inngest setup + `IesExtractionService` orchestration + `ai.tool_call` audit.
+- **V6.4:** API routes (presign upload, run extraction, status, persist).
+- **V6.5:** IES upload UI (consent, drag-drop, progress, results, edit).
+- **V6.6:** Dashboard CTA + PostHog telemetry + polish.
 
 ## Goal
 
