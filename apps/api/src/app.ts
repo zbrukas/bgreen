@@ -7,6 +7,7 @@ import { authMiddleware } from "./middleware/auth.js";
 import { auditRoutes } from "./modules/audit/module.js";
 import { csAuthRoutes } from "./modules/cs-auth/module.js";
 import { csRoutes } from "./modules/cs/api/routes.js";
+import { economicProfileRoutes } from "./modules/economic-profile/api/routes.js";
 import { createIesExtractionFunction } from "./modules/economic-profile/module.js";
 import { recordTemplatesRoutes } from "./modules/form-templates/module.js";
 import { identityRoutes } from "./modules/identity/module.js";
@@ -47,6 +48,7 @@ const authedRoutes = new Hono<AppEnv>()
   .route("/record-templates", recordTemplatesRoutes)
   .route("/records", recordsRoutes)
   .route("/audit", auditRoutes)
+  .route("/economic-profile", economicProfileRoutes)
   .route("/workflows", workflowsRoutes)
   .route("/topics", topicsRoutes)
   .route("/cs", csRoutes);

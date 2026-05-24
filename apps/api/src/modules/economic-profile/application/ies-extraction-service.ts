@@ -15,6 +15,10 @@
 import type { AiClient } from "@bgreen/ai";
 import type { S3Uploader } from "@bgreen/storage";
 import type { IesExtractionLog } from "../domain/types.js";
+import type {
+  EconomicProfileRepository,
+  OrganizationEconomicProfile,
+} from "../infrastructure/economic-profile-repository.js";
 import type { IesExtractionLogRepository } from "../infrastructure/ies-extraction-log-repository.js";
 import { validatePerfilEconomico } from "./perfil-economico-validator.js";
 import { classifyDocumentTool } from "./tools/classify-document-tool.js";
@@ -36,11 +40,38 @@ export interface IesExtractionRunResult {
   errorMessage?: string;
 }
 
+// Fields the user may override on confirm. Each is optional; absent
+// means "use whatever the AI extracted". An empty edits object is
+// "accept the AI output verbatim".
+export interface ExtractionEdits {
+  year?: number;
+  employees?: number | null;
+  turnover?: number | null;
+  ebitda?: number | null;
+  balanceSheetTotal?: number | null;
+  cae?: string | null;
+}
+
+export type ConfirmError =
+  | "log_not_found"
+  | "wrong_status"
+  | "no_year"
+  | "no_extraction";
+
+export type ConfirmResult =
+  | { ok: true; profile: OrganizationEconomicProfile }
+  | { ok: false; error: ConfirmError };
+
+export type CancelError = "log_not_found" | "wrong_status";
+
+export type CancelResult = { ok: true } | { ok: false; error: CancelError };
+
 export class IesExtractionService {
   constructor(
     private readonly repo: IesExtractionLogRepository,
     private readonly ai: AiClient,
     private readonly s3: S3Uploader,
+    private readonly profiles: EconomicProfileRepository,
   ) {}
 
   // The orchestration entrypoint. `inngestRunId` is captured for cross-
@@ -123,6 +154,102 @@ export class IesExtractionService {
     return { logId, status: "awaiting_user_confirmation" };
   }
 
+  // Tenant-checked status fetch for the polling UI.
+  getStatus(organizationId: string, logId: string): Promise<IesExtractionLog | null> {
+    return this.repo.findById(organizationId, logId);
+  }
+
+  // Persist the extraction (optionally with user edits) as an
+  // organization_economic_profiles row, mark the log confirmed, and
+  // delete the S3 PDF. Tenant-checked: the lookup filters by org.
+  async confirm(
+    organizationId: string,
+    logId: string,
+    edits: ExtractionEdits = {},
+  ): Promise<ConfirmResult> {
+    const log = await this.repo.findById(organizationId, logId);
+    if (!log) return { ok: false, error: "log_not_found" };
+    if (log.status !== "awaiting_user_confirmation") {
+      return { ok: false, error: "wrong_status" };
+    }
+    const extraction = log.extractionResult;
+    if (!extraction) return { ok: false, error: "no_extraction" };
+
+    const editedKeys = Object.keys(edits) as Array<keyof ExtractionEdits>;
+    const hasEdits = editedKeys.length > 0;
+
+    // Resolve each field — edit wins over extraction. Year is required;
+    // if neither side has it, the row can't be written.
+    const year = edits.year ?? extraction.year.value;
+    if (year === null || year === undefined) {
+      return { ok: false, error: "no_year" };
+    }
+
+    const profile = await this.profiles.upsert({
+      organizationId,
+      year,
+      employees: pick(edits.employees, extraction.employees.value),
+      turnover: pick(edits.turnover, extraction.turnover.value),
+      ebitda: pick(edits.ebitda, extraction.ebitda.value),
+      balanceSheetTotal: pick(edits.balanceSheetTotal, extraction.balanceSheetTotal.value),
+      cae: pick(edits.cae, extraction.cae.value),
+      source: hasEdits ? "edited_after_extraction" : "ies_extracted",
+      iesExtractionLogId: log.id,
+    });
+
+    // Mark confirmed first, then delete S3. If the S3 delete fails the
+    // user still sees their profile + status=confirmed; the orphan
+    // object is swept by lifecycle policy (future). Reversing the order
+    // would leave a confirmed-but-PDF-still-present state on S3 errors,
+    // which is worse for GDPR posture.
+    await this.repo.update(log.id, {
+      status: "confirmed",
+      completedAt: new Date(),
+    });
+    await this.deletePdf(log);
+
+    return { ok: true, profile };
+  }
+
+  // User aborts before confirmation. Deletes the PDF + marks cancelled.
+  async cancel(organizationId: string, logId: string): Promise<CancelResult> {
+    const log = await this.repo.findById(organizationId, logId);
+    if (!log) return { ok: false, error: "log_not_found" };
+    // Allow cancel from any non-terminal state. Terminal states ignore
+    // the request silently (idempotent).
+    const cancellableStatuses: IesExtractionLog["status"][] = [
+      "pending",
+      "extracting",
+      "awaiting_user_confirmation",
+    ];
+    if (!cancellableStatuses.includes(log.status)) {
+      return { ok: false, error: "wrong_status" };
+    }
+    await this.repo.update(log.id, {
+      status: "cancelled",
+      completedAt: new Date(),
+    });
+    await this.deletePdf(log);
+    return { ok: true };
+  }
+
+  // Best-effort S3 delete. Logs (doesn't throw) on failure — the worst
+  // case is an orphaned object that lifecycle policy will sweep. Logged
+  // failures show up in the audit trail via the next extraction attempt
+  // (or a future cleanup job in V6.5+).
+  private async deletePdf(log: IesExtractionLog): Promise<void> {
+    if (!log.s3Key) return;
+    const result = await this.s3.delete(log.s3Key);
+    if (!result.ok) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[ies-extraction] S3 delete failed for log=${log.id} key=${log.s3Key}: ${result.error.message}`,
+      );
+      return;
+    }
+    await this.repo.update(log.id, { s3DeletedAt: new Date(), s3Key: null });
+  }
+
   private async fail(
     logId: string,
     status: "failed_not_ies" | "failed_extraction" | "failed_validation",
@@ -135,6 +262,14 @@ export class IesExtractionService {
     });
     return { logId, status, errorMessage };
   }
+}
+
+// Helper for edits-vs-extraction resolution. The edit may explicitly
+// be `null` (user clearing a value); `pick` honours that by
+// distinguishing "key present and value=null" (use null) from "key
+// absent" (use the extraction value).
+function pick<T>(edit: T | undefined, fallback: T): T {
+  return edit === undefined ? fallback : edit;
 }
 
 // Node Buffer.toString('base64') is the obvious way to do this, but we

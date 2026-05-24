@@ -4,10 +4,14 @@ import { AwsS3Uploader, InMemoryS3Uploader, type S3Uploader } from "@bgreen/stor
 import { AuditService, DrizzleAuditRepository } from "./modules/audit/module.js";
 import { CsAuthService } from "./modules/cs-auth/module.js";
 import {
+  DrizzleEconomicProfileRepository,
   DrizzleIesExtractionLogRepository,
+  EconomicProfileService,
   IesExtractionService,
+  IesUploadService,
   createAiToolCallObserver,
 } from "./modules/economic-profile/module.js";
+import { inngest } from "./inngest.js";
 import {
   DrizzleCompositionRepository,
   DrizzleRecordTemplateRepository,
@@ -41,6 +45,7 @@ export const repositories = {
   topics: new DrizzleTopicRepository(),
   compositions: new DrizzleCompositionRepository(),
   iesExtractionLogs: new DrizzleIesExtractionLogRepository(),
+  economicProfiles: new DrizzleEconomicProfileRepository(),
 };
 
 export const userService = new UserService(repositories.users, repositories.centralServicesDomains);
@@ -121,4 +126,21 @@ export const iesExtractionService = new IesExtractionService(
   repositories.iesExtractionLogs,
   anthropicAiClient,
   s3Uploader,
+  repositories.economicProfiles,
+);
+
+export const economicProfileService = new EconomicProfileService(
+  repositories.economicProfiles,
+);
+
+export const iesUploadService = new IesUploadService(
+  repositories.iesExtractionLogs,
+  s3Uploader,
+  // Default Inngest sender — wraps the shared client. Tests substitute
+  // a recording fake.
+  {
+    send: async (event) => {
+      await inngest.send(event);
+    },
+  },
 );

@@ -16,8 +16,53 @@ import type {
   IesExtractionStatus,
   ValidatorWarning,
 } from "../domain/types.js";
+import type {
+  EconomicProfileRepository,
+  OrganizationEconomicProfile,
+} from "../infrastructure/economic-profile-repository.js";
 import type { IesExtractionLogRepository } from "../infrastructure/ies-extraction-log-repository.js";
 import { IesExtractionService } from "./ies-extraction-service.js";
+
+// Minimal in-memory EconomicProfileRepository. Keys on (orgId, year).
+class InMemoryProfileRepo implements EconomicProfileRepository {
+  readonly profiles = new Map<string, OrganizationEconomicProfile>();
+
+  private key(orgId: string, year: number): string {
+    return `${orgId}::${year}`;
+  }
+
+  upsert(input: Parameters<EconomicProfileRepository["upsert"]>[0]) {
+    const existing = this.profiles.get(this.key(input.organizationId, input.year));
+    const now = new Date().toISOString();
+    const profile: OrganizationEconomicProfile = {
+      id: existing?.id ?? `profile-${this.profiles.size + 1}`,
+      organizationId: input.organizationId,
+      year: input.year,
+      employees: input.employees,
+      turnover: input.turnover,
+      ebitda: input.ebitda,
+      balanceSheetTotal: input.balanceSheetTotal,
+      cae: input.cae,
+      source: input.source,
+      confirmedAt: now,
+      iesExtractionLogId: input.iesExtractionLogId,
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    };
+    this.profiles.set(this.key(input.organizationId, input.year), profile);
+    return Promise.resolve(profile);
+  }
+
+  findByOrgYear(orgId: string, year: number) {
+    return Promise.resolve(this.profiles.get(this.key(orgId, year)) ?? null);
+  }
+
+  listByOrg(orgId: string) {
+    return Promise.resolve(
+      Array.from(this.profiles.values()).filter((p) => p.organizationId === orgId),
+    );
+  }
+}
 
 // Per-test in-memory log repo. Mirrors the Drizzle repo's contract
 // without touching the database. We track update history so tests can
@@ -151,7 +196,8 @@ describe("IesExtractionService.runPipeline", () => {
     });
     const s3 = new InMemoryS3Uploader();
     await preloadPdf(s3, "organizations/org-1/ies/log-1.pdf");
-    const service = new IesExtractionService(repo, ai, s3);
+    const profileRepo = new InMemoryProfileRepo();
+    const service = new IesExtractionService(repo, ai, s3, profileRepo);
     const logId = seedLog(repo);
 
     const result = await service.runPipeline(logId, "inngest-run-abc");
@@ -173,7 +219,8 @@ describe("IesExtractionService.runPipeline", () => {
     });
     const s3 = new InMemoryS3Uploader();
     await preloadPdf(s3, "organizations/org-1/ies/log-1.pdf");
-    const service = new IesExtractionService(repo, ai, s3);
+    const profileRepo = new InMemoryProfileRepo();
+    const service = new IesExtractionService(repo, ai, s3, profileRepo);
     const logId = seedLog(repo);
 
     await service.runPipeline(logId);
@@ -193,7 +240,8 @@ describe("IesExtractionService.runPipeline", () => {
     });
     const s3 = new InMemoryS3Uploader();
     await preloadPdf(s3, "organizations/org-1/ies/log-1.pdf");
-    const service = new IesExtractionService(repo, ai, s3);
+    const profileRepo = new InMemoryProfileRepo();
+    const service = new IesExtractionService(repo, ai, s3, profileRepo);
     const logId = seedLog(repo);
 
     const result = await service.runPipeline(logId);
@@ -213,7 +261,8 @@ describe("IesExtractionService.runPipeline", () => {
     });
     const s3 = new InMemoryS3Uploader();
     await preloadPdf(s3, "organizations/org-1/ies/log-1.pdf");
-    const service = new IesExtractionService(repo, ai, s3);
+    const profileRepo = new InMemoryProfileRepo();
+    const service = new IesExtractionService(repo, ai, s3, profileRepo);
     const logId = seedLog(repo);
 
     const result = await service.runPipeline(logId);
@@ -231,7 +280,8 @@ describe("IesExtractionService.runPipeline", () => {
     });
     const s3 = new InMemoryS3Uploader();
     await preloadPdf(s3, "organizations/org-1/ies/log-1.pdf");
-    const service = new IesExtractionService(repo, ai, s3);
+    const profileRepo = new InMemoryProfileRepo();
+    const service = new IesExtractionService(repo, ai, s3, profileRepo);
     const logId = seedLog(repo);
 
     const result = await service.runPipeline(logId);
@@ -245,7 +295,8 @@ describe("IesExtractionService.runPipeline", () => {
     const repo = new InMemoryLogRepo();
     const ai = fakeAi({});
     const s3 = new InMemoryS3Uploader(); // empty
-    const service = new IesExtractionService(repo, ai, s3);
+    const profileRepo = new InMemoryProfileRepo();
+    const service = new IesExtractionService(repo, ai, s3, profileRepo);
     const logId = seedLog(repo);
 
     const result = await service.runPipeline(logId);
@@ -258,7 +309,8 @@ describe("IesExtractionService.runPipeline", () => {
     const repo = new InMemoryLogRepo();
     const ai = fakeAi({});
     const s3 = new InMemoryS3Uploader();
-    const service = new IesExtractionService(repo, ai, s3);
+    const profileRepo = new InMemoryProfileRepo();
+    const service = new IesExtractionService(repo, ai, s3, profileRepo);
     const logId = seedLog(repo, { s3Key: null });
 
     const result = await service.runPipeline(logId);
@@ -279,7 +331,8 @@ describe("IesExtractionService.runPipeline", () => {
     });
     const s3 = new InMemoryS3Uploader();
     await preloadPdf(s3, "organizations/org-1/ies/log-1.pdf");
-    const service = new IesExtractionService(repo, ai, s3);
+    const profileRepo = new InMemoryProfileRepo();
+    const service = new IesExtractionService(repo, ai, s3, profileRepo);
     const logId = seedLog(repo);
 
     await service.runPipeline(logId);
@@ -298,7 +351,8 @@ describe("IesExtractionService.runPipeline", () => {
     });
     const s3 = new InMemoryS3Uploader();
     await preloadPdf(s3, "organizations/org-1/ies/log-1.pdf");
-    const service = new IesExtractionService(repo, ai, s3);
+    const profileRepo = new InMemoryProfileRepo();
+    const service = new IesExtractionService(repo, ai, s3, profileRepo);
     const logId = seedLog(repo);
 
     await service.runPipeline(logId);
@@ -307,6 +361,138 @@ describe("IesExtractionService.runPipeline", () => {
       .map((u) => u.fields.status)
       .filter((s): s is IesExtractionStatus => typeof s === "string");
     expect(statusUpdates).toEqual(["extracting", "awaiting_user_confirmation"]);
+  });
+});
+
+describe("IesExtractionService.confirm", () => {
+  async function runAwaitingExtraction(
+    extractionOverride?: ExtractedEconomicProfile,
+  ): Promise<{
+    repo: InMemoryLogRepo;
+    profileRepo: InMemoryProfileRepo;
+    s3: InMemoryS3Uploader;
+    service: IesExtractionService;
+    logId: string;
+  }> {
+    const repo = new InMemoryLogRepo();
+    const ai = fakeAi({
+      classify_document: ok({ kind: "ies", confidence: "high" }),
+      extract_economic_profile: ok(extractionOverride ?? happyExtraction()),
+    });
+    const s3 = new InMemoryS3Uploader();
+    await preloadPdf(s3, "organizations/org-1/ies/log-1.pdf");
+    const profileRepo = new InMemoryProfileRepo();
+    const service = new IesExtractionService(repo, ai, s3, profileRepo);
+    const logId = seedLog(repo);
+    await service.runPipeline(logId);
+    return { repo, profileRepo, s3, service, logId };
+  }
+
+  it("no edits → writes profile with source=ies_extracted, marks confirmed, deletes S3", async () => {
+    const { repo, profileRepo, s3, service, logId } = await runAwaitingExtraction();
+
+    const result = await service.confirm("org-1", logId);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.profile.source).toBe("ies_extracted");
+    expect(result.profile.year).toBe(2024);
+    expect(result.profile.employees).toBe(50);
+    expect(profileRepo.profiles.size).toBe(1);
+
+    const finalLog = await repo.findAnyById(logId);
+    expect(finalLog?.status).toBe("confirmed");
+    expect(s3.has("organizations/org-1/ies/log-1.pdf")).toBe(false);
+  });
+
+  it("with edits → source=edited_after_extraction; edits override extracted values", async () => {
+    const { profileRepo, service, logId } = await runAwaitingExtraction();
+
+    const result = await service.confirm("org-1", logId, { employees: 75, cae: "62020" });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.profile.source).toBe("edited_after_extraction");
+    expect(result.profile.employees).toBe(75);
+    expect(result.profile.cae).toBe("62020");
+    // Non-edited fields keep the extracted value.
+    expect(result.profile.turnover).toBe(1_500_000);
+    expect(profileRepo.profiles.size).toBe(1);
+  });
+
+  it("rejects confirm on a log that isn't awaiting_user_confirmation", async () => {
+    const repo = new InMemoryLogRepo();
+    const ai = fakeAi({});
+    const s3 = new InMemoryS3Uploader();
+    const profileRepo = new InMemoryProfileRepo();
+    const service = new IesExtractionService(repo, ai, s3, profileRepo);
+    const logId = seedLog(repo, { status: "failed_extraction" });
+
+    const result = await service.confirm("org-1", logId);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error).toBe("wrong_status");
+  });
+
+  it("rejects confirm when no_year (extraction returned null year and no edit supplies one)", async () => {
+    const noYearExtraction = happyExtraction();
+    noYearExtraction.year = { value: null, confidence: "LOW" };
+    const { service, logId } = await runAwaitingExtraction(noYearExtraction);
+
+    const result = await service.confirm("org-1", logId);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error).toBe("no_year");
+  });
+
+  it("supplying year via edits when extraction omitted it succeeds", async () => {
+    const noYearExtraction = happyExtraction();
+    noYearExtraction.year = { value: null, confidence: "LOW" };
+    const { service, logId } = await runAwaitingExtraction(noYearExtraction);
+
+    const result = await service.confirm("org-1", logId, { year: 2024 });
+    expect(result.ok).toBe(true);
+  });
+
+  it("rejects confirm from a different org (tenant isolation)", async () => {
+    const { service, logId } = await runAwaitingExtraction();
+    const result = await service.confirm("other-org", logId);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error).toBe("log_not_found");
+  });
+});
+
+describe("IesExtractionService.cancel", () => {
+  it("cancels an awaiting log: status=cancelled, S3 deleted", async () => {
+    const repo = new InMemoryLogRepo();
+    const ai = fakeAi({});
+    const s3 = new InMemoryS3Uploader();
+    await preloadPdf(s3, "organizations/org-1/ies/log-1.pdf");
+    const profileRepo = new InMemoryProfileRepo();
+    const service = new IesExtractionService(repo, ai, s3, profileRepo);
+    const logId = seedLog(repo, { status: "awaiting_user_confirmation" });
+
+    const result = await service.cancel("org-1", logId);
+    expect(result.ok).toBe(true);
+    const finalLog = await repo.findAnyById(logId);
+    expect(finalLog?.status).toBe("cancelled");
+    expect(s3.has("organizations/org-1/ies/log-1.pdf")).toBe(false);
+  });
+
+  it("cancel on terminal log → wrong_status (no S3 churn)", async () => {
+    const repo = new InMemoryLogRepo();
+    const ai = fakeAi({});
+    const s3 = new InMemoryS3Uploader();
+    await preloadPdf(s3, "organizations/org-1/ies/log-1.pdf");
+    const profileRepo = new InMemoryProfileRepo();
+    const service = new IesExtractionService(repo, ai, s3, profileRepo);
+    const logId = seedLog(repo, { status: "confirmed" });
+
+    const result = await service.cancel("org-1", logId);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error).toBe("wrong_status");
+    // S3 untouched on rejection.
+    expect(s3.has("organizations/org-1/ies/log-1.pdf")).toBe(true);
   });
 });
 
