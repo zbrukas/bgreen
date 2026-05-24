@@ -40,5 +40,42 @@ services:
       MP_SMTP_AUTH_ACCEPT_ANY: "1"
       MP_SMTP_AUTH_ALLOW_INSECURE: "1"
 
+  # Local S3-compatible target for IES upload + extraction (V6 onward).
+  # Production uses real S3 in eu-central-1 / eu-west-1; this stand-in keeps
+  # dev hermetic and avoids surprise AWS bills from a runaway test loop.
+  # Console at http://localhost:9001 (user: bgreen / pw: bgreen_dev).
+  minio:
+    image: minio/minio:latest
+    container_name: bgreen-minio
+    ports:
+      - "9000:9000" # S3 API
+      - "9001:9001" # Web console
+    environment:
+      MINIO_ROOT_USER: bgreen
+      MINIO_ROOT_PASSWORD: bgreen_dev
+    command: server /data --console-address ":9001"
+    volumes:
+      - bgreen-minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # One-shot job: create the bgreen-dev bucket on first compose-up. Idempotent
+  # — the `mb --ignore-existing` skips if it's already there.
+  minio-bootstrap:
+    image: minio/mc:latest
+    container_name: bgreen-minio-bootstrap
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      sh -c "
+      mc alias set local http://minio:9000 bgreen bgreen_dev &&
+      mc mb --ignore-existing local/bgreen-dev
+      "
+
 volumes:
   bgreen-postgres-data:
+  bgreen-minio-data:

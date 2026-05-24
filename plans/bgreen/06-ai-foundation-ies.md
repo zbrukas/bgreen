@@ -8,7 +8,7 @@
 ## Sub-slice progress
 
 - **V6.1 (shipped):** `packages/ai` — `AnthropicAiClient` with zod-driven tool registry, forced `tool_choice`, pt-PT system-prompt prefix, prompt-cache markers on system + tool definitions, SDK exception → `AiError` mapping (no exceptions escape the package), Bedrock EU adapter scaffolded behind `BGREEN_AI_TRANSPORT`. Default model `claude-sonnet-4-6`.
-- **V6.2 (next):** S3Uploader + MinIO dev target + `EconomicProfile` schemas + `PerfilEconomicoValidator`.
+- **V6.2 (shipped):** `packages/storage` (`S3Uploader` interface + `AwsS3Uploader` for S3/MinIO + `InMemoryS3Uploader` for tests). MinIO in `docker-compose` with auto-created `bgreen-dev` bucket. `organization_economic_profiles` + `ies_extraction_logs` Drizzle schemas (migration 0014). `economic-profile` module shell with `PerfilEconomicoValidator` (pure, PRD #19 rules ported).
 - **V6.3:** Inngest setup + `IesExtractionService` orchestration + `ai.tool_call` audit.
 - **V6.4:** API routes (presign upload, run extraction, status, persist).
 - **V6.5:** IES upload UI (consent, drag-drop, progress, results, edit).

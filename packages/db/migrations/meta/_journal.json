@@ -99,6 +99,13 @@
       "when": 1779660000000,
       "tag": "0013_invite_topic_scope",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1779750000000,
+      "tag": "0014_economic_profiles",
+      "breakpoints": true
     }
   ]
 }
