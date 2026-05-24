@@ -60,3 +60,35 @@ export interface ValidationResult {
   profile: ExtractedEconomicProfile;
   warnings: ValidatorWarning[];
 }
+
+// Status lives on ies_extraction_logs.status — mirror the enum here so
+// callers don't reach into @bgreen/db. Keep in sync with the pgEnum.
+export type IesExtractionStatus =
+  | "pending"
+  | "extracting"
+  | "awaiting_user_confirmation"
+  | "confirmed"
+  | "cancelled"
+  | "failed_not_ies"
+  | "failed_extraction"
+  | "failed_validation";
+
+export interface IesExtractionLog {
+  id: string;
+  organizationId: string;
+  uploadedByUserId: string | null;
+  s3Key: string | null;
+  s3DeletedAt: string | null;
+  originalFilename: string | null;
+  fileSizeBytes: number | null;
+  status: IesExtractionStatus;
+  year: number | null;
+  classificationResult: unknown;
+  extractionResult: ExtractedEconomicProfile | null;
+  validatorWarnings: ValidatorWarning[] | null;
+  errorMessage: string | null;
+  inngestRunId: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  createdAt: string;
+}

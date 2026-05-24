@@ -16,11 +16,13 @@
     "seed-postal-codes": "tsx scripts/seed-postal-codes.ts"
   },
   "dependencies": {
+    "@bgreen/ai": "workspace:*",
     "@bgreen/auth": "workspace:*",
     "@bgreen/db": "workspace:*",
     "@bgreen/emails": "workspace:*",
     "@bgreen/form-engine": "workspace:*",
     "@bgreen/pt-data": "workspace:*",
+    "@bgreen/storage": "workspace:*",
     "@bgreen/types": "workspace:*",
     "@hono/node-server": "^1.13.7",
     "@hono/zod-validator": "^0.4.2",

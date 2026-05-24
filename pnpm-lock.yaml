@@ -26,6 +26,9 @@ importers:
 
   apps/api:
     dependencies:
+      '@bgreen/ai':
+        specifier: workspace:*
+        version: link:../../packages/ai
       '@bgreen/auth':
         specifier: workspace:*
         version: link:../../packages/auth
@@ -41,6 +44,9 @@ importers:
       '@bgreen/pt-data':
         specifier: workspace:*
         version: link:../../packages/pt-data
+      '@bgreen/storage':
+        specifier: workspace:*
+        version: link:../../packages/storage
       '@bgreen/types':
         specifier: workspace:*
         version: link:../../packages/types

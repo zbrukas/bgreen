@@ -1,12 +1,13 @@
 import { Hono } from "hono";
 import { logger } from "hono/logger";
-import { Inngest } from "inngest";
 import { serve as inngestServe } from "inngest/hono";
 import type { AppEnv } from "./context.js";
+import { inngest } from "./inngest.js";
 import { authMiddleware } from "./middleware/auth.js";
 import { auditRoutes } from "./modules/audit/module.js";
 import { csAuthRoutes } from "./modules/cs-auth/module.js";
 import { csRoutes } from "./modules/cs/api/routes.js";
+import { createIesExtractionFunction } from "./modules/economic-profile/module.js";
 import { recordTemplatesRoutes } from "./modules/form-templates/module.js";
 import { identityRoutes } from "./modules/identity/module.js";
 import { lookupsRoutes } from "./modules/lookups/module.js";
@@ -14,15 +15,23 @@ import { inviteRoutes, organizationsRoutes } from "./modules/organizations/modul
 import { recordsRoutes } from "./modules/records/module.js";
 import { topicsRoutes } from "./modules/topics/module.js";
 import { workflowsRoutes } from "./modules/workflows/module.js";
+import { iesExtractionService } from "./services.js";
 
-const inngest = new Inngest({ id: "bgreen-api" });
+// Register Inngest functions. Each module owns its function factory; we
+// import + invoke here so dependencies (services) are wired before the
+// handler is mounted.
+const inngestFunctions = [createIesExtractionFunction(iesExtractionService)];
 
 // Public surface — no auth required. /health, /cs/auth/* (login flow),
 // and the Inngest function endpoint (Inngest signs its own webhook calls;
 // auth would block it).
 const publicRoutes = new Hono()
   .get("/health", (c) => c.json({ status: "ok", service: "api" } as const))
-  .on(["GET", "POST", "PUT"], "/api/inngest", inngestServe({ client: inngest, functions: [] }))
+  .on(
+    ["GET", "POST", "PUT"],
+    "/api/inngest",
+    inngestServe({ client: inngest, functions: inngestFunctions }),
+  )
   .route("/cs/auth", csAuthRoutes);
 
 // Authenticated surface — every request requires either a valid WorkOS

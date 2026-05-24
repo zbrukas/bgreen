@@ -1,6 +1,6 @@
 // AnthropicAiClient — typed facade over @anthropic-ai/sdk.
 //
-// Single entry point for every Claude call in bGreen: `call(tool, input)`.
+// Single entry point for every Claude call in bGreen: `call(tool, input, ctx?)`.
 // Validates input → forces the registered tool via tool_choice → validates
 // the model's tool_use input field against the tool's outputSchema → returns
 // Result<TOutput, AiError>. No exceptions escape (see CLAUDE.md).
@@ -10,11 +10,12 @@
 //   - prompt caching on system + tool definitions
 //   - retry with exponential backoff (delegated to the SDK's built-in retry)
 //   - mapping SDK exceptions to AiError
+//   - per-call observer hook for audit / telemetry
 //
 // What it does NOT own:
 //   - Tool definitions — those live with the consuming module (e.g.,
 //     IES extraction tools live in apps/api/src/modules/economic-profile).
-//   - Token cost accounting — caller's responsibility (audit log + PostHog).
+//   - Audit storage or telemetry sinks — observers in apps/api do that.
 
 import Anthropic from "@anthropic-ai/sdk";
 import {
@@ -23,6 +24,12 @@ import {
   aiErrorFromSdkException,
   aiErrorFromZod,
 } from "./errors";
+import type {
+  AiCallContext,
+  AiCallObservation,
+  AiCallObserver,
+  AiTokenUsage,
+} from "./observer";
 import { type Result, err, ok } from "./result";
 import { buildSystemBlocks } from "./system-prompt";
 import {
@@ -49,6 +56,17 @@ export interface MessagesClient {
   create(params: Anthropic.MessageCreateParamsNonStreaming): Promise<Anthropic.Message>;
 }
 
+// Interface a caller depends on — lets tests substitute a fake without
+// constructing a full SDK. `AnthropicAiClient` implements this; future
+// adapters (Bedrock EU) would too.
+export interface AiClient {
+  call<TInput, TOutput>(
+    tool: AiToolDefinition<TInput, TOutput>,
+    input: TInput,
+    context?: AiCallContext,
+  ): Promise<Result<TOutput, AiError>>;
+}
+
 export interface AnthropicAiClientOptions {
   // Reads from ANTHROPIC_API_KEY when omitted — the standard SDK behaviour.
   apiKey?: string;
@@ -58,14 +76,19 @@ export interface AnthropicAiClientOptions {
   maxRetries?: number;
   // Test seam — inject a fake messages client to avoid hitting the network.
   messages?: MessagesClient;
+  // Called once per `call()` attempt with success/failure + tokens. Use
+  // this in apps/api to write `ai.tool_call` audit rows.
+  observer?: AiCallObserver;
 }
 
-export class AnthropicAiClient {
+export class AnthropicAiClient implements AiClient {
   private readonly messages: MessagesClient;
   private readonly model: Anthropic.Model;
+  private readonly observer?: AiCallObserver;
 
   constructor(options: AnthropicAiClientOptions = {}) {
     this.model = options.model ?? DEFAULT_MODEL;
+    this.observer = options.observer;
     if (options.messages) {
       this.messages = options.messages;
     } else {
@@ -85,10 +108,20 @@ export class AnthropicAiClient {
   async call<TInput, TOutput>(
     tool: AiToolDefinition<TInput, TOutput>,
     input: TInput,
+    context: AiCallContext = {},
   ): Promise<Result<TOutput, AiError>> {
     const inputParse = tool.inputSchema.safeParse(input);
     if (!inputParse.success) {
-      return err(aiErrorFromZod(inputParse.error, "input_validation"));
+      const error = aiErrorFromZod(inputParse.error, "input_validation");
+      await this.observe({
+        toolName: tool.name,
+        outcome: "error",
+        errorKind: error.kind,
+        latencyMs: 0,
+        usage: null,
+        context,
+      });
+      return err(error);
     }
 
     // Cast to the type-erased form for the request build — the generic
@@ -99,9 +132,16 @@ export class AnthropicAiClient {
     try {
       anthropicTool = toAnthropicTool(def);
     } catch (e) {
-      // Schema conversion failure is a programmer error — surface it as
-      // `client` so it shows up loudly in logs at boot/first-call.
-      return err(aiError("client", e instanceof Error ? e.message : String(e), e));
+      const error = aiError("client", e instanceof Error ? e.message : String(e), e);
+      await this.observe({
+        toolName: tool.name,
+        outcome: "error",
+        errorKind: error.kind,
+        latencyMs: 0,
+        usage: null,
+        context,
+      });
+      return err(error);
     }
 
     // cache_control on the last tool extends caching across system + tools.
@@ -112,6 +152,7 @@ export class AnthropicAiClient {
 
     const userContent = def.buildUserMessage(inputParse.data);
 
+    const startedAt = Date.now();
     let response: Anthropic.Message;
     try {
       response = await this.messages.create({
@@ -124,27 +165,85 @@ export class AnthropicAiClient {
         messages: [{ role: "user", content: userContent }],
       });
     } catch (e) {
-      return err(aiErrorFromSdkException(e));
+      const error = aiErrorFromSdkException(e);
+      await this.observe({
+        toolName: tool.name,
+        outcome: "error",
+        errorKind: error.kind,
+        latencyMs: Date.now() - startedAt,
+        usage: null,
+        context,
+      });
+      return err(error);
     }
+    const latencyMs = Date.now() - startedAt;
+    const usage = extractUsage(response);
 
     const toolUse = response.content.find(
       (block): block is Anthropic.ToolUseBlock => block.type === "tool_use",
     );
     if (!toolUse) {
-      return err(
-        aiError(
-          "no_tool_use",
-          `model returned stop_reason=${response.stop_reason} without invoking tool '${tool.name}'`,
-          response,
-        ),
+      const error = aiError(
+        "no_tool_use",
+        `model returned stop_reason=${response.stop_reason} without invoking tool '${tool.name}'`,
+        response,
       );
+      await this.observe({
+        toolName: tool.name,
+        outcome: "error",
+        errorKind: error.kind,
+        latencyMs,
+        usage,
+        context,
+      });
+      return err(error);
     }
 
     const outputParse = tool.outputSchema.safeParse(toolUse.input);
     if (!outputParse.success) {
-      return err(aiErrorFromZod(outputParse.error, "output_parse"));
+      const error = aiErrorFromZod(outputParse.error, "output_parse");
+      await this.observe({
+        toolName: tool.name,
+        outcome: "error",
+        errorKind: error.kind,
+        latencyMs,
+        usage,
+        context,
+      });
+      return err(error);
     }
 
+    await this.observe({
+      toolName: tool.name,
+      outcome: "ok",
+      latencyMs,
+      usage,
+      context,
+    });
     return ok(outputParse.data);
   }
+
+  // Observer failures must not corrupt the AI call's outcome. We catch
+  // and drop — observers themselves own their reliability (best effort).
+  private async observe(observation: AiCallObservation): Promise<void> {
+    if (!this.observer) return;
+    try {
+      await this.observer(observation);
+    } catch {
+      // Intentional swallow — see comment above.
+    }
+  }
+}
+
+function extractUsage(message: Anthropic.Message): AiTokenUsage {
+  // SDK 0.98's Usage type fills these as numbers or null. Normalize to
+  // `null` for missing fields rather than 0 — distinguishes "not reported"
+  // from "actually zero".
+  const u = message.usage;
+  return {
+    inputTokens: u.input_tokens ?? null,
+    outputTokens: u.output_tokens ?? null,
+    cacheCreationInputTokens: u.cache_creation_input_tokens ?? null,
+    cacheReadInputTokens: u.cache_read_input_tokens ?? null,
+  };
 }

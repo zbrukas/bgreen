@@ -9,7 +9,7 @@
 
 - **V6.1 (shipped):** `packages/ai` — `AnthropicAiClient` with zod-driven tool registry, forced `tool_choice`, pt-PT system-prompt prefix, prompt-cache markers on system + tool definitions, SDK exception → `AiError` mapping (no exceptions escape the package), Bedrock EU adapter scaffolded behind `BGREEN_AI_TRANSPORT`. Default model `claude-sonnet-4-6`.
 - **V6.2 (shipped):** `packages/storage` (`S3Uploader` interface + `AwsS3Uploader` for S3/MinIO + `InMemoryS3Uploader` for tests). MinIO in `docker-compose` with auto-created `bgreen-dev` bucket. `organization_economic_profiles` + `ies_extraction_logs` Drizzle schemas (migration 0014). `economic-profile` module shell with `PerfilEconomicoValidator` (pure, PRD #19 rules ported).
-- **V6.3:** Inngest setup + `IesExtractionService` orchestration + `ai.tool_call` audit.
+- **V6.3 (shipped):** `classifyDocument` + `extractEconomicProfile` tool definitions (multimodal — PDF goes directly to Sonnet 4.6 as a `document` content block; pdf-parse skipped). `AnthropicAiClient` extended with per-call context + observer hook. `IesExtractionService` orchestrates 4-step pipeline (S3 download → classify → extract → validate+persist; S3 deletion deferred to V6.4 user confirmation). `ai.tool_call.<toolName>` audit rows written via observer. Inngest function `ies-extraction-pipeline` registered on event `ies.extraction.started`. Services wired in `services.ts` with MinIO defaults in `.env.example`.
 - **V6.4:** API routes (presign upload, run extraction, status, persist).
 - **V6.5:** IES upload UI (consent, drag-drop, progress, results, edit).
 - **V6.6:** Dashboard CTA + PostHog telemetry + polish.

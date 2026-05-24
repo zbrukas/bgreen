@@ -1,0 +1,49 @@
+// Per-call observer hook. Wired in apps/api to write `ai.tool_call` audit
+// rows + emit PostHog events without each caller wrapping the call.
+//
+// Fires for every `client.call()` attempt — including input-validation
+// failures (latencyMs=0). One AiCallObservation per attempt. Errors thrown
+// from inside the observer are swallowed by the client so audit failure
+// doesn't break extraction.
+
+import type { AiErrorKind } from "./errors";
+
+export interface AiCallContext {
+  // Tenant scope. Required for the audit observer to write a properly
+  // scoped audit_log row.
+  organizationId?: string;
+  // Acting user, if any. Null for system-initiated calls (e.g., an
+  // Inngest function running with no user in the loop yet).
+  actorUserId?: string | null;
+  // Groups multiple AI calls in one logical operation (e.g., classify +
+  // extract for one IES upload). Becomes audit_log.correlation_id.
+  correlationId?: string;
+  // Free-form metadata for the observer. Not used by the client itself.
+  metadata?: Record<string, unknown>;
+}
+
+export interface AiTokenUsage {
+  inputTokens: number | null;
+  outputTokens: number | null;
+  cacheCreationInputTokens: number | null;
+  cacheReadInputTokens: number | null;
+}
+
+export interface AiCallObservation {
+  toolName: string;
+  // Discriminator. Observers branch on this to write success vs failure.
+  outcome: "ok" | "error";
+  // Populated when outcome === "error". Lets observers distinguish
+  // transient (worth alerting) from input_validation (programmer error).
+  errorKind?: AiErrorKind;
+  // Wall-clock duration of the SDK call. Zero for failures before the
+  // SDK was invoked (input_validation, schema conversion).
+  latencyMs: number;
+  // Null when the call never reached the SDK or the SDK didn't return
+  // usage (e.g., transient connection error).
+  usage: AiTokenUsage | null;
+  // Echoed back from the call site for the observer's bookkeeping.
+  context: AiCallContext;
+}
+
+export type AiCallObserver = (observation: AiCallObservation) => void | Promise<void>;

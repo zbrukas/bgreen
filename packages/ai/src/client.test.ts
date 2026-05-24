@@ -204,4 +204,64 @@ describe("AnthropicAiClient.call", () => {
       expect(result.error.kind).toBe("auth");
     }
   });
+
+  it("observer fires on success with tokens, latency, and context echoed back", async () => {
+    const observations: import("./observer").AiCallObservation[] = [];
+    const messages = stubMessages(
+      vi.fn(async () => fakeToolUseResponse({ employees: 5, turnover: 100 })),
+    );
+    const client = new AnthropicAiClient({
+      messages,
+      observer: (o) => {
+        observations.push(o);
+      },
+    });
+    await client.call(
+      extractTool,
+      { documentText: "..." },
+      { organizationId: "org-1", correlationId: "c-1" },
+    );
+    expect(observations).toHaveLength(1);
+    const obs = observations[0];
+    if (!obs) throw new Error("expected an observation");
+    expect(obs.toolName).toBe("extract_profile");
+    expect(obs.outcome).toBe("ok");
+    expect(obs.context.organizationId).toBe("org-1");
+    expect(obs.context.correlationId).toBe("c-1");
+    expect(obs.usage?.inputTokens).toBe(100);
+    expect(obs.usage?.outputTokens).toBe(50);
+  });
+
+  it("observer fires on input_validation failure before hitting the SDK", async () => {
+    const observations: import("./observer").AiCallObservation[] = [];
+    const create = vi.fn();
+    const client = new AnthropicAiClient({
+      messages: stubMessages(create),
+      observer: (o) => {
+        observations.push(o);
+      },
+    });
+    await client.call(extractTool, { documentText: "" });
+    expect(observations).toHaveLength(1);
+    const obs = observations[0];
+    if (!obs) throw new Error("expected an observation");
+    expect(obs.outcome).toBe("error");
+    expect(obs.errorKind).toBe("input_validation");
+    expect(obs.usage).toBeNull();
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("observer exceptions are swallowed — AI call still returns ok", async () => {
+    const messages = stubMessages(
+      vi.fn(async () => fakeToolUseResponse({ employees: 5, turnover: 100 })),
+    );
+    const client = new AnthropicAiClient({
+      messages,
+      observer: () => {
+        throw new Error("audit DB down");
+      },
+    });
+    const result = await client.call(extractTool, { documentText: "..." });
+    expect(result.ok).toBe(true);
+  });
 });
