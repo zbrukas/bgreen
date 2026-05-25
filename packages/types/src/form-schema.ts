@@ -308,3 +308,14 @@ export const RecordSchema = z.object({
   updatedAt: z.string().datetime({ offset: true }),
 });
 export type Record = z.infer<typeof RecordSchema>;
+
+// Slim projection used by list endpoints: omits the per-record JSONB
+// columns (`values`, `scoreBreakdown`) that list consumers don't read.
+// Saves both the DB→API JSONB fetch and the API→web wire payload.
+// Use `Record` (wide) for detail reads, cross-template prefill, AI
+// tools, and any caller that actually inspects per-field values.
+export const RecordSummarySchema = RecordSchema.omit({
+  values: true,
+  scoreBreakdown: true,
+});
+export type RecordSummary = z.infer<typeof RecordSummarySchema>;

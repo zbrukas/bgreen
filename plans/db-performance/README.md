@@ -21,15 +21,13 @@ Each task below is a checkbox. Tackle HIGH before MEDIUM before LOW. Most fixes 
 
 ## MEDIUM — extra round trips or known-small tables today
 
-- [ ] **M1. Replace write-then-reselect with `.returning()`.**
-  - `apps/api/src/modules/records/infrastructure/record-repository.ts:151-169` (`updateValues`) and `:179-191` (`recordReview`) — `UPDATE` followed by `findById()`, which is the joined `recordsWithStatus()` query. Two round trips + a join per write. Use `.returning()` and pull the workflow state once.
-  - `apps/api/src/modules/economic-profile/infrastructure/economic-profile-repository.ts:203-218` (`setDimensao`) — same shape; replace trailing `findByOrgYear` with `.returning()`.
+- [x] **M1. Replace write-then-reselect with `.returning()`.** Shipped. `record-repository`'s `updateValues` and `recordReview` now use `.returning()` plus a tiny indexed lookup on `workflow_instances(entity_kind, entity_id)` instead of the full `recordsWithStatus()` LEFT JOIN. `economic-profile-repository.setDimensao` returns the updated row directly. Net: small dedicated lookups replace a wide JSONB-pulling join per write.
 
-- [ ] **M2. Narrow projection on `recordsWithStatus()`.** `apps/api/src/modules/records/infrastructure/record-repository.ts:89-100` is the foundation for every list/findById. It pulls full JSONB (`values`, `scoreBreakdown`) even when callers only need scalars (permission check, list view). Add a slim variant for the list path; keep the wide one for full-record reads.
+- [x] **M2. Narrow projection on `recordsWithStatus()`.** Shipped. Added `RecordSummary` in `@bgreen/types` (zod `RecordSchema.omit({ values, scoreBreakdown })`), plus `recordSummariesWithStatus()` + `rowToSummary()` in the repo. `listForOrganization` / `listForUserInOrg` now return `RecordSummary[]`. Wide `Record` stays for `findById`, `findAnyById`, `findLatestSubmitted`. Audit of consumers (coverage-service, profile-gatherer, report-data-builder, record-service.listScoresGroupedByTemplate, web list view) confirmed none read `values` or `scoreBreakdown` on the list path — repointed their port types to `RecordSummary[]`.
 
-- [ ] **M3. Index `record_templates.status` and `is_sub_template`.** Listing published or filtering sub-templates currently scans. Table is small today — defer until volume justifies, but file the migration alongside H1 if it's already being touched.
+- [ ] **M3. Index `record_templates.status` and `is_sub_template`.** **Deferred.** Re-audit (2026-05-25) confirms no current SQL predicate touches these columns — `RecordTemplateRepository.listAll()` returns everything; filters happen in JS. No scanning to fix. Revisit when a status-scoped or sub-template-scoped list endpoint lands.
 
-- [ ] **M4. Index `organization_invites.organizationId`.** Token lookup is unique-indexed (fine). Per-org list endpoint will scan. Add when invite volume matters or when the per-org listing UI lands.
+- [ ] **M4. Index `organization_invites.organizationId`.** **Deferred.** `InviteRepository` only has `insert / findByToken / markAccepted`; no per-org listing exists yet. Add when the listing UI lands.
 
 ## LOW — cleanup, not load-bearing
 

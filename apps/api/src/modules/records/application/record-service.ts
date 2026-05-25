@@ -1,7 +1,7 @@
 import type { FormError, ValidationMode } from "@bgreen/form-engine";
 import { validateComposedFormValues, validateFormValues } from "@bgreen/form-engine";
 import { computeScore } from "@bgreen/scoring";
-import type { Record, RecordTemplate, RecordValues } from "@bgreen/types";
+import type { Record, RecordSummary, RecordTemplate, RecordValues } from "@bgreen/types";
 import type { AuditService } from "../../audit/module.js";
 import type { RecordTemplateRepository } from "../../form-templates/application/record-template-service.js";
 import type { TopicRepository } from "../../topics/module.js";
@@ -70,8 +70,11 @@ export interface RecordRepository {
   }): Promise<Record | null>;
   findById(organizationId: string, id: string): Promise<Record | null>;
   findLatestSubmitted(organizationId: string, templateId: string): Promise<Record | null>;
-  listForUserInOrg(organizationId: string, userId: string): Promise<Record[]>;
-  listForOrganization(organizationId: string): Promise<Record[]>;
+  // List paths return the slim projection — JSONB values + scoreBreakdown
+  // are omitted because no current consumer reads them and they are by
+  // far the heaviest columns on the wire. See plans/db-performance M2.
+  listForUserInOrg(organizationId: string, userId: string): Promise<RecordSummary[]>;
+  listForOrganization(organizationId: string): Promise<RecordSummary[]>;
 }
 
 export type SubmitResult =
@@ -383,11 +386,11 @@ export class RecordService {
     return this.records.findById(organizationId, id);
   }
 
-  listMine(organizationId: string, userId: string): Promise<Record[]> {
+  listMine(organizationId: string, userId: string): Promise<RecordSummary[]> {
     return this.records.listForUserInOrg(organizationId, userId);
   }
 
-  listAll(organizationId: string): Promise<Record[]> {
+  listAll(organizationId: string): Promise<RecordSummary[]> {
     return this.records.listForOrganization(organizationId);
   }
 

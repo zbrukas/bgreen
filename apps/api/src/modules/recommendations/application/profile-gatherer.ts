@@ -100,7 +100,7 @@ export class ProfileGatherer {
   }
 
   private async aggregateRecordsByTemplate(
-    records: import("@bgreen/types").Record[],
+    records: import("@bgreen/types").RecordSummary[],
   ): Promise<GenerateRecommendationsInput["profile"]["recordCountsByTemplate"]> {
     if (records.length === 0) return [];
     type Group = {

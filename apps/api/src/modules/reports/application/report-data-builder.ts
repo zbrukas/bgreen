@@ -19,7 +19,7 @@ import {
   type FrameworkDatapoint,
   evaluateSectorApplicability,
 } from "@bgreen/frameworks";
-import type { Organization, Record as ESGRecord } from "@bgreen/types";
+import type { Organization, RecordSummary as ESGRecord } from "@bgreen/types";
 import type { CoverageMatrix } from "../../framework-coverage/module.js";
 import type { CoverageService } from "../../framework-coverage/module.js";
 import type {

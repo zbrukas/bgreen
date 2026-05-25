@@ -200,7 +200,7 @@ export class DrizzleEconomicProfileRepository implements EconomicProfileReposito
     rationale: DimensaoRuleEntry[];
   }): Promise<OrganizationEconomicProfile | null> {
     const now = new Date();
-    await db
+    const [row] = await db
       .update(schema.organizationEconomicProfiles)
       .set({
         dimensao: input.dimensao,
@@ -214,7 +214,8 @@ export class DrizzleEconomicProfileRepository implements EconomicProfileReposito
           orgScope(schema.organizationEconomicProfiles, input.organizationId),
           eq(schema.organizationEconomicProfiles.year, input.year),
         ),
-      );
-    return this.findByOrgYear(input.organizationId, input.year);
+      )
+      .returning();
+    return row ? rowToProfile(row) : null;
   }
 }

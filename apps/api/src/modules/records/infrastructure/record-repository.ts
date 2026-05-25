@@ -2,6 +2,7 @@ import { db, orgScope, schema } from "@bgreen/db";
 import type {
   Record,
   RecordStatus,
+  RecordSummary,
   RecordValues,
   ScoreBreakdownEntry,
 } from "@bgreen/types";
@@ -86,9 +87,77 @@ const selectColumns = {
   workflowState: schema.workflowInstances.currentState,
 };
 
+// Slim projection for list paths — drops the JSONB columns no list
+// consumer reads (`values`, `scoreBreakdown`). M2 in plans/db-performance.
+const selectSummaryColumns = {
+  id: schema.records.id,
+  organizationId: schema.records.organizationId,
+  templateId: schema.records.templateId,
+  reviewComment: schema.records.reviewComment,
+  submittedAt: schema.records.submittedAt,
+  submittedByUserId: schema.records.submittedByUserId,
+  reviewedAt: schema.records.reviewedAt,
+  reviewedByUserId: schema.records.reviewedByUserId,
+  score: schema.records.score,
+  scorePercent: schema.records.scorePercent,
+  scoreTier: schema.records.scoreTier,
+  createdAt: schema.records.createdAt,
+  updatedAt: schema.records.updatedAt,
+  workflowState: schema.workflowInstances.currentState,
+};
+
+interface RecordSummaryRow {
+  id: string;
+  organizationId: string;
+  templateId: string;
+  reviewComment: string | null;
+  submittedAt: Date | null;
+  submittedByUserId: string | null;
+  reviewedAt: Date | null;
+  reviewedByUserId: string | null;
+  score: string | null;
+  scorePercent: string | null;
+  scoreTier: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  workflowState: unknown;
+}
+
+function rowToSummary(row: RecordSummaryRow): RecordSummary {
+  return {
+    id: row.id,
+    organizationId: row.organizationId,
+    templateId: row.templateId,
+    status: deriveStatus(row.workflowState),
+    reviewComment: row.reviewComment,
+    submittedAt: row.submittedAt ? row.submittedAt.toISOString() : null,
+    submittedByUserId: row.submittedByUserId,
+    reviewedAt: row.reviewedAt ? row.reviewedAt.toISOString() : null,
+    reviewedByUserId: row.reviewedByUserId,
+    score: parseNumeric(row.score),
+    scorePercent: parseNumeric(row.scorePercent),
+    scoreTier: row.scoreTier,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
 function recordsWithStatus() {
   return db
     .select(selectColumns)
+    .from(schema.records)
+    .leftJoin(
+      schema.workflowInstances,
+      and(
+        eq(schema.workflowInstances.entityKind, "record"),
+        eq(schema.workflowInstances.entityId, schema.records.id),
+      ),
+    );
+}
+
+function recordSummariesWithStatus() {
+  return db
+    .select(selectSummaryColumns)
     .from(schema.records)
     .leftJoin(
       schema.workflowInstances,
@@ -148,7 +217,7 @@ export class DrizzleRecordRepository implements RecordRepository {
     submittedAt: Date | null;
     score?: import("../application/record-service.js").ScoreSnapshotInput;
   }): Promise<Record | null> {
-    await db
+    const [row] = await db
       .update(schema.records)
       .set({
         values: input.values,
@@ -165,8 +234,11 @@ export class DrizzleRecordRepository implements RecordRepository {
       })
       .where(
         and(orgScope(schema.records, input.organizationId), eq(schema.records.id, input.recordId)),
-      );
-    return this.findById(input.organizationId, input.recordId);
+      )
+      .returning();
+    if (!row) return null;
+    const workflowState = await this.fetchWorkflowState(input.recordId);
+    return rowToRecord({ ...row, workflowState });
   }
 
   async recordReview(input: {
@@ -176,7 +248,7 @@ export class DrizzleRecordRepository implements RecordRepository {
     reviewedAt: Date;
     reviewedByUserId: string;
   }): Promise<Record | null> {
-    await db
+    const [row] = await db
       .update(schema.records)
       .set({
         reviewComment: input.reviewComment,
@@ -186,8 +258,29 @@ export class DrizzleRecordRepository implements RecordRepository {
       })
       .where(
         and(orgScope(schema.records, input.organizationId), eq(schema.records.id, input.recordId)),
-      );
-    return this.findById(input.organizationId, input.recordId);
+      )
+      .returning();
+    if (!row) return null;
+    const workflowState = await this.fetchWorkflowState(input.recordId);
+    return rowToRecord({ ...row, workflowState });
+  }
+
+  // Indexed single-row lookup against workflow_instances. Cheaper than
+  // re-running the full recordsWithStatus() LEFT JOIN, which would
+  // re-fetch every records column (including the JSONB values + score
+  // breakdown) just to surface the state string.
+  private async fetchWorkflowState(recordId: string): Promise<string | null> {
+    const rows = await db
+      .select({ currentState: schema.workflowInstances.currentState })
+      .from(schema.workflowInstances)
+      .where(
+        and(
+          eq(schema.workflowInstances.entityKind, "record"),
+          eq(schema.workflowInstances.entityId, recordId),
+        ),
+      )
+      .limit(1);
+    return rows[0]?.currentState ?? null;
   }
 
   async findById(organizationId: string, id: string): Promise<Record | null> {
@@ -221,19 +314,19 @@ export class DrizzleRecordRepository implements RecordRepository {
     return row ? rowToRecord(row) : null;
   }
 
-  async listForUserInOrg(organizationId: string, userId: string): Promise<Record[]> {
-    const rows = await recordsWithStatus()
+  async listForUserInOrg(organizationId: string, userId: string): Promise<RecordSummary[]> {
+    const rows = await recordSummariesWithStatus()
       .where(
         and(orgScope(schema.records, organizationId), eq(schema.records.submittedByUserId, userId)),
       )
       .orderBy(desc(schema.records.createdAt));
-    return rows.map(rowToRecord);
+    return rows.map(rowToSummary);
   }
 
-  async listForOrganization(organizationId: string): Promise<Record[]> {
-    const rows = await recordsWithStatus()
+  async listForOrganization(organizationId: string): Promise<RecordSummary[]> {
+    const rows = await recordSummariesWithStatus()
       .where(orgScope(schema.records, organizationId))
       .orderBy(desc(schema.records.createdAt));
-    return rows.map(rowToRecord);
+    return rows.map(rowToSummary);
   }
 }
