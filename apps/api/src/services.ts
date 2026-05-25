@@ -2,7 +2,12 @@ import { AnthropicAiClient, composeObservers } from "@bgreen/ai";
 import { sendReportReadyEmail } from "@bgreen/emails";
 import { HttpPdfRenderer, InMemoryPdfRenderer, type PdfRenderer } from "@bgreen/pdf-engine";
 import { HttpViesClient } from "@bgreen/pt-data";
-import { AwsS3Uploader, InMemoryS3Uploader, type S3Uploader } from "@bgreen/storage";
+import {
+  AwsS3Uploader,
+  FsUploader,
+  InMemoryS3Uploader,
+  type S3Uploader,
+} from "@bgreen/storage";
 import { AuditService, DrizzleAuditRepository } from "./modules/audit/module.js";
 import { CsAuthService } from "./modules/cs-auth/module.js";
 import {
@@ -128,31 +133,80 @@ export const anthropicAiClient = new AnthropicAiClient({
   ]),
 });
 
-// S3 wiring. In production we point at a real EU bucket via env vars.
-// In dev we point at MinIO (S3_ENDPOINT=http://localhost:9000 +
-// path-style). If S3_BUCKET is unset we fall back to the in-memory
-// uploader so unit-runnable smoke tests don't need MinIO running.
-function buildS3Uploader(): S3Uploader {
-  const bucket = process.env.S3_BUCKET;
-  if (!bucket) return new InMemoryS3Uploader();
-  return new AwsS3Uploader({
-    bucket,
-    region: process.env.AWS_REGION ?? "eu-central-1",
-    endpoint: process.env.S3_ENDPOINT,
-    // MinIO + most non-AWS S3 services require path-style addressing.
-    // Auto-enable when S3_ENDPOINT is set (real S3 doesn't set this).
-    forcePathStyle: process.env.S3_ENDPOINT !== undefined,
-    credentials:
-      process.env.S3_ACCESS_KEY_ID && process.env.S3_SECRET_ACCESS_KEY
-        ? {
-            accessKeyId: process.env.S3_ACCESS_KEY_ID,
-            secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
-          }
-        : undefined,
-  });
+// Storage wiring. STORAGE_DRIVER picks the backend:
+//   - `fs`: local filesystem under STORAGE_LOCAL_ROOT. Mirrors the
+//     legacy bgreen strategy. Signed download URLs are served by the
+//     route in apps/api/src/routes/storage-download.ts.
+//   - `s3`: real S3 (or MinIO via S3_ENDPOINT). Presigning is native.
+//   - `memory`: in-process map. Tests + ephemeral dev runs.
+//
+// When STORAGE_DRIVER is unset we infer from what env *is* present:
+// STORAGE_URL_SIGNING_SECRET → fs, S3_BUCKET → s3, otherwise memory.
+// This keeps tests-with-no-env working (they get memory) while letting
+// operators configure fs or s3 by just dropping in the right env vars.
+//
+// `s3Uploader` is the type-erased export consumed by services. The
+// `fsUploader` export is non-null only when the fs driver is active and
+// lets app.ts mount the download route with the right instance.
+function buildStorage(): { uploader: S3Uploader; fs: FsUploader | null } {
+  const explicit = process.env.STORAGE_DRIVER?.toLowerCase();
+  const hasFsConfig = !!process.env.STORAGE_URL_SIGNING_SECRET;
+  const hasS3Config = !!process.env.S3_BUCKET;
+  const driver =
+    explicit ?? (hasFsConfig ? "fs" : hasS3Config ? "s3" : "memory");
+
+  if (driver === "memory") {
+    return { uploader: new InMemoryS3Uploader(), fs: null };
+  }
+
+  if (driver === "s3") {
+    const bucket = process.env.S3_BUCKET;
+    if (!bucket) {
+      throw new Error("STORAGE_DRIVER=s3 requires S3_BUCKET");
+    }
+    return {
+      uploader: new AwsS3Uploader({
+        bucket,
+        region: process.env.AWS_REGION ?? "eu-central-1",
+        endpoint: process.env.S3_ENDPOINT,
+        // MinIO + most non-AWS S3 services require path-style addressing.
+        forcePathStyle: process.env.S3_ENDPOINT !== undefined,
+        credentials:
+          process.env.S3_ACCESS_KEY_ID && process.env.S3_SECRET_ACCESS_KEY
+            ? {
+                accessKeyId: process.env.S3_ACCESS_KEY_ID,
+                secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
+              }
+            : undefined,
+      }),
+      fs: null,
+    };
+  }
+
+  if (driver === "fs") {
+    const rootDir = process.env.STORAGE_LOCAL_ROOT ?? "./data/storage";
+    const signingSecret = process.env.STORAGE_URL_SIGNING_SECRET;
+    if (!signingSecret) {
+      throw new Error(
+        "STORAGE_DRIVER=fs requires STORAGE_URL_SIGNING_SECRET (HMAC secret for download URLs)",
+      );
+    }
+    const fsUp = new FsUploader({
+      rootDir,
+      signingSecret,
+      publicBaseUrl: process.env.STORAGE_PUBLIC_BASE_URL,
+    });
+    return { uploader: fsUp, fs: fsUp };
+  }
+
+  throw new Error(`unknown STORAGE_DRIVER=${driver} (expected fs | s3 | memory)`);
 }
 
-export const s3Uploader = buildS3Uploader();
+const storage = buildStorage();
+export const s3Uploader: S3Uploader = storage.uploader;
+export const fsUploader: FsUploader | null = storage.fs;
+export const storageUrlSigningSecret: string | undefined =
+  process.env.STORAGE_URL_SIGNING_SECRET;
 
 // V11.1 — PDF renderer wiring. PDF_URL + PDF_INTERNAL_TOKEN configure
 // the HTTP adapter against apps/pdf. Both unset → an in-memory stub

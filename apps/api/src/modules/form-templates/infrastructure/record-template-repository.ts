@@ -5,7 +5,7 @@ import type {
   RecordTemplateStatus,
   WorkflowDefinitionId,
 } from "@bgreen/types";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import type {
   CreateRecordTemplateInput,
   RecordTemplateRepository,
@@ -63,6 +63,15 @@ export class DrizzleRecordTemplateRepository implements RecordTemplateRepository
       .limit(1);
     const row = rows[0];
     return row ? rowToTemplate(row) : null;
+  }
+
+  async findByIds(ids: string[]): Promise<RecordTemplate[]> {
+    if (ids.length === 0) return [];
+    const rows = await db
+      .select()
+      .from(schema.recordTemplates)
+      .where(inArray(schema.recordTemplates.id, ids));
+    return rows.map((row) => rowToTemplate(row));
   }
 
   async listAll(): Promise<RecordTemplate[]> {

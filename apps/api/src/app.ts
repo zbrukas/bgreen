@@ -30,10 +30,13 @@ import { inviteRoutes, organizationsRoutes } from "./modules/organizations/modul
 import { recordsRoutes } from "./modules/records/module.js";
 import { topicsRoutes } from "./modules/topics/module.js";
 import { workflowsRoutes } from "./modules/workflows/module.js";
+import { createStorageDownloadRoute } from "./routes/storage-download.js";
 import {
+  fsUploader,
   iesExtractionService,
   recommendationsService,
   reportService,
+  storageUrlSigningSecret,
 } from "./services.js";
 
 // Register Inngest functions. Each module owns its function factory; we
@@ -46,8 +49,9 @@ const inngestFunctions = [
 ];
 
 // Public surface — no auth required. /health, /cs/auth/* (login flow),
-// and the Inngest function endpoint (Inngest signs its own webhook calls;
-// auth would block it).
+// the Inngest function endpoint (Inngest signs its own webhook calls;
+// auth would block it), and — when STORAGE_DRIVER=fs — the signed
+// download endpoint (the HMAC signature is the authorization).
 const publicRoutes = new Hono()
   .get("/health", (c) => c.json({ status: "ok", service: "api" } as const))
   .on(
@@ -56,6 +60,13 @@ const publicRoutes = new Hono()
     inngestServe({ client: inngest, functions: inngestFunctions }),
   )
   .route("/cs/auth", csAuthRoutes);
+
+if (fsUploader && storageUrlSigningSecret) {
+  publicRoutes.route(
+    "/api/storage/download",
+    createStorageDownloadRoute(fsUploader, storageUrlSigningSecret),
+  );
+}
 
 // Authenticated surface — every request requires either a valid WorkOS
 // JWT (org users) or a CS session token (CS users). Auth populates

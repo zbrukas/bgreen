@@ -5,7 +5,7 @@ import type {
   RecordValues,
   ScoreBreakdownEntry,
 } from "@bgreen/types";
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import type { RecordRepository } from "../application/record-service.js";
 
 // V5.2 dropped `records.status`; the authoritative state lives on the
@@ -206,17 +206,13 @@ export class DrizzleRecordRepository implements RecordRepository {
 
   async findLatestSubmitted(organizationId: string, templateId: string): Promise<Record | null> {
     // Cross-template prefill consumes any "submitted" or "approved" state.
-    // Filtering happens against the workflow state via the JSONB column.
+    // current_state is text since V12 (was jsonb scalar) — no cast needed.
     const rows = await recordsWithStatus()
       .where(
         and(
           orgScope(schema.records, organizationId),
           eq(schema.records.templateId, templateId),
-          inArray(sql`${schema.workflowInstances.currentState}::text`, [
-            '"submitted"',
-            '"approved"',
-            '"certified"',
-          ]),
+          inArray(schema.workflowInstances.currentState, ["submitted", "approved", "certified"]),
         ),
       )
       .orderBy(desc(schema.records.submittedAt))

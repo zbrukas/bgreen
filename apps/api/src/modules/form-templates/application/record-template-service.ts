@@ -32,6 +32,9 @@ export interface UpdateRecordTemplateInput {
 export interface RecordTemplateRepository {
   create(input: CreateRecordTemplateInput): Promise<RecordTemplate>;
   findById(id: string): Promise<RecordTemplate | null>;
+  // Batched variant — one round-trip for an arbitrary set of ids.
+  // Order of returned rows is not guaranteed to match `ids`.
+  findByIds(ids: string[]): Promise<RecordTemplate[]>;
   listAll(): Promise<RecordTemplate[]>;
   update(id: string, patch: UpdateRecordTemplateInput): Promise<RecordTemplate | null>;
   setStatus(id: string, status: RecordTemplateStatus): Promise<RecordTemplate | null>;

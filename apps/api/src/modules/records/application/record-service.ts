@@ -413,14 +413,16 @@ export class RecordService {
     }
     if (byTemplate.size === 0) return [];
 
-    // Resolve template names. One lookup per unique template — at zero
-    // customers the list is small; a batched findByIds is V8.3+ work.
+    // Batched template name resolution. One round-trip for every
+    // template appearing in the grouping (H5 in plans/db-performance).
+    const templates = await this.templates.findByIds([...byTemplate.keys()]);
+    const namesById = new Map(templates.map((t) => [t.id, t.name]));
     const out: TemplateScoreHistory[] = [];
     for (const [templateId, points] of byTemplate) {
-      const template = await this.templates.findById(templateId);
-      if (!template) continue;
+      const templateName = namesById.get(templateId);
+      if (!templateName) continue;
       points.sort((a, b) => a.submittedAt.localeCompare(b.submittedAt));
-      out.push({ templateId, templateName: template.name, scores: points });
+      out.push({ templateId, templateName, scores: points });
     }
     return out;
   }

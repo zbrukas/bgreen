@@ -122,6 +122,7 @@ function makeStubRepo(): { repo: RecordRepository; inserts: InsertCall[]; update
 function makeStubTemplates(template: RecordTemplate): RecordTemplateRepository {
   return {
     findById: async (id: string) => (id === template.id ? template : null),
+    findByIds: async (ids: string[]) => (ids.includes(template.id) ? [template] : []),
     list: async () => [template],
     listPublished: async () => (template.status === "published" ? [template] : []),
     insert: async () => template,

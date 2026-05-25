@@ -33,6 +33,9 @@ export interface WorkflowRepository {
   listForOrganization(organizationId: string): Promise<WorkflowInstance[]>;
   // V5.4: cross-org listing for the CS reviewer inbox.
   listByState(state: string): Promise<WorkflowInstance[]>;
+  // V12 perf: SQL-side filter for the org-side inbox (state ∈ pending
+  // set AND submitterUserId = user). See H3 in plans/db-performance.
+  listPendingForActor(organizationId: string, userId: string): Promise<WorkflowInstance[]>;
 }
 
 export type StartResult = { ok: true; instance: WorkflowInstance };
@@ -148,17 +151,9 @@ export class WorkflowService {
 
   // V5.4: org-side inbox is owner-only — drafts to fill in and records
   // returned with changes_requested. Review/certify lives in apps/cs.
-  async listPendingForActor(organizationId: string, userId: string): Promise<WorkflowInstance[]> {
-    const all = await this.repo.listForOrganization(organizationId);
-    return all.filter((instance) => actionIsPending(instance, userId));
+  listPendingForActor(organizationId: string, userId: string): Promise<WorkflowInstance[]> {
+    return this.repo.listPendingForActor(organizationId, userId);
   }
-}
-
-function actionIsPending(instance: WorkflowInstance, userId: string): boolean {
-  const state = typeof instance.currentState === "string" ? instance.currentState : null;
-  if (!state) return false;
-  if (state !== "draft" && state !== "changes_requested") return false;
-  return instance.context.submitterUserId === userId;
 }
 
 function extractComment(event: WorkflowEvent): string | null {
