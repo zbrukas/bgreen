@@ -10,6 +10,7 @@
 import { withAuth } from "@workos-inc/authkit-nextjs";
 import { getActiveOrgId } from "./active-org";
 import {
+  type BenchmarkComparison,
   type Dimensao,
   type DimensaoProposalResponse,
   type ExtractionEdits,
@@ -159,6 +160,19 @@ export async function confirmDimensao(input: {
     throw new IesError(await readErrorCode(res), res.status);
   }
   return (await res.json()) as OrganizationEconomicProfile;
+}
+
+// ── V7.2 sector benchmark comparison ───────────────────────────────────
+export async function getBenchmarkComparison(year: number): Promise<BenchmarkComparison> {
+  const headers = await authedHeaders();
+  const res = await fetch(
+    `${API_URL}/sector-benchmark/compare?year=${encodeURIComponent(String(year))}`,
+    { method: "GET", headers, cache: "no-store" },
+  );
+  if (!res.ok) {
+    throw new IesError(await readErrorCode(res), res.status);
+  }
+  return (await res.json()) as BenchmarkComparison;
 }
 
 // ── List profiles ──────────────────────────────────────────────────────

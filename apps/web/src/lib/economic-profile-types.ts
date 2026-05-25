@@ -108,6 +108,58 @@ export const DIMENSAO_LABEL: Record<Dimensao, string> = {
   grande: "GRANDE",
 };
 
+// V7.2 — benchmark comparison wire shape. Mirrors the apps/api
+// BenchmarkComparison; defined locally to keep the wire boundary
+// decoupled from the module's internal types.
+export interface SectorAggregateWire {
+  cae3: string;
+  dimensao: Dimensao;
+  year: number;
+  vintageYear: number;
+  fonte: string;
+  nCompanies: number;
+  medianTurnover: number | null;
+  medianEbitdaMargin: number | null;
+  p25Turnover: number | null;
+  p75Turnover: number | null;
+}
+
+export interface BenchmarkInsufficientData {
+  insufficientData: true;
+  reason:
+    | "no_aggregate_for_cae3_and_dimensao"
+    | "no_aggregate_in_year_window"
+    | "missing_cae"
+    | "missing_dimensao";
+  cae3: string | null;
+  dimensao: Dimensao | null;
+  year: number;
+}
+
+export type BenchmarkAggregateResult = SectorAggregateWire | BenchmarkInsufficientData;
+
+export interface BenchmarkComparison {
+  profile: {
+    year: number;
+    cae3: string | null;
+    dimensao: Dimensao | null;
+    turnover: number | null;
+    ebitda: number | null;
+    ebitdaMargin: number | null;
+  };
+  aggregate: BenchmarkAggregateResult;
+  deltas: {
+    turnoverVsMedian: number | null;
+    ebitdaMarginVsMedian: number | null;
+  };
+}
+
+export function isBenchmarkInsufficientData(
+  aggregate: BenchmarkAggregateResult,
+): aggregate is BenchmarkInsufficientData {
+  return "insufficientData" in aggregate && aggregate.insufficientData === true;
+}
+
 export interface ExtractionEdits {
   year?: number;
   employees?: number | null;

@@ -12,6 +12,7 @@ import {
   createAiToolCallObserver,
   createAiToolCallPostHogObserver,
 } from "./modules/economic-profile/module.js";
+import { DrizzleSectorBenchmarkLookup } from "./modules/sector-benchmark/module.js";
 import { buildPostHogTelemetry } from "./telemetry/posthog.js";
 import { inngest } from "./inngest.js";
 import {
@@ -141,6 +142,8 @@ export const iesExtractionService = new IesExtractionService(
 export const economicProfileService = new EconomicProfileService(
   repositories.economicProfiles,
 );
+
+export const sectorBenchmarkLookup = new DrizzleSectorBenchmarkLookup();
 
 export const iesUploadService = new IesUploadService(
   repositories.iesExtractionLogs,

@@ -129,6 +129,7 @@ function ProfileTable({ profiles }: { profiles: OrganizationEconomicProfile[] })
               <TableHead>CAE</TableHead>
               <TableHead>Dimensão</TableHead>
               <TableHead>Fonte</TableHead>
+              <TableHead />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -145,6 +146,14 @@ function ProfileTable({ profiles }: { profiles: OrganizationEconomicProfile[] })
                 </TableCell>
                 <TableCell>
                   <span className="text-xs text-muted-foreground">{SOURCE_LABEL[p.source]}</span>
+                </TableCell>
+                <TableCell>
+                  <Link
+                    href={`/economic-profile/${p.year}/benchmark`}
+                    className="text-xs underline-offset-4 hover:underline"
+                  >
+                    Comparar com setor
+                  </Link>
                 </TableCell>
               </TableRow>
             ))}
