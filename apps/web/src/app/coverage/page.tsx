@@ -2,9 +2,8 @@
 // framework + applicability toggle from search params, fetches the
 // deterministic matrix, hands it off to the client view.
 
-import { Header } from "@/app/_components/Header/Header";
 import { getActiveOrgId } from "@/lib/active-org";
-import { fetchMe, fetchMyOrganizations } from "@/lib/api-client";
+import { fetchMe } from "@/lib/api-client";
 import { getCoverageMatrix } from "@/lib/coverage-actions";
 import type { CoverageMatrix, Framework } from "@/lib/coverage-types";
 import { withAuth } from "@workos-inc/authkit-nextjs";
@@ -28,9 +27,8 @@ export default async function CoveragePage({
   const auth = await withAuth();
   if (!auth.user) redirect("/");
 
-  const [me, orgs, activeOrgId, params] = await Promise.all([
+  const [me, activeOrgId, params] = await Promise.all([
     fetchMe(),
-    fetchMyOrganizations(),
     getActiveOrgId(),
     searchParams,
   ]);
@@ -56,12 +54,6 @@ export default async function CoveragePage({
 
   return (
     <>
-      <Header
-        userEmail={auth.user.email}
-        organizations={orgs}
-        activeOrganizationId={activeOrgId}
-        activeOrganizationRole={me.activeOrganizationRole}
-      />
       <main className="mx-auto max-w-5xl space-y-6 p-8">
         <div className="flex items-start justify-between gap-4">
           <div>

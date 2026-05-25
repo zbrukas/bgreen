@@ -1,4 +1,3 @@
-import { Header } from "@/app/_components/Header";
 import { archiveTemplateAction, publishTemplateAction } from "@/app/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -50,7 +49,6 @@ export default async function TemplateDetailPage({ params }: PageProps) {
   if (!tpl) {
     return (
       <>
-        <Header userEmail={me.email} role={me.centralServicesRole} />
         <main className="mx-auto max-w-3xl space-y-4 p-8">
           <p>
             <Link href="/templates" className="text-sm text-muted-foreground hover:text-foreground">
@@ -76,7 +74,6 @@ export default async function TemplateDetailPage({ params }: PageProps) {
 
   return (
     <>
-      <Header userEmail={me.email} role={me.centralServicesRole} />
       <main className="mx-auto max-w-3xl space-y-6 p-8">
         <p>
           <Link href="/templates" className="text-sm text-muted-foreground hover:text-foreground">

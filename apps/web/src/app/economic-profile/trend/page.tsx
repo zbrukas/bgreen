@@ -1,8 +1,6 @@
-import { Header } from "@/app/_components/Header/Header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getActiveOrgId } from "@/lib/active-org";
-import { fetchMe, fetchMyOrganizations } from "@/lib/api-client";
 import { getTrendData } from "@/lib/economic-profile-actions";
 import { withAuth } from "@workos-inc/authkit-nextjs";
 import Link from "next/link";
@@ -16,11 +14,7 @@ export default async function TrendPage() {
   const auth = await withAuth();
   if (!auth.user) redirect("/");
 
-  const [me, orgs, activeOrgId] = await Promise.all([
-    fetchMe(),
-    fetchMyOrganizations(),
-    getActiveOrgId(),
-  ]);
+  const activeOrgId = await getActiveOrgId();
   if (!activeOrgId) redirect("/");
 
   const trend = await getTrendData().catch(() => ({ years: [] }));
@@ -32,12 +26,6 @@ export default async function TrendPage() {
 
   return (
     <>
-      <Header
-        userEmail={auth.user.email}
-        organizations={orgs}
-        activeOrganizationId={activeOrgId}
-        activeOrganizationRole={me?.activeOrganizationRole ?? null}
-      />
       <main className="mx-auto max-w-3xl space-y-6 p-8">
         <div className="flex items-start justify-between gap-4">
           <div>

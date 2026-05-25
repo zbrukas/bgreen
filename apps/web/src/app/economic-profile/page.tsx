@@ -1,7 +1,5 @@
-import { Header } from "@/app/_components/Header/Header";
 import { buttonVariants } from "@/components/ui/button";
 import { getActiveOrgId } from "@/lib/active-org";
-import { fetchMe, fetchMyOrganizations } from "@/lib/api-client";
 import { listProfiles } from "@/lib/economic-profile-actions";
 import type { OrganizationEconomicProfile } from "@/lib/economic-profile-types";
 import { withAuth } from "@workos-inc/authkit-nextjs";
@@ -16,23 +14,13 @@ export default async function EconomicProfilePage() {
   const auth = await withAuth();
   if (!auth.user) redirect("/");
 
-  const [me, orgs, activeOrgId] = await Promise.all([
-    fetchMe(),
-    fetchMyOrganizations(),
-    getActiveOrgId(),
-  ]);
+  const activeOrgId = await getActiveOrgId();
   if (!activeOrgId) redirect("/");
 
   const profiles = await listProfiles().catch(() => [] as OrganizationEconomicProfile[]);
 
   return (
     <>
-      <Header
-        userEmail={auth.user.email}
-        organizations={orgs}
-        activeOrganizationId={activeOrgId}
-        activeOrganizationRole={me?.activeOrganizationRole ?? null}
-      />
       <main className="mx-auto max-w-4xl space-y-6 p-8">
         <div className="flex items-start justify-between gap-4">
           <div>

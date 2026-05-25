@@ -1,6 +1,4 @@
-import { Header } from "@/app/_components/Header/Header";
 import { getActiveOrgId } from "@/lib/active-org";
-import { fetchMe, fetchMyOrganizations } from "@/lib/api-client";
 import { withAuth } from "@workos-inc/authkit-nextjs";
 import { redirect } from "next/navigation";
 import { ExtractionStatusView } from "./ExtractionStatusView";
@@ -16,21 +14,11 @@ export default async function IesExtractionPage({
   const auth = await withAuth();
   if (!auth.user) redirect("/");
 
-  const [me, orgs, activeOrgId] = await Promise.all([
-    fetchMe(),
-    fetchMyOrganizations(),
-    getActiveOrgId(),
-  ]);
+  const activeOrgId = await getActiveOrgId();
   if (!activeOrgId) redirect("/");
 
   return (
     <>
-      <Header
-        userEmail={auth.user.email}
-        organizations={orgs}
-        activeOrganizationId={activeOrgId}
-        activeOrganizationRole={me?.activeOrganizationRole ?? null}
-      />
       <main className="mx-auto max-w-3xl space-y-6 p-8">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">Extração de IES</h1>

@@ -1,7 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchMe } from "@/lib/api-client";
 import { redirect } from "next/navigation";
-import { Header } from "./_components/Header";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +12,6 @@ export default async function Home() {
 
   return (
     <>
-      <Header userEmail={me.email} role={me.centralServicesRole} />
       <main className="mx-auto max-w-3xl space-y-6 p-8">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">Consola Central Services</h1>

@@ -4,9 +4,8 @@
 // used elsewhere in the app.
 
 import { Alert } from "@/components/ui/alert";
-import { Header } from "@/app/_components/Header/Header";
 import { getActiveOrgId } from "@/lib/active-org";
-import { fetchMe, fetchMyOrganizations, fetchTemplates } from "@/lib/api-client";
+import { fetchMe, fetchTemplates } from "@/lib/api-client";
 import { getFrameworkDatapoints, getMappings } from "@/lib/coverage-actions";
 import type {
   FrameworkDatapoint,
@@ -23,11 +22,7 @@ export default async function MappingsPage() {
   const auth = await withAuth();
   if (!auth.user) redirect("/");
 
-  const [me, orgs, activeOrgId] = await Promise.all([
-    fetchMe(),
-    fetchMyOrganizations(),
-    getActiveOrgId(),
-  ]);
+  const [me, activeOrgId] = await Promise.all([fetchMe(), getActiveOrgId()]);
   if (!activeOrgId || !me) redirect("/");
 
   const isCs = me.userType === "central_services";
@@ -47,12 +42,6 @@ export default async function MappingsPage() {
 
   return (
     <>
-      <Header
-        userEmail={auth.user.email}
-        organizations={orgs}
-        activeOrganizationId={activeOrgId}
-        activeOrganizationRole={me.activeOrganizationRole}
-      />
       <main className="mx-auto max-w-5xl space-y-6 p-8">
         <p>
           <Link

@@ -1,0 +1,52 @@
+/* bGreen Carbon theme — brand palette (applied consistently, no AA-driven
+ * substitutions).
+ *
+ *   #63B995  mint leaf     — primary interactive: buttons, links, focus, brand
+ *   #37323E  shadow grey   — text primary, icon primary
+ *   #FF312E  cinnabar      — danger / destructive (button bg + support-error)
+ *   #50723C  fern          — support-success
+ *   #FFD97D  jasmine       — support-warning
+ *
+ * Hover / active states use slight tonal shifts of the base colours so the
+ * UI still gives feedback on press — not separate named brand colours.
+ *
+ * Load order: globals.css (Tailwind + fonts) → @carbon/styles → this file.
+ */
+
+:root,
+[data-carbon-theme="white"],
+[data-carbon-theme="g10"] {
+  /* === Brand: mint leaf as primary interactive === */
+  --cds-interactive: #63b995;
+  --cds-button-primary: #63b995;
+  --cds-button-primary-hover: #4fa481;
+  --cds-button-primary-active: #3d8b6a;
+  --cds-focus: #63b995;
+  --cds-focus-inset: #ffffff;
+  --cds-focus-inverse: #ffffff;
+  --cds-background-brand: #63b995;
+
+  --cds-link-primary: #63b995;
+  --cds-link-primary-hover: #4fa481;
+  --cds-link-inverse: #8fcfb3;
+  --cds-link-visited: #63b995;
+
+  /* === Text: shadow grey === */
+  --cds-text-primary: #37323e;
+  --cds-icon-primary: #37323e;
+
+  /* === Semantic === */
+  --cds-support-success: #50723c;
+  --cds-support-success-inverse: #8fb075;
+  --cds-support-warning: #ffd97d;
+  --cds-support-warning-inverse: #ffe9a8;
+  --cds-support-error: #ff312e;
+  --cds-support-error-inverse: #ff8480;
+  --cds-text-error: #ff312e;
+
+  /* Danger button uses pure cinnabar — hover/active are tonal shifts */
+  --cds-button-danger-primary: #ff312e;
+  --cds-button-danger-secondary: #ff312e;
+  --cds-button-danger-hover: #e62825;
+  --cds-button-danger-active: #c61f1d;
+}

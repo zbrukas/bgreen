@@ -1,6 +1,4 @@
-import { Header } from "@/app/_components/Header/Header";
 import { getActiveOrgId } from "@/lib/active-org";
-import { fetchMe, fetchMyOrganizations } from "@/lib/api-client";
 import {
   getBenchmarkComparison,
   listProfiles,
@@ -20,11 +18,7 @@ export default async function DashboardPage() {
   const auth = await withAuth();
   if (!auth.user) redirect("/");
 
-  const [me, orgs, activeOrgId] = await Promise.all([
-    fetchMe(),
-    fetchMyOrganizations(),
-    getActiveOrgId(),
-  ]);
+  const activeOrgId = await getActiveOrgId();
   if (!activeOrgId) redirect("/");
 
   // Fetch in parallel — both surfaces are independent and either may be
@@ -50,12 +44,6 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <Header
-        userEmail={auth.user.email}
-        organizations={orgs}
-        activeOrganizationId={activeOrgId}
-        activeOrganizationRole={me?.activeOrganizationRole ?? null}
-      />
       <main className="mx-auto max-w-4xl space-y-6 p-8">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">Painel</h1>

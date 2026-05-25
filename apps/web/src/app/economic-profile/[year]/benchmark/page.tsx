@@ -1,7 +1,5 @@
-import { Header } from "@/app/_components/Header/Header";
 import { Alert } from "@/components/ui/alert";
 import { getActiveOrgId } from "@/lib/active-org";
-import { fetchMe, fetchMyOrganizations } from "@/lib/api-client";
 import { getBenchmarkComparison } from "@/lib/economic-profile-actions";
 import { withAuth } from "@workos-inc/authkit-nextjs";
 import Link from "next/link";
@@ -24,23 +22,13 @@ export default async function BenchmarkPage({
   const auth = await withAuth();
   if (!auth.user) redirect("/");
 
-  const [me, orgs, activeOrgId] = await Promise.all([
-    fetchMe(),
-    fetchMyOrganizations(),
-    getActiveOrgId(),
-  ]);
+  const activeOrgId = await getActiveOrgId();
   if (!activeOrgId) redirect("/");
 
   const comparison = await getBenchmarkComparison(year).catch(() => null);
 
   return (
     <>
-      <Header
-        userEmail={auth.user.email}
-        organizations={orgs}
-        activeOrganizationId={activeOrgId}
-        activeOrganizationRole={me?.activeOrganizationRole ?? null}
-      />
       <main className="mx-auto max-w-3xl space-y-6 p-8">
         <div className="flex items-start justify-between gap-4">
           <div>

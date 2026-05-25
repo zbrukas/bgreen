@@ -1,4 +1,3 @@
-import { Header } from "@/app/_components/Header";
 import { addDomainAction, deleteDomainAction } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,7 +25,6 @@ export default async function CsDomainsPage() {
 
   return (
     <>
-      <Header userEmail={me.email} role={me.centralServicesRole} />
       <main className="mx-auto max-w-3xl space-y-6 p-8">
         <p>
           <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">

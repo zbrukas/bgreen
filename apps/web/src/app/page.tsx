@@ -9,7 +9,6 @@ import { redirect } from "next/navigation";
 import { EconomicProfileCta } from "./_home/EconomicProfileCta";
 import { EconomicProfileSummary } from "./_home/EconomicProfileSummary";
 import { CreateOrganizationForm } from "./_components/CreateOrganizationForm/CreateOrganizationForm";
-import { Header } from "./_components/Header/Header";
 
 export const dynamic = "force-dynamic";
 
@@ -80,12 +79,6 @@ export default async function Home() {
 
   return (
     <>
-      <Header
-        userEmail={auth.user.email}
-        organizations={orgs}
-        activeOrganizationId={activeOrgId}
-        activeOrganizationRole={me?.activeOrganizationRole ?? null}
-      />
       <main className="mx-auto max-w-3xl space-y-6 p-8">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">

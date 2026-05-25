@@ -1,7 +1,12 @@
+/* IBM Plex Sans + Mono — Carbon's CSS hardcodes the family name, so we load
+   the real fonts from Google Fonts and let Carbon's rules resolve them.
+   When Phase 4 cleanup runs, consider switching to self-hosted @ibm/plex-*. */
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap");
 @import "tailwindcss";
 
-/* shadcn-style design tokens. Bg primary = emerald-700 to match the legacy
-   #1f7a3d accent. Single light theme for v1; dark variant deferred. */
+/* shadcn-style design tokens — kept while shadcn primitives are still in use
+   (will be stripped in Phase 4 of the Carbon migration). Bg primary =
+   emerald-700 to match the legacy #1f7a3d accent. */
 
 @theme inline {
   --color-background: oklch(0.99 0 0);

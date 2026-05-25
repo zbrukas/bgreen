@@ -1,4 +1,3 @@
-import { Header } from "@/app/_components/Header";
 import { ReviewPanel } from "./_components/ReviewPanel";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
@@ -45,7 +44,6 @@ export default async function CsRecordPage({ params }: PageProps) {
   if (!record) {
     return (
       <>
-        <Header userEmail={me.email} role={me.centralServicesRole} />
         <main className="mx-auto max-w-3xl space-y-4 p-8">
           <p>
             <Link href="/inbox" className="text-sm text-muted-foreground hover:text-foreground">
@@ -76,7 +74,6 @@ export default async function CsRecordPage({ params }: PageProps) {
 
   return (
     <>
-      <Header userEmail={me.email} role={me.centralServicesRole} />
       <main className="mx-auto max-w-3xl space-y-6 p-8">
         <p>
           <Link href="/inbox" className="text-sm text-muted-foreground hover:text-foreground">
