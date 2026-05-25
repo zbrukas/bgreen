@@ -35,9 +35,8 @@ pnpm install
 # 2. Bring up Postgres + Gotenberg
 docker compose up -d
 
-# 3. (Once schemas exist) Generate + apply baseline migration
-pnpm db:generate
-pnpm db:push
+# 3. Apply migrations to local Postgres
+pnpm db:migrate
 
 # 4. Start all apps in dev mode
 pnpm dev
@@ -62,9 +61,8 @@ Services:
 | `pnpm test` | Vitest unit tests |
 | `pnpm lint` | Biome lint check |
 | `pnpm format` | Biome format (writes) |
-| `pnpm db:generate` | Generate Drizzle migration from schema |
-| `pnpm db:push` | Apply migrations to local Postgres |
-| `pnpm db:studio` | Open Drizzle Studio |
+| `pnpm db:migrate` | Apply pending SQL migrations to local Postgres |
+| `pnpm db:migrate --status` | Show which migrations are applied / pending |
 
 ## Layout
 

@@ -13,10 +13,7 @@
     "test": "turbo run test",
     "lint": "biome check .",
     "format": "biome format --write .",
-    "db:generate": "pnpm --filter @bgreen/db generate",
-    "db:migrate": "pnpm --filter @bgreen/db migrate",
-    "db:push": "pnpm --filter @bgreen/db push",
-    "db:studio": "pnpm --filter @bgreen/db studio"
+    "db:migrate": "pnpm --filter @bgreen/db migrate"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
