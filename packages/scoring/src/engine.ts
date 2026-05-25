@@ -27,6 +27,7 @@
 import type {
   Field,
   FormSchema,
+  FormSchemaScoring,
   LeafField,
   MultiSelectField,
   NumberField,
@@ -161,20 +162,21 @@ function repeatingScore(field: RepeatingField, value: unknown): number | null {
   }
 }
 
-function pickTier(percent: number, buckets: FormSchema["scoring"] extends infer S ? S : never): string {
-  // Defensive — caller has already null-checked scoring.
-  if (!buckets || !Array.isArray(buckets.buckets) || buckets.buckets.length === 0) {
-    return "—";
-  }
-  // Sort ascending by minPct; pick the LAST bucket whose minPct ≤ percent.
-  const sorted = [...buckets.buckets].sort((a, b) => a.minPct - b.minPct);
-  let chosen = sorted[0]?.label ?? "—";
+// Pick the highest-minPct bucket whose threshold the score met. If the
+// percent is below every bucket's minPct (admin forgot a 0-floor bucket),
+// returns "—" rather than misleadingly tagging the score with the lowest
+// band — a "fail" label belongs to a configured bucket, not implicit.
+function pickTier(percent: number, scoring: FormSchemaScoring): string {
+  if (scoring.buckets.length === 0) return "—";
+  // Defensive sort — admin-time ordering shouldn't affect results.
+  const sorted = [...scoring.buckets].sort((a, b) => a.minPct - b.minPct);
+  let chosen: string | null = null;
   for (const bucket of sorted) {
     if (percent >= bucket.minPct) {
       chosen = bucket.label;
     }
   }
-  return chosen;
+  return chosen ?? "—";
 }
 
 export function computeScore(template: FormSchema, values: RecordValues): ScoreResult | null {
