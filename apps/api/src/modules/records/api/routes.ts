@@ -44,6 +44,15 @@ export const recordsRoutes = new Hono<AppEnv>()
       : await recordService.listMine(orgId, c.var.user.id);
     return c.json(list);
   })
+  // V8.2 — per-template score history for the dashboard. Org-wide,
+  // any membership role. Drafts and records without a score are
+  // filtered out by the service.
+  .get("/scores", async (c) => {
+    const orgId = c.var.organizationId;
+    if (!orgId) return c.json({ error: "no_active_org" }, 400);
+    const list = await recordService.listScoresGroupedByTemplate(orgId);
+    return c.json(list);
+  })
   .get("/:id", async (c) => {
     const orgId = c.var.organizationId;
     if (!orgId) return c.json({ error: "no_active_org" }, 400);

@@ -23,6 +23,7 @@
     "@bgreen/emails": "workspace:*",
     "@bgreen/form-engine": "workspace:*",
     "@bgreen/pt-data": "workspace:*",
+    "@bgreen/scoring": "workspace:*",
     "@bgreen/storage": "workspace:*",
     "@bgreen/types": "workspace:*",
     "@hono/node-server": "^1.13.7",

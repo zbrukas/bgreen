@@ -1,11 +1,15 @@
 import type { FormError, ValidationMode } from "@bgreen/form-engine";
 import { validateComposedFormValues, validateFormValues } from "@bgreen/form-engine";
+import { computeScore } from "@bgreen/scoring";
 import type { Record, RecordTemplate, RecordValues } from "@bgreen/types";
 import type { AuditService } from "../../audit/module.js";
 import type { RecordTemplateRepository } from "../../form-templates/application/record-template-service.js";
 import type { TopicRepository } from "../../topics/module.js";
-import type { WorkflowService } from "../../workflows/module.js";
-import { defaultWorkflowDefinitionId } from "../../workflows/module.js";
+import type { WorkflowService } from "../../workflows/application/workflow-service.js";
+// Pulled from the graphs deep-export (not the workflows module barrel)
+// so test files that import this service don't transitively load
+// workflows/api/routes.ts → services.ts at module-resolution time.
+import { defaultWorkflowDefinitionId } from "../../workflows/graphs/index.js";
 
 export interface CreateRecordInput {
   organizationId: string;
@@ -30,6 +34,17 @@ export interface UpdateRecordInput {
   actorTopicScope?: string[];
 }
 
+// V8.2 — score snapshot passed through to insert / updateValues. Null
+// inside when the template has no scoring metadata. The repository
+// stores it verbatim; the service computes the values via @bgreen/scoring
+// before calling.
+export interface ScoreSnapshotInput {
+  score: number | null;
+  scorePercent: number | null;
+  scoreTier: string | null;
+  scoreBreakdown: import("@bgreen/types").ScoreBreakdownEntry[] | null;
+}
+
 export interface RecordRepository {
   insert(input: {
     organizationId: string;
@@ -37,12 +52,14 @@ export interface RecordRepository {
     values: RecordValues;
     submittedAt: Date | null;
     submittedByUserId: string | null;
+    score?: ScoreSnapshotInput;
   }): Promise<Record>;
   updateValues(input: {
     organizationId: string;
     recordId: string;
     values: RecordValues;
     submittedAt: Date | null;
+    score?: ScoreSnapshotInput;
   }): Promise<Record | null>;
   recordReview(input: {
     organizationId: string;
@@ -92,6 +109,22 @@ export type ReviewResult =
       code: "record_not_found" | "not_reviewable" | "comment_required";
     };
 
+// V8.2 — dashboard wire shape. One entry per template the org has
+// scored at least one record against; scores ascending by submittedAt.
+export interface RecordScorePoint {
+  recordId: string;
+  total: number;
+  percent: number;
+  tier: string;
+  submittedAt: string;
+}
+
+export interface TemplateScoreHistory {
+  templateId: string;
+  templateName: string;
+  scores: RecordScorePoint[];
+}
+
 export class RecordService {
   constructor(
     private readonly records: RecordRepository,
@@ -121,6 +154,13 @@ export class RecordService {
       return { ok: false, code: "validation_failed", errors: validated.errors };
     }
 
+    // V8.2 — compute the score snapshot on actual submit. Drafts skip
+    // scoring (the values aren't authoritative yet); templates without
+    // a `scoring` block return null from the engine and we persist null.
+    const score = input.asDraft
+      ? undefined
+      : buildScoreSnapshot(template, validated.values);
+
     // Insert the record row. Workflow instance is created right after;
     // status lives on the workflow_instance, not the record row.
     const record = await this.records.insert({
@@ -129,6 +169,7 @@ export class RecordService {
       values: validated.values,
       submittedAt: input.asDraft ? null : new Date(),
       submittedByUserId: input.submitterUserId,
+      score,
     });
 
     // Start the workflow chosen by the template (defaults to two-step-review).
@@ -209,11 +250,18 @@ export class RecordService {
         : existing.submittedAt
           ? new Date(existing.submittedAt)
           : null;
+    // V8.2 — recompute score on re-submit. Save-as-draft keeps the
+    // existing score row (the values haven't been validated as a
+    // submission yet); we don't pass a snapshot so the columns stay
+    // untouched.
+    const score =
+      input.action === "submit" ? buildScoreSnapshot(template, valuesToStore) : undefined;
     const record = await this.records.updateValues({
       organizationId: input.organizationId,
       recordId: input.recordId,
       values: valuesToStore,
       submittedAt,
+      score,
     });
     if (!record) return { ok: false, code: "record_not_found" };
 
@@ -343,6 +391,40 @@ export class RecordService {
     return this.records.listForOrganization(organizationId);
   }
 
+  // V8.2 — per-template score history for the dashboard. Drafts and
+  // records without a score (template without scoring metadata) are
+  // excluded. Scores are returned ascending by submittedAt so the
+  // dashboard sparkline reads left-to-right.
+  async listScoresGroupedByTemplate(organizationId: string): Promise<TemplateScoreHistory[]> {
+    const records = await this.records.listForOrganization(organizationId);
+    const byTemplate = new Map<string, RecordScorePoint[]>();
+    for (const r of records) {
+      if (r.score === null || r.scorePercent === null || r.scoreTier === null) continue;
+      if (!r.submittedAt) continue;
+      const points = byTemplate.get(r.templateId) ?? [];
+      points.push({
+        recordId: r.id,
+        total: r.score,
+        percent: r.scorePercent,
+        tier: r.scoreTier,
+        submittedAt: r.submittedAt,
+      });
+      byTemplate.set(r.templateId, points);
+    }
+    if (byTemplate.size === 0) return [];
+
+    // Resolve template names. One lookup per unique template — at zero
+    // customers the list is small; a batched findByIds is V8.3+ work.
+    const out: TemplateScoreHistory[] = [];
+    for (const [templateId, points] of byTemplate) {
+      const template = await this.templates.findById(templateId);
+      if (!template) continue;
+      points.sort((a, b) => a.submittedAt.localeCompare(b.submittedAt));
+      out.push({ templateId, templateName: template.name, scores: points });
+    }
+    return out;
+  }
+
   // Picks the plain or composed validator based on whether the template
   // declares any sub-templates. Sub-template schemas are fetched lazily;
   // a missing one is skipped silently — the composition row is the
@@ -435,6 +517,29 @@ export class RecordService {
 
 function isObject(v: unknown): v is { [k: string]: unknown } {
   return v !== null && typeof v === "object" && !Array.isArray(v);
+}
+
+// V8.2 — wraps @bgreen/scoring.computeScore + adapts the result to the
+// repository's ScoreSnapshotInput shape. Returns a fully-null snapshot
+// (rather than undefined) when the template has no scoring metadata so
+// the column write is explicit — re-submission of a previously-scored
+// record against a since-edited template that dropped scoring will null
+// the columns rather than leaving stale data. Published templates are
+// immutable in v1, so this path is mostly defensive.
+function buildScoreSnapshot(
+  template: RecordTemplate,
+  values: RecordValues,
+): ScoreSnapshotInput {
+  const result = computeScore(template.formSchema, values);
+  if (!result) {
+    return { score: null, scorePercent: null, scoreTier: null, scoreBreakdown: null };
+  }
+  return {
+    score: result.total,
+    scorePercent: result.percent,
+    scoreTier: result.tier,
+    scoreBreakdown: result.breakdown,
+  };
 }
 
 // Merges existing.values.subs[outOfScope] into the validated values so an

@@ -8,8 +8,7 @@
 ## Sub-slice progress
 
 - **V8.1 (shipped):** FormSchema zod gains optional `score` on select/multi-select options, `scoring: linear | thresholds` on number fields, `aggregate: sum|avg|min|max` on repeating, per-field `weight`, and template-level `scoring: {maxScore, buckets: [{minPct, label}]}`. New package `@bgreen/scoring` with pure `computeScore(template, values) → ScoreResult | null` — handles select/multi-select/number/repeating/showIf skip/missing-value skip/weight/tier classification with maxScore cap. 15 unit tests.
-- **V8.2 (next):** records score columns + compute-on-submit + GET /organizations/me/scores.
-- **V8.3:** /dashboard with cards + sparkline + peer-rank when SectorBenchmark has data.
+- **V8.2 (shipped):** Persistence + compute-on-submit + scores API. Migration 0017 adds `score numeric(20,2)`, `score_percent numeric(7,4)`, `score_tier text`, `score_breakdown jsonb` to `records` (all nullable). @bgreen/types Record gets the four fields + a `ScoreBreakdownEntry` schema. RecordRepository accepts an optional `ScoreSnapshotInput` on insert and updateValues; numeric round-trip through `numeric.toFixed(4)` ↔ `parseNumeric`. RecordService computes via `@bgreen/scoring.computeScore(template.formSchema, validated.values)` on submit (when !asDraft) and on update (when action='submit'); drafts and save-as-draft leave the columns alone. Templates without `scoring` produce an explicit all-null snapshot. New endpoint `GET /records/scores` returns per-template grouped score history (drafts and score-less records filtered, ascending by submittedAt) — feeds the V8.3 dashboard. 7 new RecordService tests covering submit/draft/update paths + filter behavior. Side-effect: `record-service.ts` now imports `defaultWorkflowDefinitionId` from the workflows deep-export rather than the barrel, so test files don't transitively load `services.ts`.
 
 ## Goal
 

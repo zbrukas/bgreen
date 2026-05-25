@@ -276,6 +276,17 @@ export const RecordValuesSchema: z.ZodType<{ [key: string]: unknown }> = z.recor
 );
 export type RecordValues = z.infer<typeof RecordValuesSchema>;
 
+// V8.2 — per-record score snapshot. ScoreBreakdownEntrySchema mirrors
+// @bgreen/scoring's ScoreContribution. Defined locally so @bgreen/types
+// stays a leaf package (no dependency on scoring).
+export const ScoreBreakdownEntrySchema = z.object({
+  fieldId: FieldIdSchema,
+  raw: z.number(),
+  weight: z.number(),
+  weighted: z.number(),
+});
+export type ScoreBreakdownEntry = z.infer<typeof ScoreBreakdownEntrySchema>;
+
 export const RecordSchema = z.object({
   id: z.string().uuid(),
   organizationId: z.string().uuid(),
@@ -287,6 +298,12 @@ export const RecordSchema = z.object({
   submittedByUserId: z.string().uuid().nullable(),
   reviewedAt: z.string().datetime({ offset: true }).nullable(),
   reviewedByUserId: z.string().uuid().nullable(),
+  // V8.2 score snapshot. Null when the template has no scoring metadata,
+  // or for drafts. Populated at submit / re-submit time.
+  score: z.number().nullable(),
+  scorePercent: z.number().nullable(),
+  scoreTier: z.string().nullable(),
+  scoreBreakdown: z.array(ScoreBreakdownEntrySchema).nullable(),
   createdAt: z.string().datetime({ offset: true }),
   updatedAt: z.string().datetime({ offset: true }),
 });

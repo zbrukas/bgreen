@@ -1,5 +1,10 @@
 import { db, orgScope, schema } from "@bgreen/db";
-import type { Record, RecordStatus, RecordValues } from "@bgreen/types";
+import type {
+  Record,
+  RecordStatus,
+  RecordValues,
+  ScoreBreakdownEntry,
+} from "@bgreen/types";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import type { RecordRepository } from "../application/record-service.js";
 
@@ -19,6 +24,14 @@ interface RecordWithStatusRow extends Omit<typeof schema.records.$inferSelect, n
   workflowState: unknown;
 }
 
+// Drizzle returns numeric as string to preserve precision; decode at
+// the repo boundary so the rest of the app sees plain numbers.
+function parseNumeric(value: string | null): number | null {
+  if (value === null) return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
 function rowToRecord(row: RecordWithStatusRow): Record {
   return {
     id: row.id,
@@ -31,6 +44,10 @@ function rowToRecord(row: RecordWithStatusRow): Record {
     submittedByUserId: row.submittedByUserId,
     reviewedAt: row.reviewedAt ? row.reviewedAt.toISOString() : null,
     reviewedByUserId: row.reviewedByUserId,
+    score: parseNumeric(row.score),
+    scorePercent: parseNumeric(row.scorePercent),
+    scoreTier: row.scoreTier,
+    scoreBreakdown: row.scoreBreakdown as ScoreBreakdownEntry[] | null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -60,6 +77,10 @@ const selectColumns = {
   submittedByUserId: schema.records.submittedByUserId,
   reviewedAt: schema.records.reviewedAt,
   reviewedByUserId: schema.records.reviewedByUserId,
+  score: schema.records.score,
+  scorePercent: schema.records.scorePercent,
+  scoreTier: schema.records.scoreTier,
+  scoreBreakdown: schema.records.scoreBreakdown,
   createdAt: schema.records.createdAt,
   updatedAt: schema.records.updatedAt,
   workflowState: schema.workflowInstances.currentState,
@@ -78,6 +99,15 @@ function recordsWithStatus() {
     );
 }
 
+// Encode JS number → numeric-string for Drizzle's numeric columns.
+// undefined ⇒ don't write the column at all (caller didn't supply a
+// snapshot); null ⇒ explicit null (template without scoring, etc.).
+function encodeNumeric(value: number | null | undefined): string | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  return value.toFixed(4);
+}
+
 export class DrizzleRecordRepository implements RecordRepository {
   async insert(input: {
     organizationId: string;
@@ -85,6 +115,7 @@ export class DrizzleRecordRepository implements RecordRepository {
     values: RecordValues;
     submittedAt: Date | null;
     submittedByUserId: string | null;
+    score?: import("../application/record-service.js").ScoreSnapshotInput;
   }): Promise<Record> {
     const [row] = await db
       .insert(schema.records)
@@ -94,6 +125,14 @@ export class DrizzleRecordRepository implements RecordRepository {
         values: input.values,
         submittedAt: input.submittedAt,
         submittedByUserId: input.submittedByUserId,
+        ...(input.score === undefined
+          ? {}
+          : {
+              score: encodeNumeric(input.score.score),
+              scorePercent: encodeNumeric(input.score.scorePercent),
+              scoreTier: input.score.scoreTier,
+              scoreBreakdown: input.score.scoreBreakdown,
+            }),
       })
       .returning();
     if (!row) throw new Error("insert record: unexpected empty returning() result");
@@ -107,6 +146,7 @@ export class DrizzleRecordRepository implements RecordRepository {
     recordId: string;
     values: RecordValues;
     submittedAt: Date | null;
+    score?: import("../application/record-service.js").ScoreSnapshotInput;
   }): Promise<Record | null> {
     await db
       .update(schema.records)
@@ -114,6 +154,14 @@ export class DrizzleRecordRepository implements RecordRepository {
         values: input.values,
         submittedAt: input.submittedAt,
         updatedAt: new Date(),
+        ...(input.score === undefined
+          ? {}
+          : {
+              score: encodeNumeric(input.score.score),
+              scorePercent: encodeNumeric(input.score.scorePercent),
+              scoreTier: input.score.scoreTier,
+              scoreBreakdown: input.score.scoreBreakdown,
+            }),
       })
       .where(
         and(orgScope(schema.records, input.organizationId), eq(schema.records.id, input.recordId)),

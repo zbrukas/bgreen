@@ -44,6 +44,9 @@ importers:
       '@bgreen/pt-data':
         specifier: workspace:*
         version: link:../../packages/pt-data
+      '@bgreen/scoring':
+        specifier: workspace:*
+        version: link:../../packages/scoring
       '@bgreen/storage':
         specifier: workspace:*
         version: link:../../packages/storage
