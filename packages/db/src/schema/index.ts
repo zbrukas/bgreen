@@ -2,6 +2,7 @@ export * from "./_schema_version";
 export * from "./audit-log";
 export * from "./central-services-domains";
 export * from "./economic-profiles";
+export * from "./framework-coverage";
 export * from "./legal-form";
 export * from "./organization-invites";
 export * from "./organization-memberships";

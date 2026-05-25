@@ -41,6 +41,9 @@ importers:
       '@bgreen/form-engine':
         specifier: workspace:*
         version: link:../../packages/form-engine
+      '@bgreen/frameworks':
+        specifier: workspace:*
+        version: link:../../packages/frameworks
       '@bgreen/pt-data':
         specifier: workspace:*
         version: link:../../packages/pt-data
@@ -331,6 +334,15 @@ importers:
       '@bgreen/types':
         specifier: workspace:*
         version: link:../types
+    devDependencies:
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.19.19)(lightningcss@1.32.0)
+
+  packages/frameworks:
     devDependencies:
       typescript:
         specifier: ^5.7.2

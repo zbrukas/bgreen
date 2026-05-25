@@ -1,9 +1,16 @@
 # V10 — Framework Coverage Checker
 
-> **Status:** Not started
+> **Status:** In progress — V10.1 shipped (seeds + migrations + package).
 > **Depends on:** [V9 — Recommendations](09-recommendations.md)
 > **Parent PRD:** [../bgreen-greenfield-rewrite.md](../bgreen-greenfield-rewrite.md)
 > **User stories covered:** PRD §71–74 (regulatory framework coverage), supports §65 (PDF report template picker in V11)
+
+## Sub-slice progress
+
+- **V10.1 (shipped):** Seeds + migrations + package. New `packages/frameworks` ships three TypeScript datapoint catalogs (ESRS E1: 30 datapoints, GHG Protocol: 15, GRI: 20) + `SectorApplicability` rule + `evaluateSectorApplicability` predicate. Migration 0019 adds `framework_datapoints` (text PK, `framework` enum, jsonb applicability rule, version tag) + `template_datapoint_mappings` (UUID PK + UNIQUE on (template, datapoint)). `seed-framework-datapoints` script upserts the catalog by id. 10 catalog tests assert id uniqueness across frameworks, framework-prefix invariants, expected counts, and applicability evaluation.
+- **V10.2 (next):** CoverageCalculator + admin mapping service/routes + datapoint catalog routes.
+- **V10.3:** AI tool + checkFrameworkCoverage service + coverage-check runs.
+- **V10.4:** Full UI — framework picker, coverage matrix with filters, admin mapping screen, AI explanation panels.
 
 ## Goal
 
