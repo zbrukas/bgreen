@@ -333,6 +333,8 @@ function seedOrg(repo: InMemoryOrgRepo, overrides: Partial<Organization> = {}): 
     freguesia: null,
     concelho: null,
     distrito: null,
+    logoUrl: null,
+    brandPrimaryColor: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     ...overrides,

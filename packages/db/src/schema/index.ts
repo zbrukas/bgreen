@@ -12,6 +12,7 @@ export * from "./pt-reference";
 export * from "./recommendations";
 export * from "./record-templates";
 export * from "./records";
+export * from "./reports";
 export * from "./sector-aggregates";
 export * from "./template-compositions";
 export * from "./topics";

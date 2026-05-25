@@ -1,4 +1,5 @@
 import { AnthropicAiClient, composeObservers } from "@bgreen/ai";
+import { HttpPdfRenderer, InMemoryPdfRenderer, type PdfRenderer } from "@bgreen/pdf-engine";
 import { HttpViesClient } from "@bgreen/pt-data";
 import { AwsS3Uploader, InMemoryS3Uploader, type S3Uploader } from "@bgreen/storage";
 import { AuditService, DrizzleAuditRepository } from "./modules/audit/module.js";
@@ -40,6 +41,7 @@ import {
   RecommendationsService,
 } from "./modules/recommendations/module.js";
 import { DrizzleRecordRepository, RecordService } from "./modules/records/module.js";
+import { DrizzleReportInstanceRepository } from "./modules/reports/module.js";
 import { DrizzleTopicRepository, TopicService } from "./modules/topics/module.js";
 import { DrizzleWorkflowRepository, WorkflowService } from "./modules/workflows/module.js";
 
@@ -63,6 +65,7 @@ export const repositories = {
   recommendationFeedback: new DrizzleRecommendationFeedbackRepository(),
   frameworkDatapoints: new DrizzleFrameworkDatapointRepository(),
   templateDatapointMappings: new DrizzleTemplateDatapointMappingRepository(),
+  reportInstances: new DrizzleReportInstanceRepository(),
 };
 
 export const userService = new UserService(repositories.users, repositories.centralServicesDomains);
@@ -145,6 +148,20 @@ function buildS3Uploader(): S3Uploader {
 }
 
 export const s3Uploader = buildS3Uploader();
+
+// V11.1 — PDF renderer wiring. PDF_URL + PDF_INTERNAL_TOKEN configure
+// the HTTP adapter against apps/pdf. Both unset → an in-memory stub
+// so unit-runnable smoke tests don't need apps/pdf running. V11.2
+// teaches apps/pdf to actually render; until then the HTTP adapter
+// returns render_failed via the 501 stub there.
+function buildPdfRenderer(): PdfRenderer {
+  const baseUrl = process.env.PDF_URL;
+  const token = process.env.PDF_INTERNAL_TOKEN;
+  if (!baseUrl || !token) return new InMemoryPdfRenderer();
+  return new HttpPdfRenderer({ baseUrl, internalToken: token });
+}
+
+export const pdfRenderer = buildPdfRenderer();
 
 export const iesExtractionService = new IesExtractionService(
   repositories.iesExtractionLogs,

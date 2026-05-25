@@ -25,6 +25,8 @@ function rowToOrganization(row: typeof schema.organizations.$inferSelect): Organ
     freguesia: row.freguesia,
     concelho: row.concelho,
     distrito: row.distrito,
+    logoUrl: row.logoUrl,
+    brandPrimaryColor: row.brandPrimaryColor,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };

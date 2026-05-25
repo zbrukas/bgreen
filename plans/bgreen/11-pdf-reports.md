@@ -1,9 +1,16 @@
 # V11 — PDF Reports
 
-> **Status:** Not started
+> **Status:** In progress — V11.1 shipped (foundation).
 > **Depends on:** [V10 — Framework Coverage Checker](10-framework-coverage.md), [V8 — Scoring + Dashboards](08-scoring-dashboards.md)
 > **Parent PRD:** [../bgreen-greenfield-rewrite.md](../bgreen-greenfield-rewrite.md)
 > **User stories covered:** PRD §64–70 (PDF reports)
+
+## Sub-slice progress
+
+- **V11.1 (shipped):** Foundation. New `@bgreen/pdf-engine` package ships `PdfRenderer` interface + `HttpPdfRenderer` adapter (POSTs to apps/pdf with `X-Internal-Token`) + `InMemoryPdfRenderer` test double + discriminated `PdfRenderError` (auth | transient | template_not_found | render_failed). `apps/pdf` gains zod-validated `POST /render` route, internal-token auth (rejects requests without `PDF_INTERNAL_TOKEN`); responds 501 with `render_not_implemented` until V11.2 wires templates + Gotenberg. New `reports` module at `apps/api/src/modules/reports/`: `ReportTemplateId` registry, `ReportInstance` domain shape, `InputDataHasher` (pure: canonicalise + SHA-256, 11 tests covering ordering invariance, number serialisation, NaN/Infinity rejection, undefined-drops, Date normalisation, known-hash anchor), Drizzle repository with tenant scope + Inngest-friendly findAnyById. Migration 0020: `report_instances` table (status enum, free-text template_id, period_start/end dates, s3_key, input_data_hash, commentary_json, token + Inngest snapshot) + `organizations.logo_url` + `organizations.brand_primary_color`. `Organization` zod shape updated. apps/api wires `pdfRenderer` (HTTP when configured, InMemory otherwise). 164 tests in apps/api (11 new); full monorepo typecheck green. Boot smoke: apps/pdf 200 on /health, 403 without token, 501 with token.
+- **V11.2 (next):** Three React templates (ghg-inventory, esrs-e1, custom) + Gotenberg integration in apps/pdf end-to-end.
+- **V11.3:** ReportService + generateReportCommentary AI tool + Inngest pipeline + Resend email + audit.
+- **V11.4:** UI — reports list, Gerar CTA, template picker, period selector, coverage warning.
 
 ## Goal
 

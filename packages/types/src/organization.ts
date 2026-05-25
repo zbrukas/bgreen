@@ -15,6 +15,9 @@ export const OrganizationSchema = z.object({
   freguesia: z.string().nullable(),
   concelho: z.string().nullable(),
   distrito: z.string().nullable(),
+  // V11.1 branding — both nullable; defaults applied at render time.
+  logoUrl: z.string().nullable(),
+  brandPrimaryColor: z.string().nullable(),
   createdAt: z.string().datetime({ offset: true }),
   updatedAt: z.string().datetime({ offset: true }),
 });

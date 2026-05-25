@@ -24,6 +24,7 @@
     "@bgreen/emails": "workspace:*",
     "@bgreen/form-engine": "workspace:*",
     "@bgreen/frameworks": "workspace:*",
+    "@bgreen/pdf-engine": "workspace:*",
     "@bgreen/pt-data": "workspace:*",
     "@bgreen/scoring": "workspace:*",
     "@bgreen/storage": "workspace:*",
