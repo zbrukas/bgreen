@@ -1,13 +1,18 @@
 "use client";
 
-import { Alert } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { type ReviewRecordActionResult, reviewRecordAction } from "@/app/actions";
+import { Checkmark } from "@carbon/icons-react";
+import {
+  Button,
+  InlineNotification,
+  RadioButton,
+  RadioButtonGroup,
+  Stack,
+  TextArea,
+  Tile,
+} from "@carbon/react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { type ReviewRecordActionResult, reviewRecordAction } from "@/app/actions";
 
 type Decision = "approve" | "request_changes" | "reject";
 
@@ -42,65 +47,58 @@ export function ReviewPanel({ recordId }: { recordId: string }) {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Decisão de revisão</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handle} className="space-y-3">
-          <div className="space-y-1.5">
-            {(
-              [
-                { value: "approve", label: "Aprovar" },
-                { value: "request_changes", label: "Pedir alterações" },
-                { value: "reject", label: "Rejeitar" },
-              ] satisfies Array<{ value: Decision; label: string }>
-            ).map((opt) => (
-              <label key={opt.value} className="flex items-center gap-2 text-sm">
-                <input
-                  type="radio"
-                  name="decision"
-                  value={opt.value}
-                  checked={decision === opt.value}
-                  onChange={() => setDecision(opt.value)}
-                  className="h-4 w-4 border-input text-primary focus:ring-ring"
-                />
-                {opt.label}
-              </label>
-            ))}
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="review-comment">
-              Comentário
-              {commentRequired ? (
-                <span className="text-destructive"> *</span>
-              ) : (
-                <span className="text-muted-foreground"> (opcional)</span>
-              )}
-            </Label>
-            <Textarea
-              id="review-comment"
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              rows={3}
-              maxLength={2000}
-              placeholder={
-                decision === "approve"
-                  ? "Notas para o submetedor (opcional)"
-                  : "Explique o que precisa de ser ajustado"
-              }
+    <Tile>
+      <h2 style={{ fontSize: "1rem", fontWeight: 600, lineHeight: 1.375, margin: 0 }}>
+        Decisão de revisão
+      </h2>
+      <form onSubmit={handle} className="mt-4">
+        <Stack gap={5}>
+          <RadioButtonGroup
+            name="decision"
+            legendText="Decisão"
+            orientation="vertical"
+            valueSelected={decision}
+            onChange={(value) => setDecision(value as Decision)}
+          >
+            <RadioButton labelText="Aprovar" value="approve" id="dec-approve" />
+            <RadioButton
+              labelText="Pedir alterações"
+              value="request_changes"
+              id="dec-changes"
             />
-          </div>
+            <RadioButton labelText="Rejeitar" value="reject" id="dec-reject" />
+          </RadioButtonGroup>
 
-          {error && <Alert variant="destructive">{error}</Alert>}
+          <TextArea
+            id="review-comment"
+            labelText={`Comentário${commentRequired ? " (obrigatório)" : " (opcional)"}`}
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            rows={4}
+            maxLength={2000}
+            placeholder={
+              decision === "approve"
+                ? "Notas para o submetedor (opcional)"
+                : "Explique o que precisa de ser ajustado"
+            }
+          />
 
-          <Button type="submit" disabled={isPending}>
+          {error && (
+            <InlineNotification
+              kind="error"
+              title="Não foi possível registar a decisão"
+              subtitle={error}
+              lowContrast
+              hideCloseButton
+            />
+          )}
+
+          <Button type="submit" kind="primary" disabled={isPending} renderIcon={Checkmark}>
             {isPending ? "A registar…" : "Registar decisão"}
           </Button>
-        </form>
-      </CardContent>
-    </Card>
+        </Stack>
+      </form>
+    </Tile>
   );
 }
 

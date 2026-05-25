@@ -1,6 +1,6 @@
 # UI Carbon Migration — bGreen
 
-> **Status:** Phase 2 complete on apps/web (2026-05-25). Every authenticated web route uses Carbon chrome (PageHeader / DataTable / Tile / Tag / InlineNotification / EmptyState / StatCard). Phase 3 (apps/cs migration) pending.
+> **Status:** Phase 3 complete (2026-05-25). Both apps fully on Carbon. Only Phase 4 (cleanup: remove shadcn primitives, lucide-react, audit globals.css) remains.
 > **Scope:** Visual overhaul of `apps/web` and `apps/cs`. Replaces the current `shadcn/ui` + `lucide-react` + bespoke Tailwind tokens with **IBM Carbon Design System** themed for bGreen. Not a feature vertical.
 > **Parent PRD:** [../bgreen-greenfield-rewrite.md](../bgreen-greenfield-rewrite.md)
 > **Source:** Review performed 2026-05-25. Direction agreed in session: Carbon Design System, emerald primary preserved, both apps in parallel.
@@ -118,22 +118,26 @@ Goal: replace shadcn primitives with Carbon equivalents page-by-page.
 
 **Deliverable:** every authenticated web route renders Carbon-themed chrome. ✅ Shipped.
 
-### Phase 3 — Migrate `apps/cs` pages
+### Phase 3 — Migrate `apps/cs` pages — ✅ COMPLETE 2026-05-25
 
-Same page-by-page approach. CS uses default (md) density — same as web. (Compact density was considered for CS power-user surfaces but reversed during Phase 0 review.)
+Same page-by-page approach. CS uses default (md) density — same as web.
 
-- [ ] **`/`** (home) — `PageHeader` + session info as `StructuredList`.
-- [ ] **`/login` + `/setup-password`** — Carbon `Form` + `TextInput` + `Button`. Single tile centred layout.
-- [ ] **`/inbox`** — `DataTable` with role-aware action column.
-- [ ] **`/templates` + `/templates/[id]`** — list as `DataTable`.
-- [ ] **`/templates/new`** — the **biggest visual win**: `TemplateEditor` gets drag-handle reorder (`@dnd-kit` or Carbon's drag-and-drop primitives — decide during the page), field-type icons per row, visual nesting indicator for repeating groups, sticky save bar, validation summary panel.
-- [ ] **`/orgs`** — `DataTable` (currently a stub; build when navigated).
-- [ ] **`/users`** — `DataTable` with inline-edit role column; new-user form as a Carbon `Modal` triggered by header action.
-- [ ] **`/domains` + `/topics`** — `DataTable` patterns.
-- [ ] **`/records/[id]`** — read-only record view as `StructuredList`; `ReviewPanel` rebuilt as Carbon `RadioButtonGroup` + `TextArea` + sticky-bottom action bar.
-- [ ] Remove `apps/cs/src/components/ui/*` at end of phase.
+- [x] **`/`** (home) — PageHeader + session info as StructuredListWrapper + Tag for role.
+- [x] **`/login` + `/setup-password`** — Carbon TextInput + PasswordInput + Stack + Button. Single Tile centred in viewport. InlineNotification for errors.
+- [x] **`/inbox`** — DataTable (InboxTable client wrapper) + shared EmptyState + Tag for state.
+- [x] **`/templates` + `/templates/[id]`** — list as DataTable (TemplatesTable). Detail uses Tile + Tag for status badges (workflow, sub-template, topic) and FieldRow keeps the recursive Tag-and-Plex-Mono visual. TemplateActions client wrapper for publish/archive buttons.
+- [x] **`/templates/new`** — PageHeader chrome wrap only. Big TemplateEditor refactor (drag-handle reorder, field-type icons, nesting indicator) **deferred** — body kept on shadcn; it's its own scope and would have ballooned this batch.
+- [x] **`/users`** — PageHeader + AddUserForm (Tile + Stack + TextInput + Select) + UsersTable (DataTable with inline-edit role column, Tag for state, Modal not used — inline form already worked). InlineNotification for non-admin warning.
+- [x] **`/domains`** — PageHeader + AddDomainForm + DomainsTable. Plex Mono for the domain column.
+- [x] **`/topics`** — PageHeader + AddTopicForm + TopicsTable. Plex Mono for slug.
+- [x] **`/records/[id]`** — PageHeader with status Tag in actions slot + breadcrumb. Read-only values as Tile with `<dl>` sections; sub-templates get a left-border accent. ReviewPanel rebuilt as Carbon RadioButtonGroup + TextArea + InlineNotification + Button (sticky-bottom action bar deferred — current inline placement reads fine for now).
+- [x] `/orgs` referenced in the side nav but no page file exists yet — left as future work.
 
-**Deliverable:** `apps/cs` fully on Carbon. Both apps visually consistent.
+**Pattern continued:** server-component pages that need `<Button renderIcon={…}>` in PageHeader actions delegate to "use client" wrappers (TemplatesHeaderActions, TemplateActions). Same pattern as web Phase 2.
+
+**Old `apps/cs/src/app/_components/Header.tsx` and `src/components/ui/*` still in tree** — same Phase 4 cleanup that applies to web. They're imported by inner form bodies (TemplateEditor, ReviewPanel was just migrated, AddUserForm etc. now use Carbon directly).
+
+**Deliverable:** every authenticated CS route renders Carbon-themed chrome. Both apps visually consistent. ✅ Shipped.
 
 ### Phase 4 — Cleanup
 

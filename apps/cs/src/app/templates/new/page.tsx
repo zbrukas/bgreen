@@ -1,7 +1,8 @@
-import { TemplateEditor } from "./_components/TemplateEditor/TemplateEditor";
+import { PageHeader } from "@/components/shell/PageHeader";
 import { fetchMe, fetchTemplates, fetchTopics } from "@/lib/api-client";
-import Link from "next/link";
+import { Add } from "@carbon/icons-react";
 import { redirect } from "next/navigation";
+import { TemplateEditor } from "./_components/TemplateEditor/TemplateEditor";
 
 export const dynamic = "force-dynamic";
 
@@ -24,18 +25,19 @@ export default async function NewTemplatePage() {
 
   return (
     <>
-      <main className="mx-auto max-w-3xl space-y-6 p-8">
-        <p>
-          <Link href="/templates" className="text-sm text-muted-foreground hover:text-foreground">
-            ← Voltar
-          </Link>
-        </p>
+      <PageHeader
+        title="Novo modelo"
+        description="Defina nome, fluxo, e os campos do formulário. Pode salvar como rascunho e publicar mais tarde."
+        icon={Add}
+        breadcrumbs={[{ label: "Modelos", href: "/templates" }, { label: "Novo" }]}
+      />
+      <div className="mx-auto max-w-3xl px-8 py-6">
         <TemplateEditor
           availableTemplates={available}
           subTemplates={subTemplates}
           topics={topics}
         />
-      </main>
+      </div>
     </>
   );
 }

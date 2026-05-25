@@ -1,10 +1,14 @@
 "use client";
 
 import { signInAction } from "@/app/actions";
-import { Alert } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { ArrowRight } from "@carbon/icons-react";
+import {
+  Button,
+  InlineNotification,
+  PasswordInput,
+  Stack,
+  TextInput,
+} from "@carbon/react";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect } from "react";
 
@@ -22,19 +26,30 @@ export function LoginForm() {
   }, [state.redirectToSetupForEmail, router]);
 
   return (
-    <form action={formAction} className="space-y-4">
-      <div className="space-y-1.5">
-        <Label htmlFor="email">Email</Label>
-        <Input id="email" name="email" type="email" required autoFocus />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="password">Palavra-passe</Label>
-        <Input id="password" name="password" type="password" required />
-      </div>
-      {state.error && <Alert variant="destructive">{state.error}</Alert>}
-      <Button type="submit" disabled={isPending} className="w-full">
-        {isPending ? "A entrar…" : "Entrar"}
-      </Button>
+    <form action={formAction}>
+      <Stack gap={5}>
+        <TextInput
+          id="email"
+          name="email"
+          type="email"
+          labelText="Email"
+          required
+          autoFocus
+        />
+        <PasswordInput id="password" name="password" labelText="Palavra-passe" required />
+        {state.error && (
+          <InlineNotification
+            kind="error"
+            title="Falha na autenticação"
+            subtitle={state.error}
+            lowContrast
+            hideCloseButton
+          />
+        )}
+        <Button type="submit" kind="primary" disabled={isPending} renderIcon={ArrowRight}>
+          {isPending ? "A entrar…" : "Entrar"}
+        </Button>
+      </Stack>
     </form>
   );
 }

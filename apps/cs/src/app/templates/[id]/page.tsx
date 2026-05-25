@@ -1,12 +1,11 @@
-import { archiveTemplateAction, publishTemplateAction } from "@/app/actions";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/shell/PageHeader";
 import { fetchMe, fetchTemplate, fetchTemplates, fetchTopics } from "@/lib/api-client";
-import { cn } from "@/lib/utils";
 import type { Field, LeafField } from "@bgreen/types";
+import { Document } from "@carbon/icons-react";
+import { Tag, Tile } from "@carbon/react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { TemplateActions } from "./TemplateActions";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +13,13 @@ const statusLabel: Record<string, string> = {
   draft: "Rascunho",
   published: "Publicado",
   archived: "Arquivado",
+};
+
+type StatusTagType = "cool-gray" | "green" | "warm-gray";
+const statusType: Record<string, StatusTagType> = {
+  draft: "cool-gray",
+  published: "green",
+  archived: "warm-gray",
 };
 
 const fieldKindLabel: Record<string, string> = {
@@ -48,16 +54,10 @@ export default async function TemplateDetailPage({ params }: PageProps) {
   ]);
   if (!tpl) {
     return (
-      <>
-        <main className="mx-auto max-w-3xl space-y-4 p-8">
-          <p>
-            <Link href="/templates" className="text-sm text-muted-foreground hover:text-foreground">
-              ← Voltar
-            </Link>
-          </p>
-          <p>Modelo não encontrado.</p>
-        </main>
-      </>
+      <PageHeader
+        title="Modelo não encontrado"
+        breadcrumbs={[{ label: "Modelos", href: "/templates" }, { label: id.slice(0, 8) }]}
+      />
     );
   }
 
@@ -74,141 +74,127 @@ export default async function TemplateDetailPage({ params }: PageProps) {
 
   return (
     <>
-      <main className="mx-auto max-w-3xl space-y-6 p-8">
-        <p>
-          <Link href="/templates" className="text-sm text-muted-foreground hover:text-foreground">
-            ← Voltar
-          </Link>
-        </p>
-
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">{tpl.name}</h1>
-            <p className="text-sm text-muted-foreground">
-              Estado: <strong>{statusLabel[tpl.status] ?? tpl.status}</strong>
-              <span className="mx-2">·</span>
-              Fluxo:{" "}
-              <strong>{workflowLabel[tpl.workflowDefinitionId] ?? tpl.workflowDefinitionId}</strong>
-              {tpl.isSubTemplate && (
-                <>
-                  <span className="mx-2">·</span>
-                  <Badge variant="info">Sub-template</Badge>
-                </>
-              )}
-              {topicName && (
-                <>
-                  <span className="mx-2">·</span>
-                  <Badge variant="purple">Tópico: {topicName}</Badge>
-                </>
-              )}
-            </p>
+      <PageHeader
+        title={tpl.name}
+        description={tpl.description ?? undefined}
+        icon={Document}
+        breadcrumbs={[{ label: "Modelos", href: "/templates" }, { label: tpl.name }]}
+        actions={
+          canWrite ? (
+            <TemplateActions templateId={tpl.id} status={tpl.status} />
+          ) : (
+            <Tag type={statusType[tpl.status] ?? "cool-gray"}>
+              {statusLabel[tpl.status] ?? tpl.status}
+            </Tag>
+          )
+        }
+      />
+      <div className="space-y-6 px-8 py-6">
+        <Tile>
+          <div className="flex flex-wrap items-baseline gap-3 text-sm">
+            <span className="text-neutral-600">Estado:</span>
+            <Tag type={statusType[tpl.status] ?? "cool-gray"}>
+              {statusLabel[tpl.status] ?? tpl.status}
+            </Tag>
+            <span className="text-neutral-600">Fluxo:</span>
+            <strong>{workflowLabel[tpl.workflowDefinitionId] ?? tpl.workflowDefinitionId}</strong>
+            {tpl.isSubTemplate && <Tag type="blue">Sub-template</Tag>}
+            {topicName && <Tag type="purple">Tópico: {topicName}</Tag>}
           </div>
-          {canWrite && (
-            <div className="flex gap-2">
-              {tpl.status === "draft" && (
-                <form action={publishTemplateAction}>
-                  <input type="hidden" name="id" value={tpl.id} />
-                  <Button type="submit" size="sm">
-                    Publicar
-                  </Button>
-                </form>
-              )}
-              {tpl.status !== "archived" && (
-                <form action={archiveTemplateAction}>
-                  <input type="hidden" name="id" value={tpl.id} />
-                  <Button type="submit" size="sm" variant="outline">
-                    Arquivar
-                  </Button>
-                </form>
-              )}
-            </div>
-          )}
-        </div>
-
-        {tpl.description && <p className="text-sm text-muted-foreground">{tpl.description}</p>}
+        </Tile>
 
         {composedNames.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Sub-templates incluídos</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ol className="list-decimal space-y-1 pl-5 text-sm">
-                {composedNames.map((c) => (
-                  <li key={c.id}>
-                    <Link
-                      href={`/templates/${c.id}`}
-                      className="text-primary underline-offset-4 hover:underline"
-                    >
-                      {c.name}
-                    </Link>
-                  </li>
-                ))}
-              </ol>
-            </CardContent>
-          </Card>
+          <Tile>
+            <h2 style={{ fontSize: "1rem", fontWeight: 600, lineHeight: 1.375, margin: 0 }}>
+              Sub-templates incluídos
+            </h2>
+            <ol className="mt-3 list-decimal space-y-1 pl-5 text-sm">
+              {composedNames.map((c) => (
+                <li key={c.id}>
+                  <Link
+                    href={`/templates/${c.id}`}
+                    className="text-[var(--cds-link-primary)] hover:underline"
+                  >
+                    {c.name}
+                  </Link>
+                </li>
+              ))}
+            </ol>
+          </Tile>
         )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Campos</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ol className="space-y-2">
-              {tpl.formSchema.rows.flatMap((row) =>
-                row.fields.map((field) => <FieldRow key={field.id} field={field} />),
-              )}
-            </ol>
-          </CardContent>
-        </Card>
-      </main>
+        <section>
+          <h2
+            className="mb-3"
+            style={{ fontSize: "1rem", fontWeight: 600, lineHeight: 1.375, margin: 0 }}
+          >
+            Campos
+          </h2>
+          <ol className="space-y-2">
+            {tpl.formSchema.rows.flatMap((row) =>
+              row.fields.map((field) => <FieldRow key={field.id} field={field} />),
+            )}
+          </ol>
+        </section>
+      </div>
     </>
   );
 }
 
 function FieldRow({ field }: { field: Field | LeafField }) {
   return (
-    <li className="space-y-1.5 rounded-md border bg-muted/30 p-3 text-sm">
+    <li className="space-y-1.5 rounded-md border border-neutral-200 bg-neutral-50 p-3 text-sm">
       <div className="flex flex-wrap items-center gap-2">
-        <code className="font-mono text-primary">{field.id}</code>
-        <span className="text-muted-foreground">•</span>
+        <code
+          className="text-[var(--cds-link-primary)]"
+          style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+        >
+          {field.id}
+        </code>
+        <span className="text-neutral-500">•</span>
         <strong>{field.label}</strong>
-        <span className="text-muted-foreground">
+        <span className="text-neutral-500">
           ({fieldKindLabel[field.kind] ?? field.kind}
           {field.required ? ", obrigatório" : ""})
         </span>
         {field.kind === "number" && field.unit && (
-          <span className="text-muted-foreground">{field.unit}</span>
+          <span className="text-neutral-500">{field.unit}</span>
         )}
         {field.showIf && field.showIf.length > 0 && (
-          <Badge variant="info">
+          <Tag type="blue" size="sm">
             mostrar se {field.showIf.map((p) => `${p.fieldId}="${p.equals}"`).join(" e ")}
-          </Badge>
+          </Tag>
         )}
         {field.sourceMapping && (
-          <Badge variant="purple">
+          <Tag type="purple" size="sm">
             pré-preenchido ← {field.sourceMapping.sourceFieldId} de outro modelo
-          </Badge>
+          </Tag>
         )}
       </div>
       {field.kind === "calculated" && (
-        <div className="text-xs text-muted-foreground">
-          <code className="rounded bg-muted px-1.5 py-0.5 font-mono">{field.expression}</code>
+        <div className="text-xs text-neutral-600">
+          <code
+            className="rounded bg-neutral-100 px-1.5 py-0.5"
+            style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+          >
+            {field.expression}
+          </code>
           {field.unit && <span className="ml-1.5">→ {field.unit}</span>}
         </div>
       )}
       {(field.kind === "select" || field.kind === "multi_select") && (
-        <ul className="space-y-0.5 text-xs text-muted-foreground">
+        <ul className="space-y-0.5 text-xs text-neutral-600">
           {field.options.map((opt) => (
             <li key={opt.value}>
-              <code className="font-mono">{opt.value}</code> — {opt.label}
+              <code style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{opt.value}</code> —{" "}
+              {opt.label}
             </li>
           ))}
         </ul>
       )}
       {field.kind === "repeating" && (
-        <div className={cn("space-y-2 border-l-2 border-muted-foreground/30 pl-3")}>
-          <p className="text-xs text-muted-foreground">
+        <div className="space-y-2 border-l-2 border-neutral-300 pl-3">
+          <p className="text-xs text-neutral-600">
             Cada linha = <strong>{field.rowLabel}</strong>
           </p>
           <ol className="space-y-1.5">

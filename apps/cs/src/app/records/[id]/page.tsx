@@ -1,11 +1,10 @@
-import { ReviewPanel } from "./_components/ReviewPanel";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge, type BadgeProps } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/shell/PageHeader";
 import { fetchCsRecord, fetchMe, fetchTemplate } from "@/lib/api-client";
 import type { Field, LeafField } from "@bgreen/types";
-import Link from "next/link";
+import { Document } from "@carbon/icons-react";
+import { InlineNotification, Tag, Tile } from "@carbon/react";
 import { redirect } from "next/navigation";
+import { ReviewPanel } from "./_components/ReviewPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -17,18 +16,19 @@ const statusLabel: Record<string, string> = {
   rejected: "Rejeitado",
 };
 
-const statusVariant: Record<string, NonNullable<BadgeProps["variant"]>> = {
-  draft: "outline",
-  submitted: "info",
-  approved: "success",
-  changes_requested: "warning",
-  rejected: "destructive",
+type TagType = "cool-gray" | "blue" | "green" | "magenta" | "red";
+const statusTagType: Record<string, TagType> = {
+  draft: "cool-gray",
+  submitted: "blue",
+  approved: "green",
+  changes_requested: "magenta",
+  rejected: "red",
 };
 
-const commentAlertVariant: Record<string, "success" | "warning" | "destructive"> = {
+const commentKind: Record<string, "success" | "warning" | "error"> = {
   approved: "success",
   changes_requested: "warning",
-  rejected: "destructive",
+  rejected: "error",
 };
 
 interface PageProps {
@@ -43,18 +43,13 @@ export default async function CsRecordPage({ params }: PageProps) {
   const record = await fetchCsRecord(id);
   if (!record) {
     return (
-      <>
-        <main className="mx-auto max-w-3xl space-y-4 p-8">
-          <p>
-            <Link href="/inbox" className="text-sm text-muted-foreground hover:text-foreground">
-              ← Voltar
-            </Link>
-          </p>
-          <p>Registo não encontrado.</p>
-        </main>
-      </>
+      <PageHeader
+        title="Registo não encontrado"
+        breadcrumbs={[{ label: "Revisão", href: "/inbox" }, { label: id.slice(0, 8) }]}
+      />
     );
   }
+
   const tpl = await fetchTemplate(record.templateId);
   // V5.5: hydrate composed sub-templates so the reviewer sees them
   // grouped by sub-template name, mirroring the org-side form.
@@ -70,47 +65,54 @@ export default async function CsRecordPage({ params }: PageProps) {
   const canReview =
     record.status === "submitted" &&
     (me.centralServicesRole === "admin" || me.centralServicesRole === "maintainer");
-  const commentVariant = commentAlertVariant[record.status];
+  const reviewKind = commentKind[record.status];
 
   return (
     <>
-      <main className="mx-auto max-w-3xl space-y-6 p-8">
-        <p>
-          <Link href="/inbox" className="text-sm text-muted-foreground hover:text-foreground">
-            ← Voltar
-          </Link>
-        </p>
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight">{tpl?.name ?? "Registo"}</h1>
-          <Badge variant={statusVariant[record.status] ?? "outline"}>
+      <PageHeader
+        title={tpl?.name ?? "Registo"}
+        description={`Organização: ${record.organizationId}`}
+        icon={Document}
+        breadcrumbs={[
+          { label: "Revisão", href: "/inbox" },
+          { label: tpl?.name ?? record.id.slice(0, 8) },
+        ]}
+        actions={
+          <Tag type={statusTagType[record.status] ?? "cool-gray"}>
             {statusLabel[record.status] ?? record.status}
-          </Badge>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Organização: <span className="font-mono">{record.organizationId}</span>
-        </p>
-
-        {record.reviewComment && commentVariant && (
-          <Alert variant={commentVariant}>
-            <AlertTitle>Comentário do revisor</AlertTitle>
-            <AlertDescription className="whitespace-pre-wrap">
-              {record.reviewComment}
-            </AlertDescription>
-          </Alert>
+          </Tag>
+        }
+      />
+      <div className="space-y-6 px-8 py-6">
+        {record.reviewComment && reviewKind && (
+          <InlineNotification
+            kind={reviewKind}
+            title="Comentário do revisor"
+            subtitle={record.reviewComment}
+            lowContrast
+            hideCloseButton
+          />
         )}
 
         {tpl && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Valores submetidos</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
+          <Tile>
+            <h2 style={{ fontSize: "1rem", fontWeight: 600, lineHeight: 1.375, margin: 0 }}>
+              Valores submetidos
+            </h2>
+            <div className="mt-4 space-y-4">
               {tpl.formSchema.rows.map((row) => (
                 <section
                   key={row.id}
-                  className="space-y-2 border-t pt-3 first:border-t-0 first:pt-0"
+                  className="space-y-2 border-t border-neutral-200 pt-4 first:border-t-0 first:pt-0"
                 >
-                  {row.label && <h3 className="text-sm font-medium">{row.label}</h3>}
+                  {row.label && (
+                    <h3
+                      className="text-sm font-medium"
+                      style={{ fontSize: "0.875rem", fontWeight: 600 }}
+                    >
+                      {row.label}
+                    </h3>
+                  )}
                   <dl className="space-y-1.5">
                     {row.fields.map((f) => (
                       <ReadOnlyField key={f.id} field={f} value={record.values[f.id]} />
@@ -121,12 +123,14 @@ export default async function CsRecordPage({ params }: PageProps) {
               {subTemplates.map((sub) => (
                 <section
                   key={sub.id}
-                  className="space-y-2 rounded-md border border-primary/30 bg-primary/5 p-3"
+                  className="space-y-2 rounded-md border-l-2 border-l-[var(--cds-interactive)] bg-neutral-50 p-3"
                 >
-                  <h3 className="text-sm font-semibold">{sub.name}</h3>
+                  <h3 style={{ fontSize: "0.875rem", fontWeight: 600 }}>{sub.name}</h3>
                   {sub.formSchema.rows.map((row) => (
                     <div key={row.id} className="space-y-1">
-                      {row.label && <h4 className="text-xs font-medium">{row.label}</h4>}
+                      {row.label && (
+                        <h4 className="text-xs font-medium text-neutral-600">{row.label}</h4>
+                      )}
                       <dl className="space-y-1.5">
                         {row.fields.map((f) => (
                           <ReadOnlyField key={f.id} field={f} value={subValues[sub.id]?.[f.id]} />
@@ -136,12 +140,12 @@ export default async function CsRecordPage({ params }: PageProps) {
                   ))}
                 </section>
               ))}
-            </CardContent>
-          </Card>
+            </div>
+          </Tile>
         )}
 
         {canReview && <ReviewPanel recordId={record.id} />}
-      </main>
+      </div>
     </>
   );
 }
@@ -150,7 +154,7 @@ function ReadOnlyField({ field, value }: { field: Field | LeafField; value: unkn
   return (
     <div className="flex flex-wrap items-baseline gap-2 text-sm">
       <dt className="font-medium">{field.label}:</dt>
-      <dd className="text-muted-foreground">{renderValue(field, value)}</dd>
+      <dd className="text-neutral-600">{renderValue(field, value)}</dd>
     </div>
   );
 }

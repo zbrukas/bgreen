@@ -1,10 +1,14 @@
 "use client";
 
 import { setupPasswordAction } from "@/app/actions";
-import { Alert } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Checkmark } from "@carbon/icons-react";
+import {
+  Button,
+  InlineNotification,
+  PasswordInput,
+  Stack,
+  TextInput,
+} from "@carbon/react";
 import { useActionState } from "react";
 
 const initialState = { error: null };
@@ -13,23 +17,44 @@ export function SetupPasswordForm({ defaultEmail }: { defaultEmail: string }) {
   const [state, formAction, isPending] = useActionState(setupPasswordAction, initialState);
 
   return (
-    <form action={formAction} className="space-y-4">
-      <div className="space-y-1.5">
-        <Label htmlFor="email">Email</Label>
-        <Input id="email" name="email" type="email" required defaultValue={defaultEmail} />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="newPassword">Palavra-passe nova</Label>
-        <Input id="newPassword" name="newPassword" type="password" minLength={12} required />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="confirm">Confirmar</Label>
-        <Input id="confirm" name="confirm" type="password" minLength={12} required />
-      </div>
-      {state.error && <Alert variant="destructive">{state.error}</Alert>}
-      <Button type="submit" disabled={isPending} className="w-full">
-        {isPending ? "A definir…" : "Definir palavra-passe"}
-      </Button>
+    <form action={formAction}>
+      <Stack gap={5}>
+        <TextInput
+          id="email"
+          name="email"
+          type="email"
+          labelText="Email"
+          required
+          defaultValue={defaultEmail}
+        />
+        <PasswordInput
+          id="newPassword"
+          name="newPassword"
+          labelText="Palavra-passe nova"
+          helperText="Mínimo 12 caracteres."
+          minLength={12}
+          required
+        />
+        <PasswordInput
+          id="confirm"
+          name="confirm"
+          labelText="Confirmar"
+          minLength={12}
+          required
+        />
+        {state.error && (
+          <InlineNotification
+            kind="error"
+            title="Falha ao definir"
+            subtitle={state.error}
+            lowContrast
+            hideCloseButton
+          />
+        )}
+        <Button type="submit" kind="primary" disabled={isPending} renderIcon={Checkmark}>
+          {isPending ? "A definir…" : "Definir palavra-passe"}
+        </Button>
+      </Stack>
     </form>
   );
 }
