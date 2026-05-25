@@ -11,6 +11,7 @@ import { withAuth } from "@workos-inc/authkit-nextjs";
 import { redirect } from "next/navigation";
 import { EmptyState } from "./_components/EmptyState";
 import { PeerRankCard } from "./_components/PeerRankCard";
+import { RecommendationsCta } from "./_components/RecommendationsCta";
 import { ScoreCard } from "./_components/ScoreCard";
 
 export const dynamic = "force-dynamic";
@@ -42,6 +43,10 @@ export default async function DashboardPage() {
   }
 
   const hasContent = scoresResult.length > 0 || benchmark !== null;
+  // INCOMPLETE-mode preliminary CTA shows when the org has no profile +
+  // no score data yet. Anything else gets the standard CTA.
+  const recommendationsMode: "preliminary" | "full" =
+    latestProfile === null && scoresResult.length === 0 ? "preliminary" : "full";
 
   return (
     <>
@@ -73,6 +78,8 @@ export default async function DashboardPage() {
         ) : null}
 
         {benchmark !== null ? <PeerRankCard comparison={benchmark} /> : null}
+
+        <RecommendationsCta mode={recommendationsMode} />
       </main>
     </>
   );

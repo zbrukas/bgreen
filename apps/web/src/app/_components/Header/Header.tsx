@@ -46,6 +46,12 @@ export function Header({
         >
           Perfil económico
         </Link>
+        <Link
+          href="/recommendations"
+          className="text-sm text-muted-foreground hover:text-foreground"
+        >
+          Recomendações
+        </Link>
         <Link href="/templates" className="text-sm text-muted-foreground hover:text-foreground">
           Modelos
         </Link>
