@@ -17,7 +17,7 @@ Twelve vertical slices. Each independently deployable. Each loadable as a single
 | 9 | [09-recommendations.md](09-recommendations.md) | AI recommendations with feedback loop | Shipped |
 | 10 | [10-framework-coverage.md](10-framework-coverage.md) | ESRS / GHG / GRI gap analysis | Shipped |
 | 11 | [11-pdf-reports.md](11-pdf-reports.md) | apps/pdf, Gotenberg, AI commentary, S3 archive | Shipped |
-| 12 | [12-customer-success-telemetry.md](12-customer-success-telemetry.md) | Internal CS KPIs: required-template coverage, health-score view, workflow stagnation, daily snapshots | Not started |
+| 12 | [12-customer-success-telemetry.md](12-customer-success-telemetry.md) | Internal CS KPIs: required-template coverage, health-score view, workflow stagnation, daily snapshots | Shipped |
 
 ## Conventions per plan
 
