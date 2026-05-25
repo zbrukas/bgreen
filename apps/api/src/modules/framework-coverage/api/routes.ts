@@ -2,6 +2,7 @@
 //
 //   GET  /framework-datapoints?framework=esrs   → catalog list
 //   GET  /framework-coverage/:framework         → org's coverage matrix
+//   POST /framework-coverage/:framework/check   → matrix + AI explanations
 //   GET  /template-datapoint-mappings           → mapping list (global)
 //   POST /template-datapoint-mappings           → add a mapping (CS write)
 //   DELETE /template-datapoint-mappings/:id     → remove a mapping (CS write)
@@ -71,23 +72,46 @@ export const frameworkDatapointsRoutes = new Hono<AppEnv>().get(
   },
 );
 
-export const frameworkCoverageRoutes = new Hono<AppEnv>().get(
-  "/:framework",
-  zValidator("param", coverageParamSchema),
-  zValidator("query", coverageQuerySchema),
-  async (c) => {
-    const gate = await requireOrgMembership(c);
-    if (gate instanceof Response) return gate;
-    const { framework } = c.req.valid("param");
-    const { includeNonApplicable } = c.req.valid("query");
-    const matrix = await coverageService.getMatrix({
-      organizationId: gate.orgId,
-      framework: framework as Framework,
-      includeNonApplicable,
-    });
-    return c.json(matrix);
-  },
-);
+export const frameworkCoverageRoutes = new Hono<AppEnv>()
+  .get(
+    "/:framework",
+    zValidator("param", coverageParamSchema),
+    zValidator("query", coverageQuerySchema),
+    async (c) => {
+      const gate = await requireOrgMembership(c);
+      if (gate instanceof Response) return gate;
+      const { framework } = c.req.valid("param");
+      const { includeNonApplicable } = c.req.valid("query");
+      const matrix = await coverageService.getMatrix({
+        organizationId: gate.orgId,
+        framework: framework as Framework,
+        includeNonApplicable,
+      });
+      return c.json(matrix);
+    },
+  )
+  // V10.3 — synchronous AI explanation pass. Returns matrix +
+  // explanations + aiError (null on success, pt-PT string on failure).
+  // Always 200: explanations are an additive surface, never gates the
+  // deterministic matrix.
+  .post(
+    "/:framework/check",
+    zValidator("param", coverageParamSchema),
+    zValidator("query", coverageQuerySchema),
+    async (c) => {
+      const gate = await requireOrgMembership(c);
+      if (gate instanceof Response) return gate;
+      const { framework } = c.req.valid("param");
+      const { includeNonApplicable } = c.req.valid("query");
+      const result = await coverageService.checkCoverage({
+        organizationId: gate.orgId,
+        actorUserId: c.var.user.id,
+        framework: framework as Framework,
+        includeNonApplicable,
+      });
+      return c.json(result);
+    },
+  );
 
 export const templateDatapointMappingsRoutes = new Hono<AppEnv>()
   // Global list — any authed user can read. The V10.4 admin screen

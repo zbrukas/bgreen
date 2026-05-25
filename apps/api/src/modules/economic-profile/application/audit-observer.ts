@@ -37,6 +37,7 @@ const KNOWN_ENTITY_KINDS: ReadonlySet<AuditEntityKind> = new Set<AuditEntityKind
   "workflow_instance",
   "ies_extraction",
   "generated_recommendation",
+  "framework_coverage_check",
 ]);
 
 function resolveEntityKind(metadata: unknown): AuditEntityKind {

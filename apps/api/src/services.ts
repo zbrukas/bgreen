@@ -176,6 +176,8 @@ export const coverageService = new CoverageService(
   repositories.templateDatapointMappings,
   repositories.records,
   repositories.economicProfiles,
+  repositories.organizations,
+  anthropicAiClient,
   auditService,
 );
 

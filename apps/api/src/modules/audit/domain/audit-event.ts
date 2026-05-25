@@ -9,7 +9,8 @@ export type AuditEntityKind =
   | "organization_invite"
   | "workflow_instance"
   | "ies_extraction"
-  | "generated_recommendation";
+  | "generated_recommendation"
+  | "framework_coverage_check";
 
 export interface AuditEvent<Payload = unknown> {
   id: string;

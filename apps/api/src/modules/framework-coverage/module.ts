@@ -5,10 +5,19 @@ export {
 } from "./application/coverage-calculator.js";
 export {
   CoverageService,
+  type CoverageCheckResult,
   type CoverageQuery,
   type MappingError,
   type MappingResult,
+  type RowExplanation,
 } from "./application/coverage-service.js";
+export {
+  type CheckFrameworkCoverageInput,
+  type CheckFrameworkCoverageOutput,
+  checkFrameworkCoverageInputSchema,
+  checkFrameworkCoverageOutputSchema,
+  checkFrameworkCoverageTool,
+} from "./application/tools/check-framework-coverage-tool.js";
 export type {
   CoverageMatrix,
   CoverageRow,
