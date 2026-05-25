@@ -29,6 +29,11 @@ import {
   InviteService,
   OrganizationService,
 } from "./modules/organizations/module.js";
+import {
+  DrizzleGeneratedRecommendationRepository,
+  DrizzleRecommendationFeedbackRepository,
+  RecommendationsService,
+} from "./modules/recommendations/module.js";
 import { DrizzleRecordRepository, RecordService } from "./modules/records/module.js";
 import { DrizzleTopicRepository, TopicService } from "./modules/topics/module.js";
 import { DrizzleWorkflowRepository, WorkflowService } from "./modules/workflows/module.js";
@@ -49,6 +54,8 @@ export const repositories = {
   compositions: new DrizzleCompositionRepository(),
   iesExtractionLogs: new DrizzleIesExtractionLogRepository(),
   economicProfiles: new DrizzleEconomicProfileRepository(),
+  generatedRecommendations: new DrizzleGeneratedRecommendationRepository(),
+  recommendationFeedback: new DrizzleRecommendationFeedbackRepository(),
 };
 
 export const userService = new UserService(repositories.users, repositories.centralServicesDomains);
@@ -154,5 +161,26 @@ export const iesUploadService = new IesUploadService(
     send: async (event) => {
       await inngest.send(event);
     },
+  },
+);
+
+export const recommendationsService = new RecommendationsService(
+  repositories.generatedRecommendations,
+  repositories.recommendationFeedback,
+  anthropicAiClient,
+  auditService,
+  // Inngest sender for the generation pipeline. Same shape as the IES
+  // upload sender; one wrapper per event name keeps the type narrow.
+  {
+    send: async (event) => {
+      await inngest.send(event);
+    },
+  },
+  {
+    orgs: repositories.organizations,
+    profiles: repositories.economicProfiles,
+    sector: sectorBenchmarkLookup,
+    records: repositories.records,
+    templates: repositories.recordTemplates,
   },
 );

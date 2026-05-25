@@ -9,6 +9,10 @@ import { csAuthRoutes } from "./modules/cs-auth/module.js";
 import { csRoutes } from "./modules/cs/api/routes.js";
 import { economicProfileRoutes } from "./modules/economic-profile/api/routes.js";
 import { createIesExtractionFunction } from "./modules/economic-profile/module.js";
+import {
+  createRecommendationsGenerationFunction,
+  recommendationsRoutes,
+} from "./modules/recommendations/module.js";
 import { sectorBenchmarkRoutes } from "./modules/sector-benchmark/module.js";
 import { recordTemplatesRoutes } from "./modules/form-templates/module.js";
 import { identityRoutes } from "./modules/identity/module.js";
@@ -17,12 +21,15 @@ import { inviteRoutes, organizationsRoutes } from "./modules/organizations/modul
 import { recordsRoutes } from "./modules/records/module.js";
 import { topicsRoutes } from "./modules/topics/module.js";
 import { workflowsRoutes } from "./modules/workflows/module.js";
-import { iesExtractionService } from "./services.js";
+import { iesExtractionService, recommendationsService } from "./services.js";
 
 // Register Inngest functions. Each module owns its function factory; we
 // import + invoke here so dependencies (services) are wired before the
 // handler is mounted.
-const inngestFunctions = [createIesExtractionFunction(iesExtractionService)];
+const inngestFunctions = [
+  createIesExtractionFunction(iesExtractionService),
+  createRecommendationsGenerationFunction(recommendationsService),
+];
 
 // Public surface — no auth required. /health, /cs/auth/* (login flow),
 // and the Inngest function endpoint (Inngest signs its own webhook calls;
@@ -51,6 +58,7 @@ const authedRoutes = new Hono<AppEnv>()
   .route("/audit", auditRoutes)
   .route("/economic-profile", economicProfileRoutes)
   .route("/sector-benchmark", sectorBenchmarkRoutes)
+  .route("/recommendations", recommendationsRoutes)
   .route("/workflows", workflowsRoutes)
   .route("/topics", topicsRoutes)
   .route("/cs", csRoutes);

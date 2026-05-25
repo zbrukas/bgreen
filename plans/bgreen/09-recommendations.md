@@ -1,8 +1,14 @@
 # V9 — Recommendations
 
-> **Status:** Not started
+> **Status:** In progress — V9.1 + V9.2 shipped.
 > **Depends on:** [V7 — Economic Profile + Sector Benchmarks](07-economic-profile-benchmarks.md), [V8 — Scoring + Dashboards](08-scoring-dashboards.md)
 > **Parent PRD:** [../bgreen-greenfield-rewrite.md](../bgreen-greenfield-rewrite.md)
+
+## Sub-slice progress
+
+- **V9.1 (shipped):** AI tool + classifier + schemas + module shell. `generateRecommendations` tool registered (zod-validated 4-15 items per call; pt-PT system prompt forbids regulatory citations per v1.5 deferral; branches tone by completenessMode). `classifyCompleteness` (pure) FULL/PARTIAL/INCOMPLETE selector — 6 unit tests covering each signal combination. Migration 0018 adds `generated_recommendations` (status enum, completeness_mode enum, recommendations jsonb, token + Inngest run snapshot) + `recommendation_feedback` (kind enum, UNIQUE on (gen, index, user) so switching feedback updates rather than appends). Module shell at `apps/api/src/modules/recommendations/` with CLAUDE.md scoping ownership.
+- **V9.2 (shipped):** ProfileGatherer + RecommendationsService + Inngest function + routes + audit hook. `ProfileGatherer` composes EconomicProfile + SectorBenchmark + Records into the AI tool input (latest profile year, peer medians, per-template record counts, latest scores). `RecommendationsService` owns the start→Inngest→runGeneration roundtrip + per-item feedback upsert + history listing. Inngest function `recommendations-generation` (concurrency 5, retries 2) calls `runGeneration` off the `recommendations.generation.started` event. Routes: POST `/recommendations` (start), GET `/recommendations` (history; admin sees all, member sees own), GET `/recommendations/:id` (poll), POST `/recommendations/:id/feedback` (upsert per-item kind). AI observer extended via `context.metadata.entityKind` so `ai.tool_call.generate_recommendations` writes against `generated_recommendation`; the service also writes its own `recommendations.generate` and `recommendations.feedback` audit rows. 16 service tests + 6 completeness tests; full monorepo typecheck green; 134 tests in apps/api.
+- **V9.3 (next):** UI — Gerar button, polling, result cards with feedback chips, history, preliminary mode.
 > **User stories covered:** PRD §54–63 (recommendations + feedback)
 
 ## Goal
