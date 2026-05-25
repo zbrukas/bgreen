@@ -25,6 +25,10 @@ class InMemoryProfileRepo implements EconomicProfileRepository {
       source: input.source,
       confirmedAt: now,
       iesExtractionLogId: input.iesExtractionLogId,
+      dimensao: existing?.dimensao ?? null,
+      dimensaoSource: existing?.dimensaoSource ?? null,
+      dimensaoConfirmedAt: existing?.dimensaoConfirmedAt ?? null,
+      dimensaoRationale: existing?.dimensaoRationale ?? null,
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
     };
@@ -38,6 +42,20 @@ class InMemoryProfileRepo implements EconomicProfileRepository {
     return Promise.resolve(
       Array.from(this.profiles.values()).filter((p) => p.organizationId === orgId),
     );
+  }
+  setDimensao(input: Parameters<EconomicProfileRepository["setDimensao"]>[0]) {
+    const current = this.profiles.get(this.key(input.organizationId, input.year));
+    if (!current) return Promise.resolve(null);
+    const updated: OrganizationEconomicProfile = {
+      ...current,
+      dimensao: input.dimensao,
+      dimensaoSource: input.source,
+      dimensaoConfirmedAt: new Date().toISOString(),
+      dimensaoRationale: input.rationale,
+      updatedAt: new Date().toISOString(),
+    };
+    this.profiles.set(this.key(input.organizationId, input.year), updated);
+    return Promise.resolve(updated);
   }
 }
 
@@ -133,5 +151,98 @@ describe("EconomicProfileService.manualEntry", () => {
     const list = await service.list("org-1");
     expect(list).toHaveLength(1);
     expect(list[0]?.organizationId).toBe("org-1");
+  });
+});
+
+describe("EconomicProfileService dimensao flow", () => {
+  it("proposeDimensao runs classifier on the persisted profile", async () => {
+    const repo = new InMemoryProfileRepo();
+    const service = new EconomicProfileService(repo);
+    await service.manualEntry({
+      organizationId: "org-1",
+      year: 2024,
+      employees: 32,
+      turnover: 4_800_000,
+      ebitda: null,
+      balanceSheetTotal: 3_200_000,
+      cae: null,
+    });
+
+    const result = await service.proposeDimensao("org-1", 2024);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.proposal.dimensao).toBe("pequena");
+    expect(result.alreadyConfirmed).toBe(false);
+  });
+
+  it("proposeDimensao 404s when no profile exists for the year", async () => {
+    const repo = new InMemoryProfileRepo();
+    const service = new EconomicProfileService(repo);
+    const result = await service.proposeDimensao("org-1", 2024);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error).toBe("profile_not_found");
+  });
+
+  it("confirmDimensao persists value + source + rationale", async () => {
+    const repo = new InMemoryProfileRepo();
+    const service = new EconomicProfileService(repo);
+    await service.manualEntry({
+      organizationId: "org-1",
+      year: 2024,
+      employees: 32,
+      turnover: 4_800_000,
+      ebitda: null,
+      balanceSheetTotal: 3_200_000,
+      cae: null,
+    });
+
+    const result = await service.confirmDimensao({
+      organizationId: "org-1",
+      year: 2024,
+      dimensao: "pequena",
+      source: "ai_classified",
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.profile.dimensao).toBe("pequena");
+    expect(result.profile.dimensaoSource).toBe("ai_classified");
+    expect(result.profile.dimensaoConfirmedAt).not.toBeNull();
+    // Rationale is non-empty because the classifier fired several rules.
+    expect((result.profile.dimensaoRationale ?? []).length).toBeGreaterThan(0);
+
+    // Second propose call now reflects alreadyConfirmed=true.
+    const second = await service.proposeDimensao("org-1", 2024);
+    expect(second.ok).toBe(true);
+    if (!second.ok) return;
+    expect(second.alreadyConfirmed).toBe(true);
+  });
+
+  it("user_override stores a dimensao different from the classifier's proposal", async () => {
+    const repo = new InMemoryProfileRepo();
+    const service = new EconomicProfileService(repo);
+    await service.manualEntry({
+      organizationId: "org-1",
+      year: 2024,
+      employees: 32,
+      turnover: 4_800_000,
+      ebitda: null,
+      balanceSheetTotal: 3_200_000,
+      cae: null,
+    });
+
+    // Classifier would say pequena; user overrides to media (e.g. they
+    // know the group rollup pushes them up but didn't enter rolled-up
+    // values).
+    const result = await service.confirmDimensao({
+      organizationId: "org-1",
+      year: 2024,
+      dimensao: "media",
+      source: "user_override",
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.profile.dimensao).toBe("media");
+    expect(result.profile.dimensaoSource).toBe("user_override");
   });
 });

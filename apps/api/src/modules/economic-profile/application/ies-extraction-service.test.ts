@@ -46,6 +46,10 @@ class InMemoryProfileRepo implements EconomicProfileRepository {
       source: input.source,
       confirmedAt: now,
       iesExtractionLogId: input.iesExtractionLogId,
+      dimensao: existing?.dimensao ?? null,
+      dimensaoSource: existing?.dimensaoSource ?? null,
+      dimensaoConfirmedAt: existing?.dimensaoConfirmedAt ?? null,
+      dimensaoRationale: existing?.dimensaoRationale ?? null,
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
     };
@@ -61,6 +65,21 @@ class InMemoryProfileRepo implements EconomicProfileRepository {
     return Promise.resolve(
       Array.from(this.profiles.values()).filter((p) => p.organizationId === orgId),
     );
+  }
+
+  setDimensao(input: Parameters<EconomicProfileRepository["setDimensao"]>[0]) {
+    const current = this.profiles.get(this.key(input.organizationId, input.year));
+    if (!current) return Promise.resolve(null);
+    const updated: OrganizationEconomicProfile = {
+      ...current,
+      dimensao: input.dimensao,
+      dimensaoSource: input.source,
+      dimensaoConfirmedAt: new Date().toISOString(),
+      dimensaoRationale: input.rationale,
+      updatedAt: new Date().toISOString(),
+    };
+    this.profiles.set(this.key(input.organizationId, input.year), updated);
+    return Promise.resolve(updated);
   }
 }
 

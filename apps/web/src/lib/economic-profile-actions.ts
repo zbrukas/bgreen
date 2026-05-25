@@ -10,6 +10,8 @@
 import { withAuth } from "@workos-inc/authkit-nextjs";
 import { getActiveOrgId } from "./active-org";
 import {
+  type Dimensao,
+  type DimensaoProposalResponse,
   type ExtractionEdits,
   IesError,
   type IesExtractionLog,
@@ -119,6 +121,40 @@ export async function manualEntry(
     headers: { ...headers, "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
+  if (!res.ok) {
+    throw new IesError(await readErrorCode(res), res.status);
+  }
+  return (await res.json()) as OrganizationEconomicProfile;
+}
+
+// ── V7.1 dimensao proposal (deterministic classifier output) ───────────
+export async function getDimensaoProposal(year: number): Promise<DimensaoProposalResponse> {
+  const headers = await authedHeaders();
+  const res = await fetch(
+    `${API_URL}/economic-profile/${encodeURIComponent(String(year))}/dimensao/proposed`,
+    { method: "GET", headers, cache: "no-store" },
+  );
+  if (!res.ok) {
+    throw new IesError(await readErrorCode(res), res.status);
+  }
+  return (await res.json()) as DimensaoProposalResponse;
+}
+
+// ── V7.1 dimensao confirm ──────────────────────────────────────────────
+export async function confirmDimensao(input: {
+  year: number;
+  dimensao: Dimensao;
+  source: "ai_classified" | "user_override";
+}): Promise<OrganizationEconomicProfile> {
+  const headers = await authedHeaders();
+  const res = await fetch(
+    `${API_URL}/economic-profile/${encodeURIComponent(String(input.year))}/dimensao`,
+    {
+      method: "POST",
+      headers: { ...headers, "Content-Type": "application/json" },
+      body: JSON.stringify({ dimensao: input.dimensao, source: input.source }),
+    },
+  );
   if (!res.ok) {
     throw new IesError(await readErrorCode(res), res.status);
   }

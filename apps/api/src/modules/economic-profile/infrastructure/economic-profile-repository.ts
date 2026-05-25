@@ -1,5 +1,11 @@
 import { db, orgScope, schema } from "@bgreen/db";
 import { and, desc, eq } from "drizzle-orm";
+import type {
+  Dimensao,
+  DimensaoRuleEntry,
+} from "../application/dimensao-classifier.js";
+
+export type DimensaoSource = "ai_classified" | "user_override" | "manual_entry";
 
 // Domain shape of one organization_economic_profiles row, decoded from
 // Drizzle's numeric-as-string into plain numbers for the JSON surface.
@@ -17,6 +23,13 @@ export interface OrganizationEconomicProfile {
   source: "ies_extracted" | "manual" | "edited_after_extraction";
   confirmedAt: string;
   iesExtractionLogId: string | null;
+  // V7.1 size classification. All null until the user confirms a
+  // dimensao for this year. Once set, V6 extraction confirms do not
+  // overwrite (the upsert path leaves these columns alone).
+  dimensao: Dimensao | null;
+  dimensaoSource: DimensaoSource | null;
+  dimensaoConfirmedAt: string | null;
+  dimensaoRationale: DimensaoRuleEntry[] | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -41,6 +54,18 @@ export interface EconomicProfileRepository {
   ): Promise<OrganizationEconomicProfile | null>;
 
   listByOrg(organizationId: string): Promise<OrganizationEconomicProfile[]>;
+
+  // V7.1: persist the user's dimensao decision for one year. Idempotent
+  // — subsequent confirmations overwrite the prior choice (the user can
+  // revisit and change). The upsert path leaves these columns alone so
+  // re-extraction never silently overwrites a confirmed dimensao.
+  setDimensao(input: {
+    organizationId: string;
+    year: number;
+    dimensao: Dimensao;
+    source: DimensaoSource;
+    rationale: DimensaoRuleEntry[];
+  }): Promise<OrganizationEconomicProfile | null>;
 }
 
 type Row = typeof schema.organizationEconomicProfiles.$inferSelect;
@@ -69,6 +94,12 @@ function rowToProfile(row: Row): OrganizationEconomicProfile {
     source: row.source,
     confirmedAt: row.confirmedAt.toISOString(),
     iesExtractionLogId: row.iesExtractionLogId,
+    dimensao: row.dimensao,
+    dimensaoSource: row.dimensaoSource,
+    dimensaoConfirmedAt: row.dimensaoConfirmedAt
+      ? row.dimensaoConfirmedAt.toISOString()
+      : null,
+    dimensaoRationale: row.dimensaoRationale as DimensaoRuleEntry[] | null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -159,5 +190,31 @@ export class DrizzleEconomicProfileRepository implements EconomicProfileReposito
       // Newest year first — dashboards want the most recent on top.
       .orderBy(desc(schema.organizationEconomicProfiles.year));
     return rows.map(rowToProfile);
+  }
+
+  async setDimensao(input: {
+    organizationId: string;
+    year: number;
+    dimensao: Dimensao;
+    source: DimensaoSource;
+    rationale: DimensaoRuleEntry[];
+  }): Promise<OrganizationEconomicProfile | null> {
+    const now = new Date();
+    await db
+      .update(schema.organizationEconomicProfiles)
+      .set({
+        dimensao: input.dimensao,
+        dimensaoSource: input.source,
+        dimensaoConfirmedAt: now,
+        dimensaoRationale: input.rationale,
+        updatedAt: now,
+      })
+      .where(
+        and(
+          orgScope(schema.organizationEconomicProfiles, input.organizationId),
+          eq(schema.organizationEconomicProfiles.year, input.year),
+        ),
+      );
+    return this.findByOrgYear(input.organizationId, input.year);
   }
 }

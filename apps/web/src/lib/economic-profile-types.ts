@@ -62,6 +62,15 @@ export interface IesExtractionLog {
   createdAt: string;
 }
 
+export type Dimensao = "micro" | "pequena" | "media" | "grande";
+
+export type DimensaoSource = "ai_classified" | "user_override" | "manual_entry";
+
+export interface DimensaoRuleEntry {
+  rule: string;
+  message: string;
+}
+
 export interface OrganizationEconomicProfile {
   id: string;
   organizationId: string;
@@ -74,9 +83,30 @@ export interface OrganizationEconomicProfile {
   source: "ies_extracted" | "manual" | "edited_after_extraction";
   confirmedAt: string;
   iesExtractionLogId: string | null;
+  dimensao: Dimensao | null;
+  dimensaoSource: DimensaoSource | null;
+  dimensaoConfirmedAt: string | null;
+  dimensaoRationale: DimensaoRuleEntry[] | null;
   createdAt: string;
   updatedAt: string;
 }
+
+export interface DimensaoProposalResponse {
+  year: number;
+  proposal: {
+    dimensao: Dimensao;
+    rationale: DimensaoRuleEntry[];
+    confidence: { level: "high" | "medium" | "low" };
+  };
+  alreadyConfirmed: boolean;
+}
+
+export const DIMENSAO_LABEL: Record<Dimensao, string> = {
+  micro: "MICRO",
+  pequena: "PEQUENA",
+  media: "MÉDIA",
+  grande: "GRANDE",
+};
 
 export interface ExtractionEdits {
   year?: number;

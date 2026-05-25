@@ -16,6 +16,7 @@ import type { OrganizationEconomicProfile } from "@/lib/economic-profile-types";
 import { withAuth } from "@workos-inc/authkit-nextjs";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { DimensaoCell } from "./DimensaoCell";
 
 export const dynamic = "force-dynamic";
 
@@ -126,6 +127,7 @@ function ProfileTable({ profiles }: { profiles: OrganizationEconomicProfile[] })
               <TableHead>EBITDA</TableHead>
               <TableHead>Ativo total</TableHead>
               <TableHead>CAE</TableHead>
+              <TableHead>Dimensão</TableHead>
               <TableHead>Fonte</TableHead>
             </TableRow>
           </TableHeader>
@@ -138,6 +140,9 @@ function ProfileTable({ profiles }: { profiles: OrganizationEconomicProfile[] })
                 <TableCell>{formatMoney(p.ebitda)}</TableCell>
                 <TableCell>{formatMoney(p.balanceSheetTotal)}</TableCell>
                 <TableCell>{p.cae ?? "—"}</TableCell>
+                <TableCell>
+                  <DimensaoCell profile={p} />
+                </TableCell>
                 <TableCell>
                   <span className="text-xs text-muted-foreground">{SOURCE_LABEL[p.source]}</span>
                 </TableCell>

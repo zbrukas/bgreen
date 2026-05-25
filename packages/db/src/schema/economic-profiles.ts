@@ -12,6 +12,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { organizations } from "./organizations";
+import { organizationSizeEnum } from "./organization-size";
 import { users } from "./users";
 
 // One row per (organization, year). Two channels write here:
@@ -30,6 +31,17 @@ export const economicProfileSourceEnum = pgEnum("economic_profile_source", [
   "ies_extracted",
   "manual",
   "edited_after_extraction",
+]);
+
+// V7.1: how the dimensao classification was decided. 'ai_classified'
+// means DimensaoClassifier (with optional AI narrative) ran and the
+// user accepted the proposal as-is; 'user_override' means the user
+// changed it; 'manual_entry' covers a profile set during manual entry
+// (the V3 self-assessment flow eventually feeding through this column).
+export const dimensaoSourceEnum = pgEnum("dimensao_source", [
+  "ai_classified",
+  "user_override",
+  "manual_entry",
 ]);
 
 export const organizationEconomicProfiles = pgTable(
@@ -58,6 +70,17 @@ export const organizationEconomicProfiles = pgTable(
     // manual entries. Set null on extraction-log delete so a hard-purged
     // log doesn't take the profile with it.
     iesExtractionLogId: uuid("ies_extraction_log_id"),
+    // V7.1 — size classification. Independent of the (org, year) values
+    // so a profile can exist without a confirmed dimensao yet (created
+    // pre-classification in V6, or pending the user's confirmation).
+    dimensao: organizationSizeEnum("dimensao"),
+    dimensaoSource: dimensaoSourceEnum("dimensao_source"),
+    dimensaoConfirmedAt: timestamp("dimensao_confirmed_at", { withTimezone: true }),
+    // Array of {rule, message} entries. Persisted alongside dimensao so
+    // the UI can show "porque tem N funcionários e €X de turnover" even
+    // months after the original confirmation without re-running the
+    // classifier.
+    dimensaoRationale: jsonb("dimensao_rationale"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },

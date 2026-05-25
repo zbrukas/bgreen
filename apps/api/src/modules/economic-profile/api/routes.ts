@@ -38,6 +38,17 @@ const manualEntrySchema = z
   })
   .strict();
 
+const dimensaoConfirmSchema = z
+  .object({
+    dimensao: z.enum(["micro", "pequena", "media", "grande"]),
+    source: z.enum(["ai_classified", "user_override"]),
+  })
+  .strict();
+
+const yearParamSchema = z.object({
+  year: z.coerce.number().int().min(1990).max(2100),
+});
+
 const listQuerySchema = z.object({
   year: z.coerce.number().int().min(1990).max(2100).optional(),
 });
@@ -157,6 +168,43 @@ export const economicProfileRoutes = new Hono<AppEnv>()
     }
     return c.json(result.profile, 201);
   })
+  // ── V7.1 dimensao: propose classification for one year ──
+  .get(
+    "/:year/dimensao/proposed",
+    zValidator("param", yearParamSchema),
+    async (c) => {
+      const gate = await requireOrgMembership(c);
+      if (gate instanceof Response) return gate;
+      const { year } = c.req.valid("param");
+      const result = await economicProfileService.proposeDimensao(gate.orgId, year);
+      if (!result.ok) return c.json({ error: result.error }, 404);
+      return c.json({
+        year: result.year,
+        proposal: result.proposal,
+        alreadyConfirmed: result.alreadyConfirmed,
+      });
+    },
+  )
+  // ── V7.1 dimensao: confirm classification for one year ──
+  .post(
+    "/:year/dimensao",
+    zValidator("param", yearParamSchema),
+    zValidator("json", dimensaoConfirmSchema),
+    async (c) => {
+      const gate = await requireOrgWrite(c);
+      if (gate instanceof Response) return gate;
+      const { year } = c.req.valid("param");
+      const body = c.req.valid("json");
+      const result = await economicProfileService.confirmDimensao({
+        organizationId: gate.orgId,
+        year,
+        dimensao: body.dimensao,
+        source: body.source,
+      });
+      if (!result.ok) return c.json({ error: result.error }, 404);
+      return c.json(result.profile);
+    },
+  )
   // ── List profiles for the org (or fetch a specific year) ──
   .get("/", zValidator("query", listQuerySchema), async (c) => {
     const gate = await requireOrgMembership(c);

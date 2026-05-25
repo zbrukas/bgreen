@@ -1,9 +1,15 @@
 # V7 — Economic Profile + Sector Benchmarks
 
-> **Status:** Not started
+> **Status:** In progress — V7.1 shipped (size classification).
 > **Depends on:** [V6 — AI Foundation + IES Extraction](06-ai-foundation-ies.md)
 > **Parent PRD:** [../bgreen-greenfield-rewrite.md](../bgreen-greenfield-rewrite.md)
 > **User stories covered:** PRD §48–53 (size classification + benchmarking), §47 (multi-year profile)
+
+## Sub-slice progress
+
+- **V7.1 (shipped):** Size classification end-to-end. `DimensaoClassifier` (pure EU 2003/361/EC arithmetic — head-count band primary, financial criterion OR, group-rollup flag, missing-input fallbacks). Migration 0015 adds `dimensao` + `dimensao_source` + `dimensao_confirmed_at` + `dimensao_rationale` to `organization_economic_profiles`. `classifyOrganizationSize` AI tool registered (deterministic classifier remains source of truth; tool defines a richer-narrative surface for future use). `EconomicProfileService.proposeDimensao` / `.confirmDimensao` + `GET /economic-profile/:year/dimensao/proposed` + `POST /economic-profile/:year/dimensao`. UI: `DimensaoCell` in the per-year row — "Classificar" → inline editor with proposal banner (PEQUENA + structured pt-PT rationale + confidence badge) + override dropdown + Confirmar; "Alterar" link once locked.
+- **V7.2 (next):** Sector benchmarks. `SectorAggregate` schema + ~80-row placeholder seed + `SectorBenchmarkLookup` (pure) + API + comparison UI with vintage badge + InsufficientData fallback.
+- **V7.3:** Multi-year trend chart + year picker.
 
 ## Goal
 
