@@ -1,4 +1,5 @@
 import { AnthropicAiClient, composeObservers } from "@bgreen/ai";
+import { sendReportReadyEmail } from "@bgreen/emails";
 import { HttpPdfRenderer, InMemoryPdfRenderer, type PdfRenderer } from "@bgreen/pdf-engine";
 import { HttpViesClient } from "@bgreen/pt-data";
 import { AwsS3Uploader, InMemoryS3Uploader, type S3Uploader } from "@bgreen/storage";
@@ -41,7 +42,11 @@ import {
   RecommendationsService,
 } from "./modules/recommendations/module.js";
 import { DrizzleRecordRepository, RecordService } from "./modules/records/module.js";
-import { DrizzleReportInstanceRepository } from "./modules/reports/module.js";
+import {
+  DrizzleReportInstanceRepository,
+  ReportDataBuilder,
+  ReportService,
+} from "./modules/reports/module.js";
 import { DrizzleTopicRepository, TopicService } from "./modules/topics/module.js";
 import { DrizzleWorkflowRepository, WorkflowService } from "./modules/workflows/module.js";
 
@@ -218,3 +223,42 @@ export const recommendationsService = new RecommendationsService(
     templates: repositories.recordTemplates,
   },
 );
+
+// V11.3 — report pipeline. Data builder composes the repos +
+// CoverageService; ReportService wires AI + PdfRenderer + S3 + email.
+export const reportDataBuilder = new ReportDataBuilder(
+  repositories.organizations,
+  repositories.economicProfiles,
+  sectorBenchmarkLookup,
+  repositories.records,
+  repositories.recordTemplates,
+  coverageService,
+);
+
+export const reportService = new ReportService({
+  reports: repositories.reportInstances,
+  builder: reportDataBuilder,
+  ai: anthropicAiClient,
+  pdf: pdfRenderer,
+  s3: s3Uploader,
+  // Email sender is a thin port; the real impl wraps the
+  // @bgreen/emails nodemailer transport. Tests substitute a recording fake.
+  email: {
+    send: (input) => sendReportReadyEmail(input),
+  },
+  // User-email lookup. Narrow port so the service doesn't depend on
+  // identity internals; the DrizzleUserRepository's findById returns
+  // the User domain which carries an email.
+  users: {
+    findEmailById: async (userId) => {
+      const u = await repositories.users.findById(userId);
+      return u?.email ?? null;
+    },
+  },
+  events: {
+    send: async (event) => {
+      await inngest.send(event);
+    },
+  },
+  audit: auditService,
+});

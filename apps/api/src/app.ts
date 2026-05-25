@@ -18,6 +18,10 @@ import {
   createRecommendationsGenerationFunction,
   recommendationsRoutes,
 } from "./modules/recommendations/module.js";
+import {
+  createReportGenerationFunction,
+  reportsRoutes,
+} from "./modules/reports/module.js";
 import { sectorBenchmarkRoutes } from "./modules/sector-benchmark/module.js";
 import { recordTemplatesRoutes } from "./modules/form-templates/module.js";
 import { identityRoutes } from "./modules/identity/module.js";
@@ -26,7 +30,11 @@ import { inviteRoutes, organizationsRoutes } from "./modules/organizations/modul
 import { recordsRoutes } from "./modules/records/module.js";
 import { topicsRoutes } from "./modules/topics/module.js";
 import { workflowsRoutes } from "./modules/workflows/module.js";
-import { iesExtractionService, recommendationsService } from "./services.js";
+import {
+  iesExtractionService,
+  recommendationsService,
+  reportService,
+} from "./services.js";
 
 // Register Inngest functions. Each module owns its function factory; we
 // import + invoke here so dependencies (services) are wired before the
@@ -34,6 +42,7 @@ import { iesExtractionService, recommendationsService } from "./services.js";
 const inngestFunctions = [
   createIesExtractionFunction(iesExtractionService),
   createRecommendationsGenerationFunction(recommendationsService),
+  createReportGenerationFunction(reportService),
 ];
 
 // Public surface — no auth required. /health, /cs/auth/* (login flow),
@@ -67,6 +76,7 @@ const authedRoutes = new Hono<AppEnv>()
   .route("/framework-coverage", frameworkCoverageRoutes)
   .route("/template-datapoint-mappings", templateDatapointMappingsRoutes)
   .route("/recommendations", recommendationsRoutes)
+  .route("/reports", reportsRoutes)
   .route("/workflows", workflowsRoutes)
   .route("/topics", topicsRoutes)
   .route("/cs", csRoutes);
