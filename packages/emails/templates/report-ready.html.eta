@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="pt-PT">
+  <body style="font-family: system-ui, sans-serif; line-height: 1.5; color: #222;">
+    <p>Olá,</p>
+    <p>
+      O relatório <strong><%= it.reportTitle %></strong> de
+      <strong><%= it.organizationName %></strong> está pronto para descarregar.
+    </p>
+    <p>
+      <a href="<%= it.downloadUrl %>"
+         style="display:inline-block;padding:0.75rem 1.25rem;background:#1f7a3d;color:#fff;text-decoration:none;border-radius:0.25rem;">
+        Abrir relatório
+      </a>
+    </p>
+    <p style="color:#555;font-size:0.9rem;">Se o botão não funcionar, copie este endereço:</p>
+    <p style="font-family:monospace;font-size:0.85rem;word-break:break-all;"><%= it.downloadUrl %></p>
+    <hr style="border:none;border-top:1px solid #eee;margin:1.5rem 0;" />
+    <p style="color:#777;font-size:0.8rem;">
+      Gerado a <%= it.generatedAt %>. O conteúdo está sujeito à validação humana.
+    </p>
+  </body>
+</html>

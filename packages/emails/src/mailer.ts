@@ -8,7 +8,7 @@ let _transport: Transporter | null = null;
  * and fall back to a copy-link / queue / retry strategy.
  *
  * Dev: defaults match the Mailpit container in docker-compose.yml.
- * Prod: point SMTP_HOST at a real relay (SES, Mailgun, Resend SMTP, …).
+ * Prod: point SMTP_HOST at a real relay (SES, Mailgun, Postmark, …).
  */
 export function getMailer(): Transporter | null {
   if (_transport) return _transport;

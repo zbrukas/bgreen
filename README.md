@@ -80,7 +80,7 @@ packages/
   auth/        WorkOS helpers + FGA wrapper
   pt-data/     PT reference data (CAE, freguesias, …)
   form-engine/ FormSchemaInterpreter
-  emails/      React-Email templates
+  emails/      ETA templates + nodemailer transport
 ```
 
 Each app and package carries its own `CLAUDE.md` describing its bounded context.

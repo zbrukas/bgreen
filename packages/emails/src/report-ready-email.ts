@@ -1,10 +1,11 @@
-// V11.3 — "Relatório pronto" email. Sent by ReportService after
-// the PDF lands in S3. The link points at the in-app report detail
-// page (which gates by membership before redirecting to a presigned
-// S3 URL) rather than directly at S3 — the same posture as the
-// invite-email pattern.
+// V11.3 — "Relatório pronto" email. Sent by ReportService after the
+// PDF lands in S3. The link points at the in-app report detail page
+// (which gates by membership before redirecting to a presigned S3
+// URL) rather than directly at S3 — the same posture as the invite
+// email.
 
 import { getDefaultFromAddress, getMailer } from "./mailer";
+import { renderEmailTemplate } from "./renderer";
 
 export interface ReportReadyEmailInput {
   to: string;
@@ -13,8 +14,8 @@ export interface ReportReadyEmailInput {
   // Deep-link into the bGreen app, NOT a direct S3 URL. The app
   // checks org membership before producing a presigned download URL.
   downloadUrl: string;
-  // ISO timestamp surfaced in the body ("gerado a 2026-05-25 12:34
-  // UTC").
+  // ISO timestamp; formatted to "yyyy-mm-dd HH:MM UTC" in the body
+  // so users see the same string in the email + on the PDF cover.
   generatedAt: string;
 }
 
@@ -23,18 +24,9 @@ export interface ReportReadyEmailResult {
   reason?: string;
 }
 
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
 function formatGeneratedAt(iso: string): string {
   // Deterministic UTC formatting — same approach the PDF template
-  // uses so users see the same string in the email + on the cover.
+  // uses so the email + the cover footer agree.
   const d = new Date(iso);
   const pad = (n: number) => String(n).padStart(2, "0");
   return (
@@ -43,44 +35,20 @@ function formatGeneratedAt(iso: string): string {
   );
 }
 
-function renderHtml(input: ReportReadyEmailInput): string {
-  const generated = formatGeneratedAt(input.generatedAt);
-  return `<!doctype html>
-<html lang="pt-PT">
-  <body style="font-family: system-ui, sans-serif; line-height: 1.5; color: #222;">
-    <p>Olá,</p>
-    <p>
-      O relatório <strong>${escapeHtml(input.reportTitle)}</strong> de
-      <strong>${escapeHtml(input.organizationName)}</strong> está pronto para descarregar.
-    </p>
-    <p>
-      <a href="${escapeHtml(input.downloadUrl)}"
-         style="display:inline-block;padding:0.75rem 1.25rem;background:#1f7a3d;color:#fff;text-decoration:none;border-radius:0.25rem;">
-        Abrir relatório
-      </a>
-    </p>
-    <p style="color:#555;font-size:0.9rem;">Se o botão não funcionar, copie este endereço:</p>
-    <p style="font-family:monospace;font-size:0.85rem;word-break:break-all;">${escapeHtml(input.downloadUrl)}</p>
-    <hr style="border:none;border-top:1px solid #eee;margin:1.5rem 0;" />
-    <p style="color:#777;font-size:0.8rem;">
-      Gerado a ${escapeHtml(generated)}. O conteúdo está sujeito à validação humana.
-    </p>
-  </body>
-</html>`;
+interface ReportReadyTemplateData extends Record<string, unknown> {
+  organizationName: string;
+  reportTitle: string;
+  downloadUrl: string;
+  generatedAt: string;
 }
 
-function renderText(input: ReportReadyEmailInput): string {
-  const generated = formatGeneratedAt(input.generatedAt);
-  return [
-    "Olá,",
-    "",
-    `O relatório "${input.reportTitle}" de ${input.organizationName} está pronto para descarregar.`,
-    "",
-    "Abrir relatório:",
-    input.downloadUrl,
-    "",
-    `Gerado a ${generated}. O conteúdo está sujeito à validação humana.`,
-  ].join("\n");
+function buildTemplateData(input: ReportReadyEmailInput): ReportReadyTemplateData {
+  return {
+    organizationName: input.organizationName,
+    reportTitle: input.reportTitle,
+    downloadUrl: input.downloadUrl,
+    generatedAt: formatGeneratedAt(input.generatedAt),
+  };
 }
 
 export async function sendReportReadyEmail(
@@ -90,13 +58,14 @@ export async function sendReportReadyEmail(
   if (!mailer) {
     return { delivered: false, reason: "smtp_not_configured" };
   }
+  const data = buildTemplateData(input);
   try {
     await mailer.sendMail({
       from: getDefaultFromAddress(),
       to: input.to,
       subject: `Relatório pronto — ${input.reportTitle}`,
-      html: renderHtml(input),
-      text: renderText(input),
+      html: renderEmailTemplate("report-ready.html.eta", data),
+      text: renderEmailTemplate("report-ready.txt.eta", data),
     });
     return { delivered: true };
   } catch (err) {

@@ -47,7 +47,7 @@ Ship the third deployed pillar: `apps/pdf`. Users pick a report template, kick o
   4. POST HTML to `apps/pdf` `/render` → Gotenberg → PDF bytes.
   5. Store PDF in S3 EU: `organizations/{orgId}/reports/{reportId}.pdf`.
   6. Compute SHA-256 of the input-data JSON; store with Postgres timestamp on `ReportInstance.input_data_hash`.
-  7. Send Resend email "Relatório pronto" with a presigned download link.
+  7. Send "Relatório pronto" email (SMTP via nodemailer + ETA templates in `@bgreen/emails`) with a presigned download link.
 
 ### Branding
 
@@ -62,7 +62,7 @@ Ship the third deployed pillar: `apps/pdf`. Users pick a report template, kick o
   - Period selector (year / quarter / custom range).
   - For ESRS E1: warning panel surfaced from V10 if coverage is incomplete ("Atenção: 12 datapoints obrigatórios estão em falta — gerar mesmo assim?").
   - Submit → Inngest fires → UI shows "em geração" status.
-- [ ] Notification on completion: in-app toast + Resend email.
+- [ ] Notification on completion: in-app toast + SMTP email (via `@bgreen/emails`).
 
 ### Audit & tamper evidence
 
@@ -78,7 +78,7 @@ Ship the third deployed pillar: `apps/pdf`. Users pick a report template, kick o
 - Branding (logo + primary color).
 - Reports list + generation UI.
 - Tamper-evidence hash + AuditLog rows.
-- Resend email notification.
+- SMTP email notification (nodemailer + ETA templates).
 
 ## Out of scope
 
@@ -98,7 +98,7 @@ Ship the third deployed pillar: `apps/pdf`. Users pick a report template, kick o
 | `packages/pdf-engine` *(or in `packages/ai`)* | **new or extended** | `PdfRenderer` interface + Gotenberg adapter. |
 | Organizations | **extended** | `logo_url`, `brand_primary_color` columns + upload flow. |
 | `packages/ai` | **extended** | Registers `generateReportCommentary` tool. |
-| `packages/emails` | **extended** | "Relatório pronto" template (React-Email). |
+| `packages/emails` | **extended** | "Relatório pronto" template (ETA, served via SMTP/nodemailer). |
 | Audit | **extended** | Captures report lifecycle events. |
 
 ## Deep modules introduced

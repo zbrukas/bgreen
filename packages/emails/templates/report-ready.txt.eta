@@ -1,0 +1,8 @@
+Olá,
+
+O relatório "<%= it.reportTitle %>" de <%= it.organizationName %> está pronto para descarregar.
+
+Abrir relatório:
+<%= it.downloadUrl %>
+
+Gerado a <%= it.generatedAt %>. O conteúdo está sujeito à validação humana.

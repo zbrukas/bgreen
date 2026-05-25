@@ -38,7 +38,7 @@ Three deployed services in a single monorepo:
 2. **`apps/api`** — Hono on Node (heavy API, AI calls, IES extraction, public API for partners/agents, Inngest event handlers).
 3. **`apps/pdf`** — Hono wrapper around Gotenberg (HTML+CSS → PDF, isolated scaling).
 
-Shared `packages/` for DB schema (Drizzle), zod schemas (single source of truth driving validation + OpenAPI + Hono RPC + Anthropic tool definitions), AI client wrappers, WorkOS auth helpers, email templates (React-Email), PT reference data, and the form-builder engine.
+Shared `packages/` for DB schema (Drizzle), zod schemas (single source of truth driving validation + OpenAPI + Hono RPC + Anthropic tool definitions), AI client wrappers, WorkOS auth helpers, email templates (ETA + nodemailer), PT reference data, and the form-builder engine.
 
 The previous form-builder concept (`RecordTemplate → FormSchema → RowSchema → FieldSchema`) is **kept conceptually but rebuilt simpler**: Postgres JSONB columns + zod schemas + a thin editor UI. Companies still define their own ESG forms; the implementation drops the multi-table matrix in favor of a single JSONB-per-schema model with cross-template mapping rules.
 
@@ -158,7 +158,7 @@ From the user's perspective (carried over from PRD #19):
 66. As a user, I want the AI to write commentary paragraphs embedded in the PDF (year-over-year analysis, trend highlights, recommendations), so the report tells a story.
 67. As a user, I want my organization's logo and brand colors to appear on the PDF cover and headers, so the output is on-brand.
 68. As a user, I want generated PDFs to be archived in my account for re-download, so I don't need to regenerate them.
-69. As a user, I want to see when a PDF generation job is in progress vs ready (notification on completion via Resend email), so I don't watch a spinner.
+69. As a user, I want to see when a PDF generation job is in progress vs ready (notification on completion via SMTP email), so I don't watch a spinner.
 70. As an auditor, I want generated PDFs to include a cryptographic hash + timestamp of the underlying data snapshot, so I can verify a report wasn't tampered with after the fact.
 
 ### Regulatory framework coverage (the AI "regulatory checker" feature)
@@ -219,7 +219,7 @@ From the user's perspective (carried over from PRD #19):
 | API contract | `@hono/zod-openapi` for OpenAPI emission + Hono RPC for internal type-safe calls |
 | Background jobs | Inngest (EU region) |
 | File storage | AWS S3 EU (Frankfurt/Ireland) |
-| Email | Resend + React-Email |
+| Email | SMTP via nodemailer + ETA templates (any SMTP relay: SES, Mailgun, Postmark, …) |
 | Observability | PostHog (errors + logs + product analytics, single vendor) |
 | Workflows | XState (state-machine graphs in TS, current state persisted as JSONB) |
 | Hosting | Vercel (web) + Fly.io EU (api + pdf) + Neon Postgres EU |
@@ -319,7 +319,7 @@ These are the modules where TDD pays off and tests are non-negotiable:
 - Step 3: server-render React component (`apps/pdf/templates/<framework>.tsx`) to HTML.
 - Step 4: POST HTML to Gotenberg → receive PDF bytes.
 - Step 5: store PDF in S3 EU under `organizations/{orgId}/reports/{reportId}.pdf`.
-- Step 6: Resend email notifies user "Relatório pronto."
+- Step 6: SMTP email (nodemailer + ETA template in `@bgreen/emails`) notifies user "Relatório pronto."
 - Cryptographic hash of the input-data JSON + Postgres timestamp stored on `ReportInstance` for tamper-evidence.
 
 ### Greenfield operational scope

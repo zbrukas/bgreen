@@ -1,0 +1,8 @@
+Olá,
+
+<%= it.inviterEmail %> convidou-o(a) para se juntar a <%= it.organizationName %> na bGreen como <%= it.roleLabel %>.
+
+Aceitar convite:
+<%= it.acceptUrl %>
+
+Este convite é válido durante 7 dias.
