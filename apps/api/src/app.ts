@@ -5,7 +5,11 @@ import type { AppEnv } from "./context.js";
 import { inngest } from "./inngest.js";
 import { authMiddleware } from "./middleware/auth.js";
 import { auditRoutes } from "./modules/audit/module.js";
-import { csAdminRoutes } from "./modules/cs-admin/module.js";
+import {
+  createCsSnapshotFunction,
+  csAdminRoutes,
+  csHealthRoutes,
+} from "./modules/cs-admin/module.js";
 import { csAuthRoutes } from "./modules/cs-auth/module.js";
 import { csRoutes } from "./modules/cs/api/routes.js";
 import { economicProfileRoutes } from "./modules/economic-profile/api/routes.js";
@@ -33,6 +37,7 @@ import { topicsRoutes } from "./modules/topics/module.js";
 import { workflowsRoutes } from "./modules/workflows/module.js";
 import { createStorageDownloadRoute } from "./routes/storage-download.js";
 import {
+  csHealthService,
   fsUploader,
   iesExtractionService,
   recommendationsService,
@@ -47,6 +52,7 @@ const inngestFunctions = [
   createIesExtractionFunction(iesExtractionService),
   createRecommendationsGenerationFunction(recommendationsService),
   createReportGenerationFunction(reportService),
+  createCsSnapshotFunction(inngest, csHealthService),
 ];
 
 // Public surface — no auth required. /health, /cs/auth/* (login flow),
@@ -94,6 +100,7 @@ const authedRoutes = new Hono<AppEnv>()
   // V12.1 cs-admin paths mount before /cs so the Hono radix tree picks
   // the more specific /cs/required-templates segment for csAdmin.
   .route("/cs", csAdminRoutes)
+  .route("/cs", csHealthRoutes)
   .route("/cs", csRoutes);
 
 export const app = new Hono().use("*", logger()).route("/", publicRoutes).route("/", authedRoutes);

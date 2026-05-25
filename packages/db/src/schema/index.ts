@@ -1,6 +1,7 @@
 export * from "./_schema_version";
 export * from "./audit-log";
 export * from "./central-services-domains";
+export * from "./cs-health-snapshots";
 export * from "./economic-profiles";
 export * from "./framework-coverage";
 export * from "./legal-form";

@@ -10,6 +10,7 @@ import {
 } from "@bgreen/storage";
 import { AuditService, DrizzleAuditRepository } from "./modules/audit/module.js";
 import {
+  CsHealthService,
   DrizzleRequiredTemplateRepository,
   RequiredTemplateService,
 } from "./modules/cs-admin/module.js";
@@ -114,6 +115,8 @@ export const requiredTemplateService = new RequiredTemplateService(
   repositories.requiredTemplates,
   auditService,
 );
+
+export const csHealthService = new CsHealthService();
 
 export const recordService = new RecordService(
   repositories.records,

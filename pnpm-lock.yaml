@@ -32,6 +32,9 @@ importers:
       '@bgreen/auth':
         specifier: workspace:*
         version: link:../../packages/auth
+      '@bgreen/cs-telemetry':
+        specifier: workspace:*
+        version: link:../../packages/cs-telemetry
       '@bgreen/db':
         specifier: workspace:*
         version: link:../../packages/db
