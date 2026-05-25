@@ -2,7 +2,7 @@
 
 import { Select } from "@/components/ui/select";
 import { useRef } from "react";
-import { switchActiveOrganizationAction } from "../actions";
+import { switchActiveOrganizationAction } from "../../actions";
 
 interface OrganizationSwitcherProps {
   organizations: Array<{ id: string; name: string }>;

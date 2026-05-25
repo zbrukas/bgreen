@@ -14,7 +14,7 @@ import {
   createOrganizationAction,
   lookupPostalCodeAction,
   lookupViesAction,
-} from "../actions";
+} from "../../actions";
 import { CaePicker } from "./CaePicker";
 
 const legalFormOptions: Array<{ value: string; label: string }> = [

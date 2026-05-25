@@ -1,5 +1,5 @@
 import { Header } from "@/app/_components/Header";
-import { TemplateEditor } from "@/app/_components/TemplateEditor";
+import { TemplateEditor } from "./_components/TemplateEditor/TemplateEditor";
 import { fetchMe, fetchTemplates, fetchTopics } from "@/lib/api-client";
 import Link from "next/link";
 import { redirect } from "next/navigation";

@@ -1,5 +1,5 @@
 import { Header } from "@/app/_components/Header";
-import { ReviewPanel } from "@/app/_components/ReviewPanel";
+import { ReviewPanel } from "./_components/ReviewPanel";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

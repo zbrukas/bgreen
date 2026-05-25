@@ -1,4 +1,4 @@
-import { InviteMemberForm } from "@/app/_components/InviteMemberForm";
+import { InviteMemberForm } from "./_components/InviteMemberForm";
 import { fetchMe, fetchTopics } from "@/lib/api-client";
 import { withAuth } from "@workos-inc/authkit-nextjs";
 import Link from "next/link";

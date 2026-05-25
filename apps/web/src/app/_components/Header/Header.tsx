@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import type { MembershipRole } from "@bgreen/types";
 import Link from "next/link";
-import { signOutAction } from "../actions";
+import { signOutAction } from "../../actions";
 import { OrganizationSwitcher } from "./OrganizationSwitcher";
 
 interface HeaderProps {

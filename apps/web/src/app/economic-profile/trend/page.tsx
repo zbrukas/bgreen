@@ -1,14 +1,14 @@
-import { Header } from "@/app/_components/Header";
+import { Header } from "@/app/_components/Header/Header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getActiveOrgId } from "@/lib/active-org";
 import { fetchMe, fetchMyOrganizations } from "@/lib/api-client";
 import { getTrendData } from "@/lib/economic-profile-actions";
-import { DIMENSAO_LABEL } from "@/lib/economic-profile-types";
 import { withAuth } from "@workos-inc/authkit-nextjs";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { TrendChart } from "./TrendChart";
+import { YearList } from "./_components/YearList";
 
 export const dynamic = "force-dynamic";
 
@@ -86,38 +86,5 @@ export default async function TrendPage() {
         {years.length > 0 ? <YearList rows={years} /> : null}
       </main>
     </>
-  );
-}
-
-function YearList({
-  rows,
-}: {
-  rows: Awaited<ReturnType<typeof getTrendData>>["years"];
-}) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Por exercício</CardTitle>
-        <CardDescription>
-          Salte para o detalhe de qualquer ano para comparar diretamente com o setor.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="grid gap-2 sm:grid-cols-2">
-        {rows.map((r) => (
-          <Link
-            key={r.year}
-            href={`/economic-profile/${r.year}/benchmark`}
-            className="flex items-center justify-between rounded-md border px-3 py-2 text-sm hover:bg-muted/50"
-          >
-            <span className="font-medium">{r.year}</span>
-            <span className="flex items-center gap-2 text-xs text-muted-foreground">
-              {r.dimensao ? DIMENSAO_LABEL[r.dimensao] : "—"}
-              {r.cae3 ? <span>· CAE {r.cae3}</span> : null}
-              <span aria-hidden>→</span>
-            </span>
-          </Link>
-        ))}
-      </CardContent>
-    </Card>
   );
 }

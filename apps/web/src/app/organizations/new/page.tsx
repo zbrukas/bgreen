@@ -1,4 +1,4 @@
-import { CreateOrganizationForm } from "@/app/_components/CreateOrganizationForm";
+import { CreateOrganizationForm } from "@/app/_components/CreateOrganizationForm/CreateOrganizationForm";
 import { withAuth } from "@workos-inc/authkit-nextjs";
 import Link from "next/link";
 import { redirect } from "next/navigation";

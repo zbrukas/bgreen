@@ -1,4 +1,4 @@
-import { Header } from "@/app/_components/Header";
+import { Header } from "@/app/_components/Header/Header";
 import { getActiveOrgId } from "@/lib/active-org";
 import { fetchMe, fetchMyOrganizations } from "@/lib/api-client";
 import { withAuth } from "@workos-inc/authkit-nextjs";

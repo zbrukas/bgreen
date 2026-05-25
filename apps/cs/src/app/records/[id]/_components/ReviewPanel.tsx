@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { type ReviewRecordActionResult, reviewRecordAction } from "../actions";
+import { type ReviewRecordActionResult, reviewRecordAction } from "@/app/actions";
 
 type Decision = "approve" | "request_changes" | "reject";
 

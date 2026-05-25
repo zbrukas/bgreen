@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import type { Topic } from "@bgreen/types";
 import { useActionState } from "react";
-import { type CreateInviteFormState, createInviteAction } from "../actions";
+import { type CreateInviteFormState, createInviteAction } from "@/app/actions";
 
 const initialState: CreateInviteFormState = {
   error: null,

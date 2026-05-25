@@ -1,5 +1,5 @@
-import { AuditTrail } from "@/app/_components/AuditTrail";
-import { RecordForm } from "@/app/_components/RecordForm";
+import { AuditTrail } from "./_components/AuditTrail";
+import { RecordForm } from "@/app/_components/RecordForm/RecordForm";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { fetchMe, fetchRecord, fetchTemplate, fetchTopics } from "@/lib/api-client";

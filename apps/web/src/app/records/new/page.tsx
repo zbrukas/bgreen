@@ -1,4 +1,4 @@
-import { RecordForm } from "@/app/_components/RecordForm";
+import { RecordForm } from "@/app/_components/RecordForm/RecordForm";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { fetchMe, fetchRecordPrefill, fetchTemplate, fetchTopics } from "@/lib/api-client";
 import { getSignInUrl, withAuth } from "@workos-inc/authkit-nextjs";
