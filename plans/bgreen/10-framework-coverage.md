@@ -1,6 +1,6 @@
 # V10 — Framework Coverage Checker
 
-> **Status:** In progress — V10.1 shipped (seeds + migrations + package).
+> **Status:** In progress — V10.1 + V10.2 shipped.
 > **Depends on:** [V9 — Recommendations](09-recommendations.md)
 > **Parent PRD:** [../bgreen-greenfield-rewrite.md](../bgreen-greenfield-rewrite.md)
 > **User stories covered:** PRD §71–74 (regulatory framework coverage), supports §65 (PDF report template picker in V11)
@@ -8,8 +8,8 @@
 ## Sub-slice progress
 
 - **V10.1 (shipped):** Seeds + migrations + package. New `packages/frameworks` ships three TypeScript datapoint catalogs (ESRS E1: 30 datapoints, GHG Protocol: 15, GRI: 20) + `SectorApplicability` rule + `evaluateSectorApplicability` predicate. Migration 0019 adds `framework_datapoints` (text PK, `framework` enum, jsonb applicability rule, version tag) + `template_datapoint_mappings` (UUID PK + UNIQUE on (template, datapoint)). `seed-framework-datapoints` script upserts the catalog by id. 10 catalog tests assert id uniqueness across frameworks, framework-prefix invariants, expected counts, and applicability evaluation.
-- **V10.2 (next):** CoverageCalculator + admin mapping service/routes + datapoint catalog routes.
-- **V10.3:** AI tool + checkFrameworkCoverage service + coverage-check runs.
+- **V10.2 (shipped):** CoverageCalculator + admin mapping service/routes + datapoint catalog routes. `framework-coverage` module ships `CoverageCalculator` (pure: `(framework, datapoints, mappings, records, cae3, includeNonApplicable?) → CoverageMatrix`) with deterministic status rules (missing = no template mapped; partial = mapped but no submitted record; covered = ≥1 submitted/approved/certified record). Drafts + changes_requested are ignored for evidence rollup. Repos for catalog read + mapping CRUD (ON CONFLICT DO NOTHING for idempotent re-add). `CoverageService` orchestrates catalog + mappings + records + latest profile (CAE-3 derived via `extractCae3`). Routes: `GET /framework-datapoints` (any authed user), `GET /framework-coverage/:framework?includeNonApplicable=true|false` (org member), `GET/POST/DELETE /template-datapoint-mappings` (read open; mutations require `canCsWrite` per V5.4 CS-owned templates). Audit rows: `record_template.datapoint_mapped` / `datapoint_unmapped` against CS workspace. 13 calculator tests cover status rules, evidence rollup, applicability filter (default + override), framework filtering, counts summary. Full monorepo typecheck green; 147 tests in apps/api (13 new). Boot smoke confirms all three routes mount and 401 without auth.
+- **V10.3 (next):** AI tool + checkFrameworkCoverage service + coverage-check runs.
 - **V10.4:** Full UI — framework picker, coverage matrix with filters, admin mapping screen, AI explanation panels.
 
 ## Goal

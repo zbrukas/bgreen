@@ -10,6 +10,11 @@ import { csRoutes } from "./modules/cs/api/routes.js";
 import { economicProfileRoutes } from "./modules/economic-profile/api/routes.js";
 import { createIesExtractionFunction } from "./modules/economic-profile/module.js";
 import {
+  frameworkCoverageRoutes,
+  frameworkDatapointsRoutes,
+  templateDatapointMappingsRoutes,
+} from "./modules/framework-coverage/module.js";
+import {
   createRecommendationsGenerationFunction,
   recommendationsRoutes,
 } from "./modules/recommendations/module.js";
@@ -58,6 +63,9 @@ const authedRoutes = new Hono<AppEnv>()
   .route("/audit", auditRoutes)
   .route("/economic-profile", economicProfileRoutes)
   .route("/sector-benchmark", sectorBenchmarkRoutes)
+  .route("/framework-datapoints", frameworkDatapointsRoutes)
+  .route("/framework-coverage", frameworkCoverageRoutes)
+  .route("/template-datapoint-mappings", templateDatapointMappingsRoutes)
   .route("/recommendations", recommendationsRoutes)
   .route("/workflows", workflowsRoutes)
   .route("/topics", topicsRoutes)

@@ -12,6 +12,11 @@ import {
   createAiToolCallObserver,
   createAiToolCallPostHogObserver,
 } from "./modules/economic-profile/module.js";
+import {
+  CoverageService,
+  DrizzleFrameworkDatapointRepository,
+  DrizzleTemplateDatapointMappingRepository,
+} from "./modules/framework-coverage/module.js";
 import { DrizzleSectorBenchmarkLookup } from "./modules/sector-benchmark/module.js";
 import { buildPostHogTelemetry } from "./telemetry/posthog.js";
 import { inngest } from "./inngest.js";
@@ -56,6 +61,8 @@ export const repositories = {
   economicProfiles: new DrizzleEconomicProfileRepository(),
   generatedRecommendations: new DrizzleGeneratedRecommendationRepository(),
   recommendationFeedback: new DrizzleRecommendationFeedbackRepository(),
+  frameworkDatapoints: new DrizzleFrameworkDatapointRepository(),
+  templateDatapointMappings: new DrizzleTemplateDatapointMappingRepository(),
 };
 
 export const userService = new UserService(repositories.users, repositories.centralServicesDomains);
@@ -162,6 +169,14 @@ export const iesUploadService = new IesUploadService(
       await inngest.send(event);
     },
   },
+);
+
+export const coverageService = new CoverageService(
+  repositories.frameworkDatapoints,
+  repositories.templateDatapointMappings,
+  repositories.records,
+  repositories.economicProfiles,
+  auditService,
 );
 
 export const recommendationsService = new RecommendationsService(
