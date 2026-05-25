@@ -31,8 +31,9 @@ Thumbs.db
 # Drizzle
 .drizzle/
 
-# Testing
-coverage/
+# Testing — anchored so the V10 /coverage route folder isn't ignored.
+/coverage/
+**/.nyc_output/
 
 # tsc
 *.tsbuildinfo

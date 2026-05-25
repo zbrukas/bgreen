@@ -52,6 +52,12 @@ export function Header({
         >
           Recomendações
         </Link>
+        <Link
+          href="/coverage"
+          className="text-sm text-muted-foreground hover:text-foreground"
+        >
+          Cobertura
+        </Link>
         <Link href="/templates" className="text-sm text-muted-foreground hover:text-foreground">
           Modelos
         </Link>
