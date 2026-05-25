@@ -50,7 +50,14 @@ export class DrizzleAuditRepository implements AuditRepository {
           eq(schema.auditLog.entityId, entityId),
         ),
       )
-      .orderBy(asc(schema.auditLog.occurredAt));
+      .orderBy(asc(schema.auditLog.occurredAt))
+      // Defensive cap. Audit trails are usually a handful of events;
+      // a long-lived entity could grow unbounded and the route returns
+      // them all in one payload. Hard limit avoids a runaway. Cursor
+      // pagination lands when the customer-facing screen does.
+      .limit(LIST_LIMIT);
     return rows.map(rowToEvent);
   }
 }
+
+const LIST_LIMIT = 200;

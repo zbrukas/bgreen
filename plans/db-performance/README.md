@@ -31,9 +31,9 @@ Each task below is a checkbox. Tackle HIGH before MEDIUM before LOW. Most fixes 
 
 ## LOW — cleanup, not load-bearing
 
-- [ ] **L1. Move composition sort to SQL.** `apps/api/src/modules/form-templates/infrastructure/composition-repository.ts:23,38` sorts in JS after the query. Use `ORDER BY position ASC, sub_template_id ASC` so the planner can use index order. Composite PK already covers the predicate.
+- [x] **L1. Move composition sort to SQL.** Shipped. Both `listForMain` and `listForMains` now `.orderBy(asc(position), asc(subTemplateId))` and drop the position column from the projection.
 
-- [ ] **L2. Paginate audit history.** `apps/api/src/modules/audit/infrastructure/audit-repository.ts:43-54` returns the full audit trail for an entity unbounded. `audit_log_entity_idx` covers the WHERE+ORDER BY, but a long-lived record will accumulate rows. Add `.limit()` + cursor before exposing in a customer-facing screen.
+- [~] **L2. Paginate audit history.** Partial — added a defensive `.limit(200)` cap on `listForEntity`. Cursor pagination deferred until the customer-facing audit-history screen lands and we know the actual UX (forward-only? jump-to-date? search?).
 
 - [ ] **L3. GIN on `records.values` / `scoreBreakdown` (deferred).** No JSONB predicates today. Add when a feature lands that filters on JSONB fields.
 

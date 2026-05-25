@@ -1,5 +1,5 @@
 import { db, schema } from "@bgreen/db";
-import { eq, inArray } from "drizzle-orm";
+import { asc, eq, inArray } from "drizzle-orm";
 
 export interface CompositionRepository {
   // Returns sub-template ids ordered by position asc, then by id for ties.
@@ -14,13 +14,13 @@ export interface CompositionRepository {
 export class DrizzleCompositionRepository implements CompositionRepository {
   async listForMain(mainTemplateId: string): Promise<string[]> {
     const rows = await db
-      .select({
-        subId: schema.templateCompositions.subTemplateId,
-        position: schema.templateCompositions.position,
-      })
+      .select({ subId: schema.templateCompositions.subTemplateId })
       .from(schema.templateCompositions)
-      .where(eq(schema.templateCompositions.mainTemplateId, mainTemplateId));
-    rows.sort((a, b) => a.position - b.position || a.subId.localeCompare(b.subId));
+      .where(eq(schema.templateCompositions.mainTemplateId, mainTemplateId))
+      .orderBy(
+        asc(schema.templateCompositions.position),
+        asc(schema.templateCompositions.subTemplateId),
+      );
     return rows.map((r) => r.subId);
   }
 
@@ -31,11 +31,13 @@ export class DrizzleCompositionRepository implements CompositionRepository {
       .select({
         mainId: schema.templateCompositions.mainTemplateId,
         subId: schema.templateCompositions.subTemplateId,
-        position: schema.templateCompositions.position,
       })
       .from(schema.templateCompositions)
-      .where(inArray(schema.templateCompositions.mainTemplateId, mainTemplateIds));
-    rows.sort((a, b) => a.position - b.position || a.subId.localeCompare(b.subId));
+      .where(inArray(schema.templateCompositions.mainTemplateId, mainTemplateIds))
+      .orderBy(
+        asc(schema.templateCompositions.position),
+        asc(schema.templateCompositions.subTemplateId),
+      );
     for (const r of rows) {
       const list = out.get(r.mainId);
       if (list) list.push(r.subId);
