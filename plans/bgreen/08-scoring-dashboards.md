@@ -1,9 +1,15 @@
 # V8 — ESG Scoring + Dashboards
 
-> **Status:** Not started
+> **Status:** In progress — V8.1 shipped (FormSchema scoring metadata + ScoringEngine).
 > **Depends on:** [V4 — Form Templates + Records](04-form-templates-records.md), [V7 — Economic Profile + Sector Benchmarks](07-economic-profile-benchmarks.md)
 > **Parent PRD:** [../bgreen-greenfield-rewrite.md](../bgreen-greenfield-rewrite.md)
 > **User stories covered:** PRD §82–90 (scoring + dashboards); feeds V9 (recommendations) and V11 (PDF reports)
+
+## Sub-slice progress
+
+- **V8.1 (shipped):** FormSchema zod gains optional `score` on select/multi-select options, `scoring: linear | thresholds` on number fields, `aggregate: sum|avg|min|max` on repeating, per-field `weight`, and template-level `scoring: {maxScore, buckets: [{minPct, label}]}`. New package `@bgreen/scoring` with pure `computeScore(template, values) → ScoreResult | null` — handles select/multi-select/number/repeating/showIf skip/missing-value skip/weight/tier classification with maxScore cap. 15 unit tests.
+- **V8.2 (next):** records score columns + compute-on-submit + GET /organizations/me/scores.
+- **V8.3:** /dashboard with cards + sparkline + peer-rank when SectorBenchmark has data.
 
 ## Goal
 

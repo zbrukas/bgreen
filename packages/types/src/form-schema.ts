@@ -29,6 +29,9 @@ export const SourceMappingSchema = z.object({
 });
 export type SourceMapping = z.infer<typeof SourceMappingSchema>;
 
+// V8.1 — optional per-field weight applied as a multiplier on the field's
+// raw score. Default 1. A weight of 0 effectively excludes the field from
+// the total without removing the per-field contribution from the breakdown.
 const baseField = {
   id: FieldIdSchema,
   label: z.string().min(1).max(200),
@@ -36,6 +39,9 @@ const baseField = {
   required: z.boolean().optional(),
   showIf: z.array(ShowIfPredicateSchema).max(5).optional(),
   sourceMapping: SourceMappingSchema.optional(),
+  // Multiplier on the field's raw score. Range chosen wide enough for
+  // common cases (0.1× to 10×) but bounded to catch admin typos.
+  weight: z.number().min(0).max(100).optional(),
 };
 
 export const TextFieldSchema = z.object({
@@ -45,12 +51,40 @@ export const TextFieldSchema = z.object({
 });
 export type TextField = z.infer<typeof TextFieldSchema>;
 
+// V8.1 — two scoring strategies for number fields:
+//   - linear:    score = value × per (e.g., per=0.5 with value=100 → 50)
+//   - thresholds: first-match-wins on a sorted list. `upTo` is inclusive.
+//                 Useful for "0–10t = 10pts, 10–50t = 5pts, > 50t = 0pts".
+export const NumberLinearScoringSchema = z.object({
+  kind: z.literal("linear"),
+  per: z.number(),
+});
+
+export const NumberThresholdScoringSchema = z.object({
+  kind: z.literal("thresholds"),
+  thresholds: z
+    .array(
+      z.object({
+        upTo: z.number(),
+        score: z.number(),
+      }),
+    )
+    .min(1),
+});
+
+export const NumberScoringSchema = z.discriminatedUnion("kind", [
+  NumberLinearScoringSchema,
+  NumberThresholdScoringSchema,
+]);
+export type NumberScoring = z.infer<typeof NumberScoringSchema>;
+
 export const NumberFieldSchema = z.object({
   ...baseField,
   kind: z.literal("number"),
   unit: z.string().max(20).optional(),
   min: z.number().optional(),
   max: z.number().optional(),
+  scoring: NumberScoringSchema.optional(),
 });
 export type NumberField = z.infer<typeof NumberFieldSchema>;
 
@@ -69,9 +103,12 @@ export const DateFieldSchema = z.object({
 });
 export type DateField = z.infer<typeof DateFieldSchema>;
 
+// V8.1 — option-level optional score. select picks the chosen option's
+// score; multi_select sums over selected options.
 const OptionSchema = z.object({
   value: z.string().min(1).max(100),
   label: z.string().min(1).max(200),
+  score: z.number().optional(),
 });
 
 export const SelectFieldSchema = z.object({
@@ -120,6 +157,13 @@ export const LeafFieldSchema = z.discriminatedUnion("kind", [
 export type LeafField = z.infer<typeof LeafFieldSchema>;
 export type LeafFieldKind = LeafField["kind"];
 
+// V8.1 — how a repeating group rolls its sub-row scores up to one
+// field-level raw score. Default sum matches the most common "total
+// ESG impact" framing. avg useful for "average satisfaction"; min/max
+// for "worst/best sub-row dominates".
+export const RepeatingAggregateSchema = z.enum(["sum", "avg", "min", "max"]);
+export type RepeatingAggregate = z.infer<typeof RepeatingAggregateSchema>;
+
 export const RepeatingFieldSchema = z.object({
   ...baseField,
   kind: z.literal("repeating"),
@@ -128,6 +172,8 @@ export const RepeatingFieldSchema = z.object({
   minRows: z.number().int().min(0).max(100).optional(),
   maxRows: z.number().int().min(1).max(100).optional(),
   fields: z.array(LeafFieldSchema).min(1),
+  // V8.1 — aggregation strategy over per-sub-row scores. Default sum.
+  aggregate: RepeatingAggregateSchema.optional(),
 });
 export type RepeatingField = z.infer<typeof RepeatingFieldSchema>;
 
@@ -150,9 +196,28 @@ export const FormRowSchema = z.object({
 });
 export type FormRow = z.infer<typeof FormRowSchema>;
 
+// V8.1 — template-level tier buckets + max score. Buckets are minPct
+// thresholds (e.g., 0 "C", 50 "B", 80 "A"); the engine picks the highest
+// matching bucket. maxScore is the denominator for percent computation —
+// admins set it explicitly so renaming/removing fields doesn't silently
+// change the tier breakpoints.
+export const ScoringBucketSchema = z.object({
+  minPct: z.number().min(0).max(100),
+  label: z.string().min(1).max(40),
+});
+
+export const FormSchemaScoringSchema = z.object({
+  maxScore: z.number().positive(),
+  buckets: z.array(ScoringBucketSchema).min(1),
+});
+export type FormSchemaScoring = z.infer<typeof FormSchemaScoringSchema>;
+
 export const FormSchemaSchema = z.object({
   version: z.literal(1),
   rows: z.array(FormRowSchema).min(1),
+  // V8.1 — optional. Templates without `scoring` skip score computation;
+  // existing v4 templates remain valid.
+  scoring: FormSchemaScoringSchema.optional(),
 });
 export type FormSchema = z.infer<typeof FormSchemaSchema>;
 
