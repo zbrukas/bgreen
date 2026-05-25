@@ -1,3 +1,5 @@
+"use client";
+
 import type { CarbonIconType } from "@carbon/icons-react";
 import { Button, ButtonSet, Tile } from "@carbon/react";
 

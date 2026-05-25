@@ -1,3 +1,5 @@
+import { EmptyState } from "@/components/shell/EmptyState";
+import { PageHeader } from "@/components/shell/PageHeader";
 import { getActiveOrgId } from "@/lib/active-org";
 import {
   getBenchmarkComparison,
@@ -5,9 +7,9 @@ import {
 } from "@/lib/economic-profile-actions";
 import type { BenchmarkComparison } from "@/lib/economic-profile-types";
 import { type TemplateScoreHistory, getScores } from "@/lib/scores-actions";
+import { Dashboard, Upload, Document } from "@carbon/icons-react";
 import { withAuth } from "@workos-inc/authkit-nextjs";
 import { redirect } from "next/navigation";
-import { EmptyState } from "./_components/EmptyState";
 import { PeerRankCard } from "./_components/PeerRankCard";
 import { RecommendationsCta } from "./_components/RecommendationsCta";
 import { ScoreCard } from "./_components/ScoreCard";
@@ -44,19 +46,29 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <main className="mx-auto max-w-4xl space-y-6 p-8">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Painel</h1>
-          <p className="text-sm text-muted-foreground">
-            Resumo dos seus indicadores ESG e desempenho frente a pares do setor.
-          </p>
-        </div>
-
-        {!hasContent ? <EmptyState /> : null}
+      <PageHeader
+        title="Painel"
+        description="Resumo dos seus indicadores ESG e desempenho frente a pares do setor."
+        icon={Dashboard}
+      />
+      <div className="space-y-6 px-8 py-6">
+        {!hasContent ? (
+          <EmptyState
+            title="Comece por aqui"
+            description="Submeta um registo ESG ou carregue um IES para começar a ver indicadores e tendências."
+            primaryAction={{ label: "Novo registo", href: "/records/new", icon: Document }}
+            secondaryAction={{ label: "Carregar IES", href: "/economic-profile/ies/new", icon: Upload }}
+          />
+        ) : null}
 
         {scoresResult.length > 0 ? (
-          <section className="space-y-3">
-            <h2 className="text-lg font-medium">Modelos ESG</h2>
+          <section>
+            <h2
+              className="mb-3"
+              style={{ fontSize: "1rem", fontWeight: 600, lineHeight: 1.375, margin: 0 }}
+            >
+              Modelos ESG
+            </h2>
             <div className="grid gap-4 sm:grid-cols-2">
               {scoresResult.map((history) => (
                 <ScoreCard key={history.templateId} history={history} />
@@ -68,7 +80,7 @@ export default async function DashboardPage() {
         {benchmark !== null ? <PeerRankCard comparison={benchmark} /> : null}
 
         <RecommendationsCta mode={recommendationsMode} />
-      </main>
+      </div>
     </>
   );
 }

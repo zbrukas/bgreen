@@ -1,8 +1,10 @@
 import { RecordForm } from "@/app/_components/RecordForm/RecordForm";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { PageHeader } from "@/components/shell/PageHeader";
 import { fetchMe, fetchRecordPrefill, fetchTemplate, fetchTopics } from "@/lib/api-client";
-import { getSignInUrl, withAuth } from "@workos-inc/authkit-nextjs";
-import Link from "next/link";
+import { Add, Document } from "@carbon/icons-react";
+import { InlineNotification } from "@carbon/react";
+import { withAuth } from "@workos-inc/authkit-nextjs";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -13,56 +15,42 @@ interface PageProps {
 export default async function NewRecordPage({ searchParams }: PageProps) {
   const { template: templateId } = await searchParams;
   const auth = await withAuth();
-  if (!auth.user) {
-    const signInUrl = await getSignInUrl();
-    return (
-      <main className="mx-auto max-w-xl p-8">
-        <p>
-          <a href={signInUrl} className="text-primary underline-offset-4 hover:underline">
-            Iniciar sessão
-          </a>{" "}
-          para submeter um registo.
-        </p>
-      </main>
-    );
-  }
+  if (!auth.user) redirect("/");
 
   if (!templateId) {
     return (
-      <main className="mx-auto max-w-3xl space-y-4 p-8">
-        <p>
-          <Link href="/records" className="text-sm text-muted-foreground hover:text-foreground">
-            ← Voltar
-          </Link>
-        </p>
-        <p>Escolha um modelo na lista de registos.</p>
-      </main>
+      <>
+        <PageHeader
+          title="Novo registo"
+          description="Escolha um modelo na lista de registos."
+          icon={Add}
+          breadcrumbs={[{ label: "Registos", href: "/records" }, { label: "Novo" }]}
+        />
+      </>
     );
   }
 
   const tpl = await fetchTemplate(templateId);
   if (!tpl) {
     return (
-      <main className="mx-auto max-w-3xl space-y-4 p-8">
-        <p>
-          <Link href="/records" className="text-sm text-muted-foreground hover:text-foreground">
-            ← Voltar
-          </Link>
-        </p>
-        <p>Modelo não encontrado.</p>
-      </main>
+      <>
+        <PageHeader
+          title="Modelo não encontrado"
+          breadcrumbs={[{ label: "Registos", href: "/records" }, { label: "Novo" }]}
+        />
+      </>
     );
   }
   if (tpl.status !== "published") {
     return (
-      <main className="mx-auto max-w-3xl space-y-4 p-8">
-        <p>
-          <Link href="/records" className="text-sm text-muted-foreground hover:text-foreground">
-            ← Voltar
-          </Link>
-        </p>
-        <p>Este modelo não está publicado, não é possível submeter registos.</p>
-      </main>
+      <>
+        <PageHeader
+          title={tpl.name}
+          description="Este modelo não está publicado — não é possível submeter registos."
+          icon={Document}
+          breadcrumbs={[{ label: "Registos", href: "/records" }, { label: tpl.name }]}
+        />
+      </>
     );
   }
 
@@ -94,32 +82,34 @@ export default async function NewRecordPage({ searchParams }: PageProps) {
     .map((s) => ({ id: s.id, name: s.name, formSchema: s.formSchema }));
 
   return (
-    <main className="mx-auto max-w-3xl space-y-6 p-8">
-      <p>
-        <Link href="/records" className="text-sm text-muted-foreground hover:text-foreground">
-          ← Voltar
-        </Link>
-      </p>
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">{tpl.name}</h1>
-        {tpl.description && <p className="text-sm text-muted-foreground">{tpl.description}</p>}
-      </div>
-      {prefillCount > 0 && (
-        <Alert variant="info">
-          <AlertDescription>
-            {prefillCount}{" "}
-            {prefillCount === 1
-              ? "campo foi pré-preenchido a partir de outro modelo."
-              : "campos foram pré-preenchidos a partir de outros modelos."}
-          </AlertDescription>
-        </Alert>
-      )}
-      <RecordForm
-        template={tpl}
-        recordId={null}
-        initialValues={prefill}
-        subTemplates={subTemplates}
+    <>
+      <PageHeader
+        title={tpl.name}
+        description={tpl.description ?? undefined}
+        icon={Document}
+        breadcrumbs={[{ label: "Registos", href: "/records" }, { label: tpl.name }]}
       />
-    </main>
+      <div className="space-y-6 px-8 py-6">
+        {prefillCount > 0 && (
+          <InlineNotification
+            kind="info"
+            title="Pré-preenchimento aplicado"
+            subtitle={
+              prefillCount === 1
+                ? "1 campo foi pré-preenchido a partir de outro modelo."
+                : `${prefillCount} campos foram pré-preenchidos a partir de outros modelos.`
+            }
+            lowContrast
+            hideCloseButton
+          />
+        )}
+        <RecordForm
+          template={tpl}
+          recordId={null}
+          initialValues={prefill}
+          subTemplates={subTemplates}
+        />
+      </div>
+    </>
   );
 }

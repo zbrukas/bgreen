@@ -1,14 +1,23 @@
-import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/shell/PageHeader";
 import { getActiveOrgId, setActiveOrgId } from "@/lib/active-org";
 import { fetchHealth, fetchMe, fetchMyOrganizations } from "@/lib/api-client";
 import { listProfiles } from "@/lib/economic-profile-actions";
 import type { OrganizationEconomicProfile } from "@/lib/economic-profile-types";
+import { Building } from "@carbon/icons-react";
+import {
+  Button,
+  StructuredListBody,
+  StructuredListCell,
+  StructuredListHead,
+  StructuredListRow,
+  StructuredListWrapper,
+  Tag,
+} from "@carbon/react";
 import { getSignInUrl, withAuth } from "@workos-inc/authkit-nextjs";
 import { redirect } from "next/navigation";
+import { CreateOrganizationForm } from "./_components/CreateOrganizationForm/CreateOrganizationForm";
 import { EconomicProfileCta } from "./_home/EconomicProfileCta";
 import { EconomicProfileSummary } from "./_home/EconomicProfileSummary";
-import { CreateOrganizationForm } from "./_components/CreateOrganizationForm/CreateOrganizationForm";
 
 export const dynamic = "force-dynamic";
 
@@ -23,15 +32,18 @@ export default async function Home() {
     const signInUrl = await getSignInUrl();
     return (
       <main className="mx-auto flex min-h-screen max-w-xl flex-col items-center justify-center gap-6 p-8">
-        <h1 className="text-4xl font-bold tracking-tight">bGreen</h1>
-        <p className="text-center text-muted-foreground">
+        <h1 style={{ fontSize: "3rem", fontWeight: 300, letterSpacing: "0.16px", margin: 0 }}>
+          bGreen
+        </h1>
+        <p className="text-center text-neutral-700">
           Recolha de dados ESG, recomendações com IA, e relatórios prontos para o regulador.
         </p>
-        <a href={signInUrl} className={buttonVariants({ size: "lg" })}>
+        <Button kind="primary" href={signInUrl} size="lg">
           Iniciar sessão
-        </a>
-        <p className="text-xs text-muted-foreground">
-          API: <span className="font-mono">{healthLine}</span>
+        </Button>
+        <p className="text-xs text-neutral-500">
+          API:{" "}
+          <code style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{healthLine}</code>
         </p>
       </main>
     );
@@ -47,14 +59,14 @@ export default async function Home() {
   if (orgs.length === 0) {
     return (
       <main className="mx-auto max-w-xl space-y-6 p-8">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">bGreen</h1>
-          <p className="text-muted-foreground">
-            Olá <strong className="text-foreground">{auth.user.email}</strong>. Vamos criar a sua
-            primeira organização.
-          </p>
+        <PageHeader
+          title="Bem-vindo ao bGreen"
+          description={`Olá ${auth.user.email}. Vamos criar a sua primeira organização.`}
+          icon={Building}
+        />
+        <div className="px-8">
+          <CreateOrganizationForm />
         </div>
-        <CreateOrganizationForm />
       </main>
     );
   }
@@ -79,41 +91,62 @@ export default async function Home() {
 
   return (
     <>
-      <main className="mx-auto max-w-3xl space-y-6 p-8">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">
-            {activeOrg ? activeOrg.name : "bGreen"}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {orgs.length === 1
-              ? "Pertence a 1 organização."
-              : `Pertence a ${orgs.length} organizações.`}
-          </p>
-        </div>
-
+      <PageHeader
+        title={activeOrg ? activeOrg.name : "bGreen"}
+        description={
+          orgs.length === 1
+            ? "Pertence a 1 organização."
+            : `Pertence a ${orgs.length} organizações.`
+        }
+        icon={Building}
+      />
+      <div className="space-y-6 px-8 py-6">
         {latestProfile === null ? (
           <EconomicProfileCta />
         ) : (
           <EconomicProfileSummary profile={latestProfile} count={profiles.length} />
         )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Estado do sistema</CardTitle>
-            <CardDescription>Diagnóstico rápido das ligações da plataforma.</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-2 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Utilizador autenticado</span>
-              <span className="font-mono text-xs">{me ? `${me.email}` : "sync failed"}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">API</span>
-              <span className="font-mono text-xs">{healthLine}</span>
-            </div>
-          </CardContent>
-        </Card>
-      </main>
+        <section>
+          <h2
+            className="mb-3"
+            style={{ fontSize: "1rem", fontWeight: 600, lineHeight: 1.375, margin: 0 }}
+          >
+            Estado do sistema
+          </h2>
+          <p className="mb-3 text-sm text-neutral-600">
+            Diagnóstico rápido das ligações da plataforma.
+          </p>
+          <StructuredListWrapper>
+            <StructuredListHead>
+              <StructuredListRow head>
+                <StructuredListCell head>Componente</StructuredListCell>
+                <StructuredListCell head>Estado</StructuredListCell>
+              </StructuredListRow>
+            </StructuredListHead>
+            <StructuredListBody>
+              <StructuredListRow>
+                <StructuredListCell>Utilizador autenticado</StructuredListCell>
+                <StructuredListCell>
+                  <code style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.8125rem" }}>
+                    {me ? me.email : "sync failed"}
+                  </code>
+                </StructuredListCell>
+              </StructuredListRow>
+              <StructuredListRow>
+                <StructuredListCell>API</StructuredListCell>
+                <StructuredListCell>
+                  {health ? (
+                    <Tag type="green">{healthLine}</Tag>
+                  ) : (
+                    <Tag type="red">{healthLine}</Tag>
+                  )}
+                </StructuredListCell>
+              </StructuredListRow>
+            </StructuredListBody>
+          </StructuredListWrapper>
+        </section>
+      </div>
     </>
   );
 }

@@ -1,6 +1,9 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+"use client";
+
+import { StatCard } from "@/components/shell/StatCard";
 import type { OrganizationEconomicProfile } from "@/lib/economic-profile-types";
-import Link from "next/link";
+import { ArrowRight, Calendar, Money, UserMultiple } from "@carbon/icons-react";
+import { Button } from "@carbon/react";
 
 // pt-PT money formatter — vírgula decimal, espaço como separador.
 const EUR = new Intl.NumberFormat("pt-PT", {
@@ -17,39 +20,37 @@ export function EconomicProfileSummary({
   count: number;
 }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Perfil económico</CardTitle>
-        <CardDescription>
-          {count === 1
-            ? `1 exercício registado.`
-            : `${count} exercícios registados. Mais recente: ${profile.year}.`}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="grid gap-2 text-sm sm:grid-cols-3">
+    <section>
+      <div className="mb-3 flex items-end justify-between gap-4">
         <div>
-          <div className="text-xs text-muted-foreground">Ano</div>
-          <div className="font-medium">{profile.year}</div>
-        </div>
-        <div>
-          <div className="text-xs text-muted-foreground">Colaboradores</div>
-          <div className="font-medium">{profile.employees ?? "—"}</div>
-        </div>
-        <div>
-          <div className="text-xs text-muted-foreground">Volume de negócios</div>
-          <div className="font-medium">
-            {profile.turnover === null ? "—" : EUR.format(profile.turnover)}
-          </div>
-        </div>
-        <div className="sm:col-span-3">
-          <Link
-            href="/economic-profile"
-            className="text-sm text-muted-foreground underline-offset-4 hover:underline"
+          <h2
+            style={{ fontSize: "1.25rem", fontWeight: 400, lineHeight: 1.28, margin: 0 }}
           >
-            Ver perfil económico completo →
-          </Link>
+            Perfil económico
+          </h2>
+          <p className="mt-0.5 text-sm text-neutral-600">
+            {count === 1
+              ? "1 exercício registado."
+              : `${count} exercícios registados. Mais recente: ${profile.year}.`}
+          </p>
         </div>
-      </CardContent>
-    </Card>
+        <Button kind="ghost" href="/economic-profile" renderIcon={ArrowRight} size="sm">
+          Ver perfil completo
+        </Button>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <StatCard label="Ano" value={String(profile.year)} icon={Calendar} />
+        <StatCard
+          label="Colaboradores"
+          value={profile.employees !== null ? String(profile.employees) : "—"}
+          icon={UserMultiple}
+        />
+        <StatCard
+          label="Volume de negócios"
+          value={profile.turnover === null ? "—" : EUR.format(profile.turnover)}
+          icon={Money}
+        />
+      </div>
+    </section>
   );
 }

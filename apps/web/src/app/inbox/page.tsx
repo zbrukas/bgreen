@@ -1,16 +1,10 @@
-import { Badge, type BadgeProps } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { fetchInbox, fetchMe, fetchMyRecords, fetchTemplates } from "@/lib/api-client";
-import { getSignInUrl, withAuth } from "@workos-inc/authkit-nextjs";
-import Link from "next/link";
+import { EmptyState } from "@/components/shell/EmptyState";
+import { PageHeader } from "@/components/shell/PageHeader";
+import { fetchInbox, fetchMyRecords, fetchTemplates } from "@/lib/api-client";
+import { ArrowRight, Notification as NotificationIcon } from "@carbon/icons-react";
+import { withAuth } from "@workos-inc/authkit-nextjs";
+import { redirect } from "next/navigation";
+import { InboxTable } from "./InboxTable";
 
 export const dynamic = "force-dynamic";
 
@@ -19,29 +13,17 @@ const stateLabel: Record<string, string> = {
   changes_requested: "Alterações pedidas — corrigir",
 };
 
-const stateVariant: Record<string, NonNullable<BadgeProps["variant"]>> = {
-  draft: "outline",
-  changes_requested: "warning",
+type TagType = "cool-gray" | "magenta";
+const stateTagType: Record<string, TagType> = {
+  draft: "cool-gray",
+  changes_requested: "magenta",
 };
 
 export default async function InboxPage() {
   const auth = await withAuth();
-  if (!auth.user) {
-    const signInUrl = await getSignInUrl();
-    return (
-      <main className="mx-auto max-w-xl p-8">
-        <p>
-          <a href={signInUrl} className="text-primary underline-offset-4 hover:underline">
-            Iniciar sessão
-          </a>{" "}
-          para ver as tarefas pendentes.
-        </p>
-      </main>
-    );
-  }
+  if (!auth.user) redirect("/");
 
-  const [_me, inbox, templates, records] = await Promise.all([
-    fetchMe(),
+  const [inbox, templates, records] = await Promise.all([
     fetchInbox(),
     fetchTemplates(),
     fetchMyRecords(),
@@ -54,75 +36,37 @@ export default async function InboxPage() {
     records.map((r) => [r.id, templateNameById.get(r.templateId) ?? "Registo"]),
   );
 
-  return (
-    <main className="mx-auto max-w-5xl space-y-6 p-8">
-      <p>
-        <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
-          ← Voltar
-        </Link>
-      </p>
-      <h1 className="text-2xl font-semibold tracking-tight">Pendentes</h1>
-      <p className="text-sm text-muted-foreground">
-        Rascunhos e registos com alterações pedidas a aguardar a sua resposta. A revisão é feita
-        pelos serviços centrais.
-      </p>
+  const rows = inbox.map((instance) => {
+    const state = typeof instance.currentState === "string" ? instance.currentState : "—";
+    return {
+      id: instance.id,
+      recordId: instance.entityId,
+      template: templateNameByRecord.get(instance.entityId) ?? "Registo",
+      state,
+      stateLabel: stateLabel[state] ?? state,
+      stateType: stateTagType[state] ?? "cool-gray",
+      updatedAt: new Date(instance.updatedAt).toLocaleString("pt-PT"),
+    };
+  });
 
-      {inbox.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          Nenhuma tarefa pendente.{" "}
-          <Link href="/records" className={buttonVariants({ variant: "outline", size: "sm" })}>
-            Ver todos os registos
-          </Link>
-        </p>
-      ) : (
-        <div className="rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Modelo</TableHead>
-                <TableHead>Acção</TableHead>
-                <TableHead>Actualizado</TableHead>
-                <TableHead className="text-right" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {inbox.map((instance) => {
-                const state =
-                  typeof instance.currentState === "string" ? instance.currentState : "—";
-                const tplName = templateNameByRecord.get(instance.entityId) ?? "Registo";
-                return (
-                  <TableRow key={instance.id}>
-                    <TableCell>
-                      <Link
-                        href={`/records/${instance.entityId}`}
-                        className="font-medium text-primary underline-offset-4 hover:underline"
-                      >
-                        {tplName}
-                      </Link>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={stateVariant[state] ?? "outline"}>
-                        {stateLabel[state] ?? state}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {new Date(instance.updatedAt).toLocaleString("pt-PT")}
-                    </TableCell>
-                    <TableCell className="text-right text-sm">
-                      <Link
-                        href={`/records/${instance.entityId}`}
-                        className="text-primary underline-offset-4 hover:underline"
-                      >
-                        Abrir
-                      </Link>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </div>
-      )}
-    </main>
+  return (
+    <>
+      <PageHeader
+        title="Pendentes"
+        description="Rascunhos e registos com alterações pedidas a aguardar a sua resposta. A revisão é feita pelos serviços centrais."
+        icon={NotificationIcon}
+      />
+      <div className="space-y-6 px-8 py-6">
+        {rows.length === 0 ? (
+          <EmptyState
+            title="Nada pendente"
+            description="Quando tiver rascunhos ou registos com alterações pedidas, aparecerão aqui."
+            primaryAction={{ label: "Ver todos os registos", href: "/records", icon: ArrowRight }}
+          />
+        ) : (
+          <InboxTable rows={rows} />
+        )}
+      </div>
+    </>
   );
 }

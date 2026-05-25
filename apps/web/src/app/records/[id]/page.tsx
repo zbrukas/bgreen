@@ -1,10 +1,11 @@
-import { AuditTrail } from "./_components/AuditTrail";
 import { RecordForm } from "@/app/_components/RecordForm/RecordForm";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge, type BadgeProps } from "@/components/ui/badge";
+import { PageHeader } from "@/components/shell/PageHeader";
 import { fetchMe, fetchRecord, fetchTemplate, fetchTopics } from "@/lib/api-client";
-import { getSignInUrl, withAuth } from "@workos-inc/authkit-nextjs";
-import Link from "next/link";
+import { Document } from "@carbon/icons-react";
+import { InlineNotification, Tag } from "@carbon/react";
+import { withAuth } from "@workos-inc/authkit-nextjs";
+import { redirect } from "next/navigation";
+import { AuditTrail } from "./_components/AuditTrail";
 
 export const dynamic = "force-dynamic";
 
@@ -16,18 +17,19 @@ const statusLabel: Record<string, string> = {
   rejected: "Rejeitado",
 };
 
-const statusVariant: Record<string, NonNullable<BadgeProps["variant"]>> = {
-  draft: "outline",
-  submitted: "info",
-  approved: "success",
-  changes_requested: "warning",
-  rejected: "destructive",
+type TagType = "cool-gray" | "blue" | "green" | "magenta" | "red";
+const statusTagType: Record<string, TagType> = {
+  draft: "cool-gray",
+  submitted: "blue",
+  approved: "green",
+  changes_requested: "magenta",
+  rejected: "red",
 };
 
-const commentAlertVariant: Record<string, "success" | "warning" | "destructive"> = {
+const commentKind: Record<string, "success" | "warning" | "error"> = {
   approved: "success",
   changes_requested: "warning",
-  rejected: "destructive",
+  rejected: "error",
 };
 
 interface PageProps {
@@ -37,45 +39,29 @@ interface PageProps {
 export default async function RecordDetailPage({ params }: PageProps) {
   const { id } = await params;
   const auth = await withAuth();
-  if (!auth.user) {
-    const signInUrl = await getSignInUrl();
-    return (
-      <main className="mx-auto max-w-xl p-8">
-        <p>
-          <a href={signInUrl} className="text-primary underline-offset-4 hover:underline">
-            Iniciar sessão
-          </a>{" "}
-          para ver o registo.
-        </p>
-      </main>
-    );
-  }
+  if (!auth.user) redirect("/");
 
   const [me, record] = await Promise.all([fetchMe(), fetchRecord(id)]);
   if (!record) {
     return (
-      <main className="mx-auto max-w-3xl space-y-4 p-8">
-        <p>
-          <Link href="/records" className="text-sm text-muted-foreground hover:text-foreground">
-            ← Voltar
-          </Link>
-        </p>
-        <p>Registo não encontrado.</p>
-      </main>
+      <>
+        <PageHeader
+          title="Registo não encontrado"
+          breadcrumbs={[{ label: "Registos", href: "/records" }, { label: "—" }]}
+        />
+      </>
     );
   }
 
   const tpl = await fetchTemplate(record.templateId);
   if (!tpl) {
     return (
-      <main className="mx-auto max-w-3xl space-y-4 p-8">
-        <p>
-          <Link href="/records" className="text-sm text-muted-foreground hover:text-foreground">
-            ← Voltar
-          </Link>
-        </p>
-        <p>Modelo associado não encontrado.</p>
-      </main>
+      <>
+        <PageHeader
+          title="Modelo associado não encontrado"
+          breadcrumbs={[{ label: "Registos", href: "/records" }, { label: record.id }]}
+        />
+      </>
     );
   }
 
@@ -102,42 +88,43 @@ export default async function RecordDetailPage({ params }: PageProps) {
   const isAdmin = me?.activeOrganizationRole === "org_admin";
   const isOwner = record.submittedByUserId === me?.id;
   const editable = isOwner && (record.status === "draft" || record.status === "changes_requested");
-  const commentVariant = commentAlertVariant[record.status];
+  const reviewKind = commentKind[record.status];
 
   return (
-    <main className="mx-auto max-w-3xl space-y-6 p-8">
-      <p>
-        <Link href="/records" className="text-sm text-muted-foreground hover:text-foreground">
-          ← Voltar
-        </Link>
-      </p>
-      <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">{tpl.name}</h1>
-        <Badge variant={statusVariant[record.status] ?? "outline"}>
-          {statusLabel[record.status] ?? record.status}
-        </Badge>
-      </div>
-      {tpl.description && <p className="text-sm text-muted-foreground">{tpl.description}</p>}
-
-      {record.reviewComment && commentVariant && (
-        <Alert variant={commentVariant}>
-          <AlertTitle>Comentário do revisor</AlertTitle>
-          <AlertDescription className="whitespace-pre-wrap">
-            {record.reviewComment}
-          </AlertDescription>
-        </Alert>
-      )}
-
-      <RecordForm
-        template={tpl}
-        recordId={record.id}
-        initialValues={record.values}
-        readOnly={!editable}
-        initialStatus={record.status}
-        subTemplates={subTemplates}
+    <>
+      <PageHeader
+        title={tpl.name}
+        description={tpl.description ?? undefined}
+        icon={Document}
+        breadcrumbs={[{ label: "Registos", href: "/records" }, { label: tpl.name }]}
+        actions={
+          <Tag type={statusTagType[record.status] ?? "cool-gray"}>
+            {statusLabel[record.status] ?? record.status}
+          </Tag>
+        }
       />
+      <div className="space-y-6 px-8 py-6">
+        {record.reviewComment && reviewKind && (
+          <InlineNotification
+            kind={reviewKind}
+            title="Comentário do revisor"
+            subtitle={record.reviewComment}
+            lowContrast
+            hideCloseButton
+          />
+        )}
 
-      {isAdmin && <AuditTrail entityKind="record" entityId={record.id} />}
-    </main>
+        <RecordForm
+          template={tpl}
+          recordId={record.id}
+          initialValues={record.values}
+          readOnly={!editable}
+          initialStatus={record.status}
+          subTemplates={subTemplates}
+        />
+
+        {isAdmin && <AuditTrail entityKind="record" entityId={record.id} />}
+      </div>
+    </>
   );
 }
