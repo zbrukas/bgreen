@@ -160,6 +160,26 @@ export function isBenchmarkInsufficientData(
   return "insufficientData" in aggregate && aggregate.insufficientData === true;
 }
 
+// V7.3 — trend wire shape. One row per (profile) year, augmented with
+// the matched sector peer medians for that year (or nulls when no
+// aggregate exists for that slice).
+export interface TrendYearRow {
+  year: number;
+  cae3: string | null;
+  dimensao: Dimensao | null;
+  turnover: number | null;
+  ebitda: number | null;
+  ebitdaMargin: number | null;
+  peerMedianTurnover: number | null;
+  peerMedianEbitdaMargin: number | null;
+  peerVintageYear: number | null;
+  peerNCompanies: number | null;
+}
+
+export interface TrendData {
+  years: TrendYearRow[];
+}
+
 export interface ExtractionEdits {
   year?: number;
   employees?: number | null;

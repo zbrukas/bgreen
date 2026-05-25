@@ -18,6 +18,9 @@ import {
   type IesExtractionLog,
   type ManualEntryInput,
   type OrganizationEconomicProfile,
+  type TrendData,
+  type TrendYearRow,
+  isBenchmarkInsufficientData,
 } from "./economic-profile-types";
 
 const API_URL = process.env.API_URL ?? "http://localhost:8787";
@@ -173,6 +176,52 @@ export async function getBenchmarkComparison(year: number): Promise<BenchmarkCom
     throw new IesError(await readErrorCode(res), res.status);
   }
   return (await res.json()) as BenchmarkComparison;
+}
+
+// ── V7.3 multi-year trend ──────────────────────────────────────────────
+// Composes listProfiles + getBenchmarkComparison per year. Best-effort
+// — a benchmark fetch failing for one year doesn't block the others;
+// peer medians for that year are null in the chart.
+export async function getTrendData(): Promise<TrendData> {
+  const profiles = await listProfiles();
+  // Sort ascending — charts read left-to-right.
+  profiles.sort((a, b) => a.year - b.year);
+  const rows = await Promise.all(
+    profiles.map(async (p): Promise<TrendYearRow> => {
+      let peerMedianTurnover: number | null = null;
+      let peerMedianEbitdaMargin: number | null = null;
+      let peerVintageYear: number | null = null;
+      let peerNCompanies: number | null = null;
+      try {
+        const comparison = await getBenchmarkComparison(p.year);
+        if (!isBenchmarkInsufficientData(comparison.aggregate)) {
+          peerMedianTurnover = comparison.aggregate.medianTurnover;
+          peerMedianEbitdaMargin = comparison.aggregate.medianEbitdaMargin;
+          peerVintageYear = comparison.aggregate.vintageYear;
+          peerNCompanies = comparison.aggregate.nCompanies;
+        }
+      } catch {
+        // Swallow: peer overlay is optional, profile data is the trunk.
+      }
+      const ebitdaMargin =
+        p.ebitda !== null && p.turnover !== null && p.turnover !== 0
+          ? p.ebitda / p.turnover
+          : null;
+      return {
+        year: p.year,
+        cae3: p.cae ? p.cae.replace(/[^0-9]/g, "").slice(0, 3) || null : null,
+        dimensao: p.dimensao,
+        turnover: p.turnover,
+        ebitda: p.ebitda,
+        ebitdaMargin,
+        peerMedianTurnover,
+        peerMedianEbitdaMargin,
+        peerVintageYear,
+        peerNCompanies,
+      };
+    }),
+  );
+  return { years: rows };
 }
 
 // ── List profiles ──────────────────────────────────────────────────────

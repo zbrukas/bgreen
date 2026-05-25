@@ -81,6 +81,12 @@ export default async function EconomicProfilePage() {
             >
               Entrada manual
             </Link>
+            <Link
+              href="/economic-profile/trend"
+              className={buttonVariants({ size: "sm", variant: "ghost" })}
+            >
+              Tendências
+            </Link>
           </div>
         </div>
 
