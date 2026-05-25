@@ -6,7 +6,12 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { requireOrgRelation } from "../../../auth-helpers.js";
 import type { AppEnv } from "../../../context.js";
-import { inviteService, organizationService, repositories } from "../../../services.js";
+import {
+  inviteService,
+  organizationService,
+  repositories,
+  s3Uploader,
+} from "../../../services.js";
 
 const nullableTrimmed = z.string().nullable().optional();
 
@@ -47,6 +52,36 @@ const updateMembershipInput = z.object({
   role: MembershipRoleSchema.optional(),
   topicScope: z.array(z.string()).optional(),
 });
+
+// V11.4 — branding update. Both fields optional + nullable so the UI
+// can update one without resetting the other (omit) or clear one
+// explicitly (null). Color enforced as #rrggbb hex.
+const updateBrandingInput = z
+  .object({
+    logoUrl: z.string().min(1).max(2048).nullable().optional(),
+    brandPrimaryColor: z
+      .string()
+      .regex(/^#[0-9a-fA-F]{6}$/, "invalid_color")
+      .nullable()
+      .optional(),
+  })
+  .strict();
+
+const requestLogoUploadInput = z
+  .object({
+    // Lowercase extension; we use it for the S3 object key + content
+    // type. Validated against the small whitelist below.
+    extension: z.enum(["png", "svg", "jpg", "jpeg", "webp"]),
+  })
+  .strict();
+
+const CONTENT_TYPE_BY_EXTENSION: Record<string, string> = {
+  png: "image/png",
+  svg: "image/svg+xml",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  webp: "image/webp",
+};
 
 function appPublicUrl(): string {
   return process.env.APP_PUBLIC_URL ?? "http://localhost:3000";
@@ -144,6 +179,56 @@ export const organizationsRoutes = new Hono<AppEnv>()
     }));
     return c.json(out);
   })
+  // V11.4 — request a presigned PUT URL for a new logo upload. The
+  // client uploads bytes directly to S3, then PATCHes /branding with
+  // the returned logoKey. Two-step flow keeps logo bytes off apps/api.
+  .post(
+    "/:orgId/branding/logo-upload-url",
+    zValidator("json", requestLogoUploadInput),
+    async (c) => {
+      const orgId = c.req.param("orgId");
+      if (!orgId) return c.json({ error: "missing_org_id" }, 400);
+      if (c.var.organizationId !== orgId) {
+        return c.json({ error: "wrong_active_org" }, 403);
+      }
+      await requireOrgRelation(c.var.user.id, orgId, "org_admin");
+      const { extension } = c.req.valid("json");
+      // Random suffix so consecutive uploads don't overwrite each
+      // other server-side — the admin sees a clean replace via PATCH.
+      const logoKey = `organizations/${orgId}/branding/logo-${crypto.randomUUID()}.${extension}`;
+      const presign = await s3Uploader.presignedUploadUrl(logoKey, {
+        contentType: CONTENT_TYPE_BY_EXTENSION[extension],
+      });
+      if (!presign.ok) {
+        return c.json({ error: "presign_failed", reason: presign.error.message }, 500);
+      }
+      return c.json({ uploadUrl: presign.value, logoKey });
+    },
+  )
+  // V11.4 — apply branding changes. logoUrl carries the S3 object key
+  // (not a URL) — render-time resolution lives in apps/pdf. The column
+  // is named logo_url for legacy alignment.
+  .patch(
+    "/:orgId/branding",
+    zValidator("json", updateBrandingInput),
+    async (c) => {
+      const orgId = c.req.param("orgId");
+      if (!orgId) return c.json({ error: "missing_org_id" }, 400);
+      if (c.var.organizationId !== orgId) {
+        return c.json({ error: "wrong_active_org" }, 403);
+      }
+      await requireOrgRelation(c.var.user.id, orgId, "org_admin");
+      const input = c.req.valid("json");
+      const updated = await organizationService.updateBranding({
+        organizationId: orgId,
+        actorUserId: c.var.user.id,
+        logoUrl: input.logoUrl,
+        brandPrimaryColor: input.brandPrimaryColor,
+      });
+      if (!updated) return c.json({ error: "org_not_found" }, 404);
+      return c.json(updated);
+    },
+  )
   .patch("/:orgId/members/:userId", zValidator("json", updateMembershipInput), async (c) => {
     const orgId = c.req.param("orgId");
     const targetUserId = c.req.param("userId");

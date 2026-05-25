@@ -58,6 +58,12 @@ export function Header({
         >
           Cobertura
         </Link>
+        <Link
+          href="/reports"
+          className="text-sm text-muted-foreground hover:text-foreground"
+        >
+          Relatórios
+        </Link>
         <Link href="/templates" className="text-sm text-muted-foreground hover:text-foreground">
           Modelos
         </Link>
@@ -68,6 +74,12 @@ export function Header({
               className="text-sm text-muted-foreground hover:text-foreground"
             >
               Membros
+            </Link>
+            <Link
+              href={`/organizations/${activeOrganizationId}/branding`}
+              className="text-sm text-muted-foreground hover:text-foreground"
+            >
+              Identidade
             </Link>
             <Link
               href={`/organizations/${activeOrganizationId}/invites/new`}

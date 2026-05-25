@@ -114,6 +114,9 @@ class StubOrgRepo implements OrganizationRepository {
   listForUser() {
     return Promise.resolve([]);
   }
+  updateBranding(): never {
+    throw new Error("unused");
+  }
 }
 
 class StubAuditRepo implements AuditRepository {

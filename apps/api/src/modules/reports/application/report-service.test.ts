@@ -146,6 +146,9 @@ class InMemoryOrgRepo implements OrganizationRepository {
   listForUser() {
     return Promise.resolve([]);
   }
+  updateBranding(): never {
+    throw new Error("unused in V11 tests");
+  }
   seed(org: Organization) {
     this.orgs.set(org.id, org);
   }

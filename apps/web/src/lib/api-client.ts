@@ -90,6 +90,39 @@ export async function fetchMyOrganizations(): Promise<Array<{ id: string; name: 
   }
 }
 
+// V11.4 — fetches the full organization row (with branding fields) for
+// the active org. Returns null when not signed in or not a member.
+// The /organizations endpoint already returns full rows; we just need
+// the un-narrowed shape here.
+export interface OrganizationFull {
+  id: string;
+  name: string;
+  logoUrl: string | null;
+  brandPrimaryColor: string | null;
+}
+
+export async function fetchActiveOrganization(
+  organizationId: string,
+): Promise<OrganizationFull | null> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return null;
+    const res = await api.organizations.$get(undefined, { headers });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const o = data.find((row) => row.id === organizationId);
+    if (!o) return null;
+    return {
+      id: o.id,
+      name: o.name,
+      logoUrl: o.logoUrl,
+      brandPrimaryColor: o.brandPrimaryColor,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function createOrganization(input: {
   name: string;
   nif: string | null;

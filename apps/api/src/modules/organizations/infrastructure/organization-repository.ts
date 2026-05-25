@@ -89,6 +89,28 @@ export class DrizzleOrganizationRepository implements OrganizationRepository {
       .where(eq(schema.organizationMemberships.userId, userId));
     return rows.map((r) => rowToOrganization(r.organization));
   }
+
+  async updateBranding(input: {
+    organizationId: string;
+    logoUrl?: string | null;
+    brandPrimaryColor?: string | null;
+  }): Promise<Organization | null> {
+    const set: Record<string, unknown> = { updatedAt: new Date() };
+    if (input.logoUrl !== undefined) set.logoUrl = input.logoUrl;
+    if (input.brandPrimaryColor !== undefined) {
+      set.brandPrimaryColor = input.brandPrimaryColor;
+    }
+    // Empty patch → no-op write; just fetch + return.
+    if (Object.keys(set).length === 1) {
+      return this.findById(input.organizationId);
+    }
+    const [row] = await db
+      .update(schema.organizations)
+      .set(set)
+      .where(eq(schema.organizations.id, input.organizationId))
+      .returning();
+    return row ? rowToOrganization(row) : null;
+  }
 }
 
 export class DrizzleMembershipRepository implements MembershipRepository {

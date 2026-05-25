@@ -1,6 +1,5 @@
-import { Header } from "@/app/_components/Header/Header";
 import { getActiveOrgId } from "@/lib/active-org";
-import { fetchMe, fetchMyOrganizations } from "@/lib/api-client";
+import { fetchMe } from "@/lib/api-client";
 import { getRecommendationsHistory } from "@/lib/recommendations-actions";
 import type { HistoryEntry } from "@/lib/recommendations-types";
 import { withAuth } from "@workos-inc/authkit-nextjs";
@@ -15,11 +14,7 @@ export default async function RecommendationsPage() {
   const auth = await withAuth();
   if (!auth.user) redirect("/");
 
-  const [me, orgs, activeOrgId] = await Promise.all([
-    fetchMe(),
-    fetchMyOrganizations(),
-    getActiveOrgId(),
-  ]);
+  const [me, activeOrgId] = await Promise.all([fetchMe(), getActiveOrgId()]);
   if (!activeOrgId || !me) redirect("/");
 
   // History is best-effort — first-time orgs see an empty state, not an
@@ -29,12 +24,6 @@ export default async function RecommendationsPage() {
 
   return (
     <>
-      <Header
-        userEmail={auth.user.email}
-        organizations={orgs}
-        activeOrganizationId={activeOrgId}
-        activeOrganizationRole={me.activeOrganizationRole}
-      />
       <main className="mx-auto max-w-4xl space-y-6 p-8">
         <div className="flex items-start justify-between gap-4">
           <div>

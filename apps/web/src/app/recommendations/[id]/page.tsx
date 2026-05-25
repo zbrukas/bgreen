@@ -1,6 +1,5 @@
-import { Header } from "@/app/_components/Header/Header";
 import { getActiveOrgId } from "@/lib/active-org";
-import { fetchMe, fetchMyOrganizations } from "@/lib/api-client";
+import { fetchMe } from "@/lib/api-client";
 import { withAuth } from "@workos-inc/authkit-nextjs";
 import { redirect } from "next/navigation";
 import { RecommendationsRunView } from "./RecommendationsRunView";
@@ -16,21 +15,11 @@ export default async function RecommendationsRunPage({
   const auth = await withAuth();
   if (!auth.user) redirect("/");
 
-  const [me, orgs, activeOrgId] = await Promise.all([
-    fetchMe(),
-    fetchMyOrganizations(),
-    getActiveOrgId(),
-  ]);
+  const [me, activeOrgId] = await Promise.all([fetchMe(), getActiveOrgId()]);
   if (!activeOrgId || !me) redirect("/");
 
   return (
     <>
-      <Header
-        userEmail={auth.user.email}
-        organizations={orgs}
-        activeOrganizationId={activeOrgId}
-        activeOrganizationRole={me.activeOrganizationRole}
-      />
       <main className="mx-auto max-w-3xl space-y-6 p-8">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">Recomendações</h1>
