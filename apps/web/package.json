@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev --port 3000",
-    "build": "next build",
+    "clean": "rm -rf .next",
+    "build": "rm -rf .next && next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests"
