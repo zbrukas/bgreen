@@ -5,6 +5,7 @@ import type { AppEnv } from "./context.js";
 import { inngest } from "./inngest.js";
 import { authMiddleware } from "./middleware/auth.js";
 import { auditRoutes } from "./modules/audit/module.js";
+import { csAdminRoutes } from "./modules/cs-admin/module.js";
 import { csAuthRoutes } from "./modules/cs-auth/module.js";
 import { csRoutes } from "./modules/cs/api/routes.js";
 import { economicProfileRoutes } from "./modules/economic-profile/api/routes.js";
@@ -90,6 +91,9 @@ const authedRoutes = new Hono<AppEnv>()
   .route("/reports", reportsRoutes)
   .route("/workflows", workflowsRoutes)
   .route("/topics", topicsRoutes)
+  // V12.1 cs-admin paths mount before /cs so the Hono radix tree picks
+  // the more specific /cs/required-templates segment for csAdmin.
+  .route("/cs", csAdminRoutes)
   .route("/cs", csRoutes);
 
 export const app = new Hono().use("*", logger()).route("/", publicRoutes).route("/", authedRoutes);

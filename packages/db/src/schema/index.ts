@@ -6,6 +6,7 @@ export * from "./framework-coverage";
 export * from "./legal-form";
 export * from "./organization-invites";
 export * from "./organization-memberships";
+export * from "./organization-required-templates";
 export * from "./organization-size";
 export * from "./organizations";
 export * from "./pt-reference";

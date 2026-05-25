@@ -30,6 +30,11 @@ export const auditLog = pgTable(
   (t) => ({
     entityIdx: index("audit_log_entity_idx").on(t.entityKind, t.entityId, t.occurredAt),
     orgIdx: index("audit_log_org_idx").on(t.organizationId, t.occurredAt),
+    // V12.1 — supports WAU/MAU queries that filter on `action`. The
+    // existing (organization_id, occurred_at) index can't push the
+    // action predicate down once login + record-* + workflow.* rows
+    // start dominating audit volume.
+    actionOrgIdx: index("audit_log_action_org_idx").on(t.action, t.organizationId, t.occurredAt),
   }),
 );
 

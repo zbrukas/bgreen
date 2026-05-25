@@ -9,6 +9,10 @@ import {
   type S3Uploader,
 } from "@bgreen/storage";
 import { AuditService, DrizzleAuditRepository } from "./modules/audit/module.js";
+import {
+  DrizzleRequiredTemplateRepository,
+  RequiredTemplateService,
+} from "./modules/cs-admin/module.js";
 import { CsAuthService } from "./modules/cs-auth/module.js";
 import {
   DrizzleEconomicProfileRepository,
@@ -76,6 +80,7 @@ export const repositories = {
   frameworkDatapoints: new DrizzleFrameworkDatapointRepository(),
   templateDatapointMappings: new DrizzleTemplateDatapointMappingRepository(),
   reportInstances: new DrizzleReportInstanceRepository(),
+  requiredTemplates: new DrizzleRequiredTemplateRepository(),
 };
 
 export const userService = new UserService(repositories.users, repositories.centralServicesDomains);
@@ -103,6 +108,11 @@ export const topicService = new TopicService(repositories.topics);
 export const recordTemplateService = new RecordTemplateService(
   repositories.recordTemplates,
   repositories.compositions,
+);
+
+export const requiredTemplateService = new RequiredTemplateService(
+  repositories.requiredTemplates,
+  auditService,
 );
 
 export const recordService = new RecordService(

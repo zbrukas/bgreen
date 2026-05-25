@@ -7,6 +7,8 @@ export type AuditEntityKind =
   | "record_template"
   | "organization"
   | "organization_invite"
+  | "organization_required_template"
+  | "user"
   | "workflow_instance"
   | "ies_extraction"
   | "generated_recommendation"

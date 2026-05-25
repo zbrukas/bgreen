@@ -77,6 +77,23 @@ export async function fetchMe(): Promise<MeResponse | null> {
   }
 }
 
+// V12.1 — fire-and-forget telemetry call from setActiveOrgId(). The API
+// dedupes within 60s so calling on every cookie write is safe. Failure
+// is swallowed because login UX must not break on audit-log write
+// errors.
+export async function postLoginEvent(organizationId: string): Promise<void> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return;
+    await api.identity["login-event"].$post(
+      { json: { organizationId } },
+      { headers },
+    );
+  } catch {
+    // intentional — see comment above.
+  }
+}
+
 export async function fetchMyOrganizations(): Promise<Array<{ id: string; name: string }>> {
   try {
     const headers = await authedHeaders();
