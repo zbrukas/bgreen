@@ -31,6 +31,9 @@ export function Header({
             activeOrganizationId={activeOrganizationId}
           />
         )}
+        <Link href="/dashboard" className="text-sm text-muted-foreground hover:text-foreground">
+          Painel
+        </Link>
         <Link href="/inbox" className="text-sm text-muted-foreground hover:text-foreground">
           Pendentes
         </Link>
