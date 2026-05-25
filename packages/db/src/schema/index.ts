@@ -8,6 +8,7 @@ export * from "./organization-memberships";
 export * from "./organization-size";
 export * from "./organizations";
 export * from "./pt-reference";
+export * from "./recommendations";
 export * from "./record-templates";
 export * from "./records";
 export * from "./sector-aggregates";

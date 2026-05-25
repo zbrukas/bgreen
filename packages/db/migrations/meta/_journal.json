@@ -127,6 +127,13 @@
       "when": 1780020000000,
       "tag": "0017_record_scores",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1780110000000,
+      "tag": "0018_recommendations",
+      "breakpoints": true
     }
   ]
 }
