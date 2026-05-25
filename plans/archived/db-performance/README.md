@@ -1,9 +1,11 @@
 # DB Performance Audit — bGreen
 
-> **Status:** Not started.
+> **Status:** Complete (2026-05-25). Archived.
 > **Scope:** SQL/Drizzle perf only — not a feature vertical. Tracks index gaps, query shape problems, and round-trip waste found in the current `apps/api` repositories and `packages/db` schema.
-> **Parent PRD:** [../bgreen-greenfield-rewrite.md](../bgreen-greenfield-rewrite.md)
+> **Parent PRD:** [../../bgreen-greenfield-rewrite.md](../../bgreen-greenfield-rewrite.md)
 > **Source:** Audit performed 2026-05-25.
+>
+> **Outcome:** HIGH (H1–H5) shipped in migration 0021 + repo wiring (bundled with `bcc6864`). MEDIUM (M1, M2) shipped in `703d5cc`. LOW L1 shipped in `4f3063c`; L2 capped defensively (cursor pagination deferred). M3, M4, L2-cursor, and L3 deferred — all conditional on usage that doesn't exist yet (no scanning predicates, no per-org invite listing, no JSONB filters, no customer-facing audit screen). Archived once the actionable items were done.
 
 Each task below is a checkbox. Tackle HIGH before MEDIUM before LOW. Most fixes are small (one migration + repo edit). Group HIGH-1, HIGH-2, HIGH-4 into a single migration if shipping together.
 
