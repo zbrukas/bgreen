@@ -1,6 +1,7 @@
-import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import Link from "next/link";
+"use client";
+
+import { Recommend } from "@carbon/icons-react";
+import { Button, Tile } from "@carbon/react";
 
 // PRD acceptance: "Preliminary recommendations work for INCOMPLETE-mode
 // users: as soon as signup wizard (V3) completes, a 'ver recomendações
@@ -19,16 +20,14 @@ export function RecommendationsCta({ mode }: { mode: "preliminary" | "full" }) {
   const cta = mode === "preliminary" ? "Ver recomendações preliminares" : "Gerar recomendações";
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Link href="/recommendations" className={buttonVariants({ size: "sm" })}>
+    <Tile>
+      <h2 style={{ fontSize: "1rem", fontWeight: 600, lineHeight: 1.375, margin: 0 }}>{title}</h2>
+      <p className="mt-1 text-sm text-neutral-700">{description}</p>
+      <div className="mt-4">
+        <Button kind="primary" href="/recommendations" renderIcon={Recommend}>
           {cta}
-        </Link>
-      </CardContent>
-    </Card>
+        </Button>
+      </div>
+    </Tile>
   );
 }
