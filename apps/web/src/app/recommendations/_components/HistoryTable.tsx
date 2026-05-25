@@ -1,33 +1,34 @@
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   COMPLETENESS_LABEL,
   FEEDBACK_LABEL,
   type HistoryEntry,
   type RecommendationsStatus,
 } from "@/lib/recommendations-types";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableHeader,
+  TableRow,
+  Tag,
+} from "@carbon/react";
 import Link from "next/link";
 import { statusLabel } from "./status";
 
-const STATUS_BADGE: Record<RecommendationsStatus, "info" | "warning" | "success" | "destructive" | "secondary"> = {
-  pending: "info",
-  running: "info",
-  ready: "success",
-  failed: "destructive",
-  cancelled: "secondary",
+const STATUS_TAG_TYPE: Record<
+  RecommendationsStatus,
+  "blue" | "green" | "red" | "cool-gray"
+> = {
+  pending: "blue",
+  running: "blue",
+  ready: "green",
+  failed: "red",
+  cancelled: "cool-gray",
 };
 
 function formatDateTime(iso: string): string {
-  // pt-PT-friendly compact format. The user sees the locale's date plus
-  // hour:minute — enough to disambiguate same-day regens.
   const d = new Date(iso);
   return d.toLocaleString("pt-PT", {
     year: "numeric",
@@ -41,74 +42,62 @@ function formatDateTime(iso: string): string {
 export function HistoryTable({ entries }: { entries: HistoryEntry[] }) {
   if (entries.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Histórico</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Ainda não existem gerações para esta organização.
-          </p>
-        </CardContent>
-      </Card>
+      <p className="text-sm text-neutral-600">
+        Ainda não existem gerações para esta organização.
+      </p>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Histórico</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Data</TableHead>
-              <TableHead>Perfil</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead className="text-right">Itens</TableHead>
-              <TableHead className="text-right">Úteis</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {entries.map((entry) => {
-              const { generation, feedbackCounts } = entry;
-              const utilCount = feedbackCounts.util ?? 0;
-              const itemCount = generation.recommendations?.length ?? 0;
-              return (
-                <TableRow key={generation.id}>
-                  <TableCell className="whitespace-nowrap">
-                    {formatDateTime(generation.createdAt)}
-                  </TableCell>
-                  <TableCell>{COMPLETENESS_LABEL[generation.completenessMode]}</TableCell>
-                  <TableCell>
-                    <Badge variant={STATUS_BADGE[generation.status]}>
-                      {statusLabel(generation.status)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">{itemCount || "—"}</TableCell>
-                  <TableCell className="text-right">
-                    {utilCount > 0 ? (
-                      <span title={FEEDBACK_LABEL.util}>{utilCount}</span>
-                    ) : (
-                      "—"
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Link
-                      href={`/recommendations/${generation.id}`}
-                      className="text-sm font-medium text-primary hover:underline"
-                    >
-                      Abrir
-                    </Link>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+    <TableContainer title="Histórico">
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableHeader>Data</TableHeader>
+            <TableHeader>Perfil</TableHeader>
+            <TableHeader>Estado</TableHeader>
+            <TableHeader className="text-right">Itens</TableHeader>
+            <TableHeader className="text-right">Úteis</TableHeader>
+            <TableHeader className="text-right">Ações</TableHeader>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {entries.map((entry) => {
+            const { generation, feedbackCounts } = entry;
+            const utilCount = feedbackCounts.util ?? 0;
+            const itemCount = generation.recommendations?.length ?? 0;
+            return (
+              <TableRow key={generation.id}>
+                <TableCell className="whitespace-nowrap">
+                  {formatDateTime(generation.createdAt)}
+                </TableCell>
+                <TableCell>{COMPLETENESS_LABEL[generation.completenessMode]}</TableCell>
+                <TableCell>
+                  <Tag type={STATUS_TAG_TYPE[generation.status]}>
+                    {statusLabel(generation.status)}
+                  </Tag>
+                </TableCell>
+                <TableCell className="text-right">{itemCount || "—"}</TableCell>
+                <TableCell className="text-right">
+                  {utilCount > 0 ? (
+                    <span title={FEEDBACK_LABEL.util}>{utilCount}</span>
+                  ) : (
+                    "—"
+                  )}
+                </TableCell>
+                <TableCell className="text-right">
+                  <Link
+                    href={`/recommendations/${generation.id}`}
+                    className="text-sm font-medium text-[var(--cds-link-primary)] hover:underline"
+                  >
+                    Abrir
+                  </Link>
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </TableContainer>
   );
 }

@@ -1,8 +1,7 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Add } from "@carbon/icons-react";
+import { Button, TextInput } from "@carbon/react";
 import type { RecordTemplate } from "@bgreen/types";
 import { FieldCard } from "./FieldCard";
 import { type EditorField, newField } from "./template-editor-build";
@@ -21,37 +20,34 @@ export function RepeatingEditor({
   availableTemplates: Array<Pick<RecordTemplate, "id" | "name" | "status" | "formSchema">>;
 }) {
   return (
-    <div className="space-y-3 rounded-md border border-dashed bg-muted/40 p-3">
+    <div className="space-y-3 rounded-md border border-dashed border-neutral-300 bg-neutral-50 p-3">
       <div className="grid grid-cols-3 gap-2">
-        <div className="space-y-1">
-          <Label className="text-xs">Nome de cada linha</Label>
-          <Input
-            value={field.rowLabel}
-            onChange={(e) => onPatch({ rowLabel: e.target.value })}
-            placeholder="ex.: Veículo"
-          />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Mínimo de linhas</Label>
-          <Input
-            type="number"
-            min={0}
-            value={field.minRows}
-            onChange={(e) => onPatch({ minRows: e.target.value })}
-          />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Máximo de linhas</Label>
-          <Input
-            type="number"
-            min={1}
-            value={field.maxRows}
-            onChange={(e) => onPatch({ maxRows: e.target.value })}
-          />
-        </div>
+        <TextInput
+          id={`${field.uiKey}-rowLabel`}
+          labelText="Nome de cada linha"
+          value={field.rowLabel}
+          onChange={(e) => onPatch({ rowLabel: e.target.value })}
+          placeholder="ex.: Veículo"
+        />
+        <TextInput
+          id={`${field.uiKey}-minRows`}
+          labelText="Mínimo de linhas"
+          type="number"
+          min={0}
+          value={field.minRows}
+          onChange={(e) => onPatch({ minRows: e.target.value })}
+        />
+        <TextInput
+          id={`${field.uiKey}-maxRows`}
+          labelText="Máximo de linhas"
+          type="number"
+          min={1}
+          value={field.maxRows}
+          onChange={(e) => onPatch({ maxRows: e.target.value })}
+        />
       </div>
 
-      <p className="text-xs text-muted-foreground">
+      <p className="text-xs text-neutral-600">
         Sub-campos (não podem conter outras linhas repetidas):
       </p>
 
@@ -71,11 +67,12 @@ export function RepeatingEditor({
 
       <Button
         type="button"
-        variant="outline"
+        kind="tertiary"
         size="sm"
         onClick={() => onPatch({ subFields: [...field.subFields, newField()] })}
+        renderIcon={Add}
       >
-        + Sub-campo
+        Sub-campo
       </Button>
     </div>
   );

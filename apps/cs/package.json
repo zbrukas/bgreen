@@ -21,7 +21,6 @@
     "@ibm/plex-mono": "^1.1.0",
     "@ibm/plex-sans": "^1.1.0",
     "@tailwindcss/postcss": "^4",
-    "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dotenv": "^16.4.7",
     "hono": "^4.6.14",

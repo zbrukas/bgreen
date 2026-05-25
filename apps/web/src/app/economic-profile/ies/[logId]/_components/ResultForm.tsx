@@ -1,7 +1,7 @@
 "use client";
 
-import { Alert } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { Checkmark } from "@carbon/icons-react";
+import { Button, ButtonSet, InlineNotification } from "@carbon/react";
 import type {
   ExtractedEconomicProfile,
   ExtractionEdits,
@@ -71,15 +71,28 @@ export function ResultForm({
           ),
         )}
       </div>
-      {confirmError ? <Alert variant="destructive">{confirmError}</Alert> : null}
-      <div className="flex flex-wrap gap-2">
-        <Button onClick={onConfirm} disabled={isConfirming || isCancelling}>
-          {isConfirming ? "A guardar…" : "Confirmar e guardar"}
-        </Button>
-        <Button variant="ghost" onClick={onCancel} disabled={isConfirming || isCancelling}>
+      {confirmError ? (
+        <InlineNotification
+          kind="error"
+          title="Não foi possível guardar"
+          subtitle={confirmError}
+          lowContrast
+          hideCloseButton
+        />
+      ) : null}
+      <ButtonSet>
+        <Button kind="ghost" onClick={onCancel} disabled={isConfirming || isCancelling}>
           {isCancelling ? "A cancelar…" : "Cancelar"}
         </Button>
-      </div>
+        <Button
+          kind="primary"
+          onClick={onConfirm}
+          disabled={isConfirming || isCancelling}
+          renderIcon={Checkmark}
+        >
+          {isConfirming ? "A guardar…" : "Confirmar e guardar"}
+        </Button>
+      </ButtonSet>
     </div>
   );
 }

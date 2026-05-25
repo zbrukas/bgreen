@@ -12,14 +12,13 @@
 // per-log query so the UI snaps to the terminal state without an extra
 // round-trip.
 
-import { Alert } from "@/components/ui/alert";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   cancelExtraction,
   confirmExtraction,
   getExtractionStatus,
 } from "@/lib/economic-profile-actions";
 import { type ExtractionEdits, isTerminalStatus } from "@/lib/economic-profile-types";
+import { InlineNotification, Tile } from "@carbon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -66,28 +65,29 @@ export function ExtractionStatusView({ logId }: { logId: string }) {
   });
 
   if (query.isLoading) {
-    return <p className="text-sm text-muted-foreground">A carregar estado…</p>;
+    return <p className="text-sm text-neutral-600">A carregar estado…</p>;
   }
   if (query.isError || !query.data) {
     return (
-      <Alert variant="destructive">
-        Não foi possível obter o estado desta extração.{" "}
-        <Link href="/economic-profile" className="underline">
-          Voltar
-        </Link>
-      </Alert>
+      <InlineNotification
+        kind="error"
+        title="Sem estado"
+        subtitle="Não foi possível obter o estado desta extração."
+        lowContrast
+        hideCloseButton
+      />
     );
   }
 
   const log = query.data;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{log.originalFilename ?? "IES"}</CardTitle>
-        <CardDescription>{STATUS_COPY[log.status]}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <Tile>
+      <h2 style={{ fontSize: "1rem", fontWeight: 600, lineHeight: 1.375, margin: 0 }}>
+        {log.originalFilename ?? "IES"}
+      </h2>
+      <p className="mt-1 text-sm text-neutral-700">{STATUS_COPY[log.status]}</p>
+      <div className="mt-4 space-y-4">
         {log.status === "pending" || log.status === "extracting" ? <ProgressBlock /> : null}
 
         {log.status === "awaiting_user_confirmation" && log.extractionResult ? (
@@ -109,12 +109,23 @@ export function ExtractionStatusView({ logId }: { logId: string }) {
         ) : null}
 
         {log.status === "cancelled" ? (
-          <Alert variant="info">
-            Carregamento cancelado.{" "}
-            <Link href="/economic-profile" className="underline">
-              Voltar ao perfil económico.
-            </Link>
-          </Alert>
+          <div>
+            <InlineNotification
+              kind="info"
+              title="Carregamento cancelado"
+              subtitle="Pode voltar ao perfil económico."
+              lowContrast
+              hideCloseButton
+            />
+            <p className="mt-2 text-sm">
+              <Link
+                href="/economic-profile"
+                className="text-[var(--cds-link-primary)] hover:underline"
+              >
+                ← Voltar ao perfil económico
+              </Link>
+            </p>
+          </div>
         ) : null}
 
         {(log.status === "failed_not_ies" ||
@@ -123,7 +134,7 @@ export function ExtractionStatusView({ logId }: { logId: string }) {
         log.errorMessage ? (
           <FailureBlock message={log.errorMessage} status={log.status} />
         ) : null}
-      </CardContent>
-    </Card>
+      </div>
+    </Tile>
   );
 }

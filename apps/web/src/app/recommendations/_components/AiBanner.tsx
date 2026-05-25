@@ -1,13 +1,16 @@
 // V9 — always-visible banner on recommendation screens. PRD #19
-// requires this disclosure verbatim ("Recomendações geradas por IA —
-// valide com o seu consultor.") — keep the copy in one place.
+// requires this disclosure verbatim — keep the copy in one place.
 
-import { Alert } from "@/components/ui/alert";
+import { InlineNotification } from "@carbon/react";
 
 export function AiBanner() {
   return (
-    <Alert variant="info">
-      Recomendações geradas por IA — valide com o seu consultor.
-    </Alert>
+    <InlineNotification
+      kind="info"
+      title="Conteúdo gerado por IA"
+      subtitle="Recomendações geradas por IA — valide com o seu consultor."
+      lowContrast
+      hideCloseButton
+    />
   );
 }

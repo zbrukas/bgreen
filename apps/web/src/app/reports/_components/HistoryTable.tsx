@@ -1,16 +1,13 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { type ReportInstance, TEMPLATE_LABEL } from "@/lib/reports-types";
 import {
   Table,
   TableBody,
   TableCell,
+  TableContainer,
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import {
-  type ReportInstance,
-  TEMPLATE_LABEL,
-} from "@/lib/reports-types";
+} from "@carbon/react";
 import Link from "next/link";
 import { StatusBadge } from "./StatusBadge";
 
@@ -36,61 +33,49 @@ function formatPeriod(start: string, end: string): string {
 export function HistoryTable({ reports }: { reports: ReportInstance[] }) {
   if (reports.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Histórico</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Ainda não existem relatórios para esta organização.
-          </p>
-        </CardContent>
-      </Card>
+      <p className="text-sm text-neutral-600">
+        Ainda não existem relatórios para esta organização.
+      </p>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Histórico</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Data</TableHead>
-              <TableHead>Modelo</TableHead>
-              <TableHead>Período</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
+    <TableContainer title="Histórico">
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableHeader>Data</TableHeader>
+            <TableHeader>Modelo</TableHeader>
+            <TableHeader>Período</TableHeader>
+            <TableHeader>Estado</TableHeader>
+            <TableHeader className="text-right">Ações</TableHeader>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {reports.map((report) => (
+            <TableRow key={report.id}>
+              <TableCell className="whitespace-nowrap">
+                {formatDateTime(report.createdAt)}
+              </TableCell>
+              <TableCell>{TEMPLATE_LABEL[report.templateId]}</TableCell>
+              <TableCell className="whitespace-nowrap text-neutral-600">
+                {formatPeriod(report.periodStart, report.periodEnd)}
+              </TableCell>
+              <TableCell>
+                <StatusBadge status={report.status} />
+              </TableCell>
+              <TableCell className="text-right">
+                <Link
+                  href={`/reports/${report.id}`}
+                  className="text-sm font-medium text-[var(--cds-link-primary)] hover:underline"
+                >
+                  Abrir
+                </Link>
+              </TableCell>
             </TableRow>
-          </TableHeader>
-          <TableBody>
-            {reports.map((report) => (
-              <TableRow key={report.id}>
-                <TableCell className="whitespace-nowrap">
-                  {formatDateTime(report.createdAt)}
-                </TableCell>
-                <TableCell>{TEMPLATE_LABEL[report.templateId]}</TableCell>
-                <TableCell className="whitespace-nowrap text-muted-foreground">
-                  {formatPeriod(report.periodStart, report.periodEnd)}
-                </TableCell>
-                <TableCell>
-                  <StatusBadge status={report.status} />
-                </TableCell>
-                <TableCell className="text-right">
-                  <Link
-                    href={`/reports/${report.id}`}
-                    className="text-sm font-medium text-primary hover:underline"
-                  >
-                    Abrir
-                  </Link>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
   );
 }

@@ -1,17 +1,15 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Select } from "@/components/ui/select";
 import { confirmDimensao, getDimensaoProposal } from "@/lib/economic-profile-actions";
 import {
   DIMENSAO_LABEL,
   type Dimensao,
   type OrganizationEconomicProfile,
 } from "@/lib/economic-profile-types";
+import { Button, Select, SelectItem, Tag } from "@carbon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { DIMENSAO_BADGE_VARIANT, DIMENSAO_OPTIONS } from "./dimensao-options";
+import { DIMENSAO_OPTIONS, DIMENSAO_TAG_TYPE } from "./dimensao-options";
 
 export function DimensaoEditor({
   profile,
@@ -60,16 +58,16 @@ export function DimensaoEditor({
   });
 
   if (query.isLoading) {
-    return <p className="text-xs text-muted-foreground">A classificar…</p>;
+    return <p className="text-xs text-neutral-600">A classificar…</p>;
   }
   if (query.isError || !query.data) {
     return (
       <div className="space-y-1 text-xs">
-        <p className="text-red-700">Não foi possível classificar.</p>
+        <p className="text-[var(--cds-text-error)]">Não foi possível classificar.</p>
         <button
           type="button"
           onClick={onCancel}
-          className="text-muted-foreground underline-offset-4 hover:underline"
+          className="text-neutral-600 hover:underline"
         >
           Fechar
         </button>
@@ -83,43 +81,48 @@ export function DimensaoEditor({
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2 text-xs">
-        <span className="text-muted-foreground">Proposta:</span>
-        <Badge variant={DIMENSAO_BADGE_VARIANT[proposal.dimensao]}>
-          {DIMENSAO_LABEL[proposal.dimensao]}
-        </Badge>
+        <span className="text-neutral-600">Proposta:</span>
+        <Tag type={DIMENSAO_TAG_TYPE[proposal.dimensao]}>{DIMENSAO_LABEL[proposal.dimensao]}</Tag>
         {confidence !== "high" ? (
-          <span className="text-amber-700">
+          <span className="text-[var(--cds-support-warning-inverse)]">
             confiança {confidence === "medium" ? "média" : "baixa"}
           </span>
         ) : null}
       </div>
-      <ul className="space-y-0.5 text-xs text-muted-foreground">
+      <ul className="space-y-0.5 text-xs text-neutral-600">
         {proposal.rationale.map((r) => (
           <li key={r.rule}>· {r.message}</li>
         ))}
       </ul>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-end gap-2">
         <Select
-          aria-label="Dimensão"
+          id="dimensao-override"
+          labelText=""
+          hideLabel
+          size="sm"
           value={override ?? proposal.dimensao}
           onChange={(e) => setOverride(e.target.value as Dimensao)}
-          className="w-32"
         >
           {DIMENSAO_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
+            <SelectItem key={o.value} value={o.value} text={o.label} />
           ))}
         </Select>
-        <Button size="sm" onClick={() => mutation.mutate()} disabled={mutation.isPending}>
+        <Button
+          size="sm"
+          kind="primary"
+          onClick={() => mutation.mutate()}
+          disabled={mutation.isPending}
+        >
           {mutation.isPending ? "A guardar…" : "Confirmar"}
         </Button>
-        <Button size="sm" variant="ghost" onClick={onCancel} disabled={mutation.isPending}>
+        <Button size="sm" kind="ghost" onClick={onCancel} disabled={mutation.isPending}>
           Fechar
         </Button>
       </div>
       {mutation.isError ? (
-        <p className="text-xs text-red-700">Não foi possível guardar. Tente novamente.</p>
+        <p className="text-xs text-[var(--cds-text-error)]">
+          Não foi possível guardar. Tente novamente.
+        </p>
       ) : null}
     </div>
   );

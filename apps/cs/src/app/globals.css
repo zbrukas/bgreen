@@ -1,44 +1,9 @@
 /* IBM Plex Sans + Mono are self-hosted — see layout.tsx where the
    @ibm/plex-* css bundles register the @font-face rules under the
-   "IBM Plex Sans" / "IBM Plex Mono" family names Carbon's CSS expects. */
+   "IBM Plex Sans" / "IBM Plex Mono" family names Carbon's CSS expects.
+   Carbon owns components + tokens; Tailwind here is just for layout
+   utilities (grid, spacing, neutral-* greys). */
 @import "tailwindcss";
-
-/* shadcn-style design tokens — kept while the TemplateEditor sub-components
-   still use Tailwind utility classes that reference these tokens. Strip in
-   a follow-up pass once TemplateEditor is migrated to Carbon primitives. */
-
-@theme inline {
-  --color-background: oklch(0.99 0 0);
-  --color-foreground: oklch(0.16 0.014 286);
-  --color-muted: oklch(0.97 0.005 240);
-  --color-muted-foreground: oklch(0.46 0.013 286);
-  --color-card: oklch(1 0 0);
-  --color-card-foreground: oklch(0.16 0.014 286);
-  --color-popover: oklch(1 0 0);
-  --color-popover-foreground: oklch(0.16 0.014 286);
-  --color-border: oklch(0.92 0.006 240);
-  --color-input: oklch(0.92 0.006 240);
-  --color-ring: oklch(0.58 0.13 162);
-  --color-primary: oklch(0.5 0.13 162);
-  --color-primary-foreground: oklch(0.99 0.01 162);
-  --color-secondary: oklch(0.96 0.005 240);
-  --color-secondary-foreground: oklch(0.21 0.012 286);
-  --color-accent: oklch(0.94 0.04 162);
-  --color-accent-foreground: oklch(0.3 0.06 162);
-  --color-destructive: oklch(0.55 0.21 27);
-  --color-destructive-foreground: oklch(0.99 0.01 27);
-  --color-success: oklch(0.6 0.16 162);
-  --color-warning: oklch(0.78 0.16 75);
-
-  --radius: 0.5rem;
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
-    sans-serif;
-}
 
 @layer base {
   * {
@@ -48,11 +13,5 @@
   body {
     margin: 0;
     padding: 0;
-  }
-  body {
-    background-color: var(--color-background);
-    color: var(--color-foreground);
-    font-family: var(--font-sans);
-    -webkit-font-smoothing: antialiased;
   }
 }

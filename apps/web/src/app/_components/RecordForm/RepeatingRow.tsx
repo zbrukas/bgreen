@@ -1,6 +1,7 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { TrashCan } from "@carbon/icons-react";
+import { Button } from "@carbon/react";
 import type { LeafField } from "@bgreen/types";
 import { FieldInput } from "./FieldInput";
 import type { FormValues } from "./record-form-helpers";
@@ -26,8 +27,8 @@ export function RepeatingRow({
   onRemove,
 }: RepeatingRowProps) {
   return (
-    <fieldset className="space-y-2 rounded-md border bg-muted/40 p-3">
-      <legend className="px-1 text-xs text-muted-foreground">
+    <fieldset className="space-y-2 rounded-md border border-neutral-200 bg-neutral-50 p-3">
+      <legend className="px-1 text-xs text-neutral-600">
         {field.rowLabel} {idx + 1}
       </legend>
       {field.fields.map((sub) => (
@@ -42,7 +43,7 @@ export function RepeatingRow({
         />
       ))}
       <div className="flex justify-end">
-        <Button type="button" variant="ghost" size="sm" onClick={onRemove}>
+        <Button type="button" kind="ghost" size="sm" onClick={onRemove} renderIcon={TrashCan}>
           Remover linha
         </Button>
       </div>

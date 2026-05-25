@@ -1,7 +1,7 @@
 "use client";
 
-import { Alert } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { Save, Send } from "@carbon/icons-react";
+import { Button, ButtonSet, InlineNotification } from "@carbon/react";
 import type { ComposedSchema } from "@bgreen/form-engine";
 import { validateComposedFormValues, validateFormValues } from "@bgreen/form-engine";
 import type { LeafField, RecordTemplate } from "@bgreen/types";
@@ -266,8 +266,8 @@ export function RecordForm({
       className="space-y-4"
     >
       {template.formSchema.rows.map((row) => (
-        <fieldset key={row.id} className="space-y-3 rounded-lg border bg-card p-4">
-          {row.label && <legend className="px-2 text-xs text-muted-foreground">{row.label}</legend>}
+        <fieldset key={row.id} className="space-y-3 rounded-lg border border-neutral-200 bg-white p-4">
+          {row.label && <legend className="px-2 text-xs text-neutral-600">{row.label}</legend>}
           {row.fields.map((field) => (
             <FieldInput
               key={field.id}
@@ -289,16 +289,16 @@ export function RecordForm({
       {subTemplates.map((sub) => (
         <section
           key={sub.id}
-          className="space-y-3 rounded-lg border border-primary/30 bg-primary/5 p-4"
+          className="space-y-3 rounded-lg border-l-2 border-l-[var(--cds-interactive)] border border-neutral-200 bg-neutral-50 p-4"
         >
           <header>
             <h2 className="text-base font-semibold">{sub.name}</h2>
-            <p className="text-xs text-muted-foreground">Secção do sub-modelo</p>
+            <p className="text-xs text-neutral-600">Secção do sub-modelo</p>
           </header>
           {sub.formSchema.rows.map((row) => (
-            <fieldset key={row.id} className="space-y-3 rounded-md border bg-background p-3">
+            <fieldset key={row.id} className="space-y-3 rounded-md border border-neutral-200 bg-white p-3">
               {row.label && (
-                <legend className="px-2 text-xs text-muted-foreground">{row.label}</legend>
+                <legend className="px-2 text-xs text-neutral-600">{row.label}</legend>
               )}
               {row.fields.map((field) => (
                 <FieldInput
@@ -326,21 +326,30 @@ export function RecordForm({
         </section>
       ))}
 
-      {serverError && <Alert variant="destructive">{serverError}</Alert>}
+      {serverError && (
+        <InlineNotification
+          kind="error"
+          title="Erro de validação"
+          subtitle={serverError}
+          lowContrast
+          hideCloseButton
+        />
+      )}
 
-      <div className="flex flex-wrap gap-2">
+      <ButtonSet>
         <Button
           type="button"
-          variant="outline"
+          kind="secondary"
           onClick={() => submitWith("save_draft")}
           disabled={isPending}
+          renderIcon={Save}
         >
           {isPending ? "A guardar…" : "Guardar rascunho"}
         </Button>
-        <Button type="submit" disabled={isPending}>
+        <Button type="submit" kind="primary" disabled={isPending} renderIcon={Send}>
           {isPending ? "A submeter…" : "Submeter"}
         </Button>
-      </div>
+      </ButtonSet>
     </form>
   );
 }

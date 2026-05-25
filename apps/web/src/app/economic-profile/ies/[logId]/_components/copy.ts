@@ -14,10 +14,10 @@ export const STATUS_COPY: Record<IesExtractionLog["status"], string> = {
   failed_validation: "Falhou a validação",
 };
 
-export const CONFIDENCE_VARIANT: Record<Confidence, "success" | "warning" | "destructive"> = {
-  HIGH: "success",
-  MEDIUM: "warning",
-  LOW: "destructive",
+export const CONFIDENCE_TAG_TYPE: Record<Confidence, "green" | "warm-gray" | "red"> = {
+  HIGH: "green",
+  MEDIUM: "warm-gray",
+  LOW: "red",
 };
 
 export const CONFIDENCE_LABEL: Record<Confidence, string> = {

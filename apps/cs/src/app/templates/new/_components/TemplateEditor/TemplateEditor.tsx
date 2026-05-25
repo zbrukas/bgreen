@@ -1,16 +1,26 @@
 "use client";
 
-import { Alert } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
+import { createTemplateAction } from "@/app/actions";
+import {
+  Add,
+  ArrowDown,
+  ArrowUp,
+  Checkmark,
+  TrashCan,
+} from "@carbon/icons-react";
+import {
+  Button,
+  Checkbox,
+  InlineNotification,
+  Select,
+  SelectItem,
+  Stack,
+  TextArea,
+  TextInput,
+} from "@carbon/react";
 import type { RecordTemplate, Topic } from "@bgreen/types";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { createTemplateAction } from "@/app/actions";
 import { FieldCard } from "./FieldCard";
 import {
   type EditorField,
@@ -22,8 +32,6 @@ import {
 
 interface TemplateEditorProps {
   availableTemplates: Array<Pick<RecordTemplate, "id" | "name" | "status" | "formSchema">>;
-  // V5.5: catalogue inputs. subTemplates are the templates this main template
-  // can compose; topics are the tags available to attach.
   subTemplates: Array<Pick<RecordTemplate, "id" | "name" | "topicTagId">>;
   topics: Topic[];
 }
@@ -152,146 +160,133 @@ export function TemplateEditor({ availableTemplates, subTemplates, topics }: Tem
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Novo modelo</h1>
-
-      <div className="space-y-2">
-        <Label htmlFor="tpl-name">Nome</Label>
-        <Input
+    <form onSubmit={onSubmit}>
+      <Stack gap={6}>
+        <TextInput
           id="tpl-name"
+          labelText="Nome"
           required
           maxLength={200}
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
-      </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="tpl-description">Descrição (opcional)</Label>
-        <Textarea
+        <TextArea
           id="tpl-description"
+          labelText="Descrição (opcional)"
           maxLength={2000}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={2}
         />
-      </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="tpl-workflow">Fluxo de aprovação</Label>
         <Select
           id="tpl-workflow"
+          labelText="Fluxo de aprovação"
           value={workflowDefinitionId}
           onChange={(e) => setWorkflowDefinitionId(e.target.value as WorkflowOption)}
+          helperText={WORKFLOW_OPTIONS.find((o) => o.value === workflowDefinitionId)?.hint}
         >
           {WORKFLOW_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
+            <SelectItem key={opt.value} value={opt.value} text={opt.label} />
           ))}
         </Select>
-        <p className="text-xs text-muted-foreground">
-          {WORKFLOW_OPTIONS.find((o) => o.value === workflowDefinitionId)?.hint}
-        </p>
-      </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="tpl-topic">Tópico (opcional)</Label>
-        <Select id="tpl-topic" value={topicTagId} onChange={(e) => setTopicTagId(e.target.value)}>
-          <option value="">— sem tópico —</option>
+        <Select
+          id="tpl-topic"
+          labelText="Tópico (opcional)"
+          value={topicTagId}
+          onChange={(e) => setTopicTagId(e.target.value)}
+          helperText="Etiqueta para filtrar e segmentar este modelo por área (HR, financeiro, …)."
+        >
+          <SelectItem value="" text="— sem tópico —" />
           {topics.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name} ({t.slug})
-            </option>
+            <SelectItem key={t.id} value={t.id} text={`${t.name} (${t.slug})`} />
           ))}
         </Select>
-        <p className="text-xs text-muted-foreground">
-          Etiqueta para filtrar e segmentar este modelo por área (HR, financeiro, …).
-        </p>
-      </div>
 
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
+        <Checkbox
+          id="tpl-is-sub"
+          labelText="É sub-template (não submetido directamente; embebido noutros modelos)"
           checked={isSubTemplate}
-          onChange={(e) => {
-            setIsSubTemplate(e.target.checked);
-            if (e.target.checked) setComposedIds([]);
+          onChange={(_e, { checked }) => {
+            setIsSubTemplate(checked);
+            if (checked) setComposedIds([]);
           }}
-          className="h-4 w-4 rounded border-input text-primary focus:ring-ring"
         />
-        <span>É sub-template (não submetido directamente; embebido noutros modelos)</span>
-      </label>
 
-      {!isSubTemplate && subTemplates.length > 0 && (
-        <section className="space-y-3 rounded-lg border bg-card p-4">
-          <div>
-            <h2 className="text-lg font-medium">Sub-templates incluídos</h2>
-            <p className="text-xs text-muted-foreground">
-              Os campos do sub-template aparecem no formulário, depois dos campos deste modelo.
-              Reordenar afecta a ordem de apresentação.
-            </p>
-          </div>
-          <ol className="space-y-2">
-            {subTemplates.map((sub) => {
-              const idx = composedIds.indexOf(sub.id);
-              const selected = idx >= 0;
-              return (
-                <li
-                  key={sub.id}
-                  className={cn(
-                    "flex items-center justify-between gap-3 rounded-md border bg-muted/30 p-2 text-sm",
-                    selected && "border-primary/50 bg-primary/5",
-                  )}
-                >
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
+        {!isSubTemplate && subTemplates.length > 0 && (
+          <section className="space-y-3 rounded-lg border border-neutral-200 bg-white p-4">
+            <div>
+              <h2 className="text-lg font-medium">Sub-templates incluídos</h2>
+              <p className="text-xs text-neutral-600">
+                Os campos do sub-template aparecem no formulário, depois dos campos deste modelo.
+                Reordenar afecta a ordem de apresentação.
+              </p>
+            </div>
+            <ol className="space-y-2">
+              {subTemplates.map((sub) => {
+                const idx = composedIds.indexOf(sub.id);
+                const selected = idx >= 0;
+                return (
+                  <li
+                    key={sub.id}
+                    className={`flex items-center justify-between gap-3 rounded-md border p-2 text-sm ${
+                      selected
+                        ? "border-l-2 border-l-[var(--cds-interactive)] border-neutral-200 bg-neutral-50"
+                        : "border-neutral-200 bg-neutral-50"
+                    }`}
+                  >
+                    <Checkbox
+                      id={`tpl-sub-${sub.id}`}
+                      labelText={sub.name}
                       checked={selected}
                       onChange={() => toggleSub(sub.id)}
-                      className="h-4 w-4 rounded border-input text-primary focus:ring-ring"
                     />
-                    <span>{sub.name}</span>
-                  </label>
-                  {selected && (
-                    <div className="flex items-center gap-1">
-                      <span className="text-xs text-muted-foreground">posição {idx + 1}</span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => moveSub(sub.id, -1)}
-                        disabled={idx === 0}
-                      >
-                        ↑
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => moveSub(sub.id, 1)}
-                        disabled={idx === composedIds.length - 1}
-                      >
-                        ↓
-                      </Button>
-                    </div>
-                  )}
-                </li>
-              );
-            })}
-          </ol>
-        </section>
-      )}
+                    {selected && (
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs text-neutral-600">posição {idx + 1}</span>
+                        <Button
+                          type="button"
+                          kind="ghost"
+                          size="sm"
+                          onClick={() => moveSub(sub.id, -1)}
+                          disabled={idx === 0}
+                          renderIcon={ArrowUp}
+                          iconDescription="Mover para cima"
+                          hasIconOnly
+                        />
+                        <Button
+                          type="button"
+                          kind="ghost"
+                          size="sm"
+                          onClick={() => moveSub(sub.id, 1)}
+                          disabled={idx === composedIds.length - 1}
+                          renderIcon={ArrowDown}
+                          iconDescription="Mover para baixo"
+                          hasIconOnly
+                        />
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
+          </section>
+        )}
 
-      <section className="space-y-4">
-        <h2 className="text-lg font-medium">Linhas e campos</h2>
-        {rows.map((row, rowIdx) => (
-          <fieldset key={row.uiKey} className="space-y-3 rounded-lg border bg-card p-4">
-            <legend className="px-2 text-xs text-muted-foreground">Linha {rowIdx + 1}</legend>
+        <section className="space-y-4">
+          <h2 className="text-lg font-medium">Linhas e campos</h2>
+          {rows.map((row, rowIdx) => (
+            <fieldset
+              key={row.uiKey}
+              className="space-y-3 rounded-lg border border-neutral-200 bg-white p-4"
+            >
+              <legend className="px-2 text-xs text-neutral-600">Linha {rowIdx + 1}</legend>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs">Etiqueta da linha (opcional)</Label>
-              <Input
+              <TextInput
+                id={`row-label-${row.uiKey}`}
+                labelText="Etiqueta da linha (opcional)"
                 value={row.label}
                 onChange={(e) =>
                   setRows((prev) =>
@@ -299,75 +294,86 @@ export function TemplateEditor({ availableTemplates, subTemplates, topics }: Tem
                   )
                 }
               />
-            </div>
 
-            {row.fields.map((field, fieldIdx) => (
-              <FieldCard
-                key={field.uiKey}
-                field={field}
-                fieldIdx={fieldIdx}
-                siblings={row.fields.slice(0, fieldIdx)}
-                allowRepeating
-                availableTemplates={availableTemplates}
-                onPatch={(patch) => patchField(rowIdx, fieldIdx, patch)}
-                onRemove={() =>
-                  setRows((prev) =>
-                    prev.map((r, i) =>
-                      i !== rowIdx
-                        ? r
-                        : { ...r, fields: r.fields.filter((_, j) => j !== fieldIdx) },
-                    ),
-                  )
-                }
-                removable={row.fields.length > 1 || rows.length > 1}
-                onPatchSub={(subIdx, patch) => patchSubField(rowIdx, fieldIdx, subIdx, patch)}
-              />
-            ))}
+              {row.fields.map((field, fieldIdx) => (
+                <FieldCard
+                  key={field.uiKey}
+                  field={field}
+                  fieldIdx={fieldIdx}
+                  siblings={row.fields.slice(0, fieldIdx)}
+                  allowRepeating
+                  availableTemplates={availableTemplates}
+                  onPatch={(patch) => patchField(rowIdx, fieldIdx, patch)}
+                  onRemove={() =>
+                    setRows((prev) =>
+                      prev.map((r, i) =>
+                        i !== rowIdx
+                          ? r
+                          : { ...r, fields: r.fields.filter((_, j) => j !== fieldIdx) },
+                      ),
+                    )
+                  }
+                  removable={row.fields.length > 1 || rows.length > 1}
+                  onPatchSub={(subIdx, patch) => patchSubField(rowIdx, fieldIdx, subIdx, patch)}
+                />
+              ))}
 
-            <div className="flex items-center justify-between">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setRows((prev) =>
-                    prev.map((r, i) =>
-                      i === rowIdx ? { ...r, fields: [...r.fields, newField()] } : r,
-                    ),
-                  )
-                }
-              >
-                + Adicionar campo
-              </Button>
-              {rows.length > 1 && (
+              <div className="flex items-center justify-between">
                 <Button
                   type="button"
-                  variant="ghost"
+                  kind="tertiary"
                   size="sm"
-                  onClick={() => setRows((prev) => prev.filter((_, i) => i !== rowIdx))}
+                  onClick={() =>
+                    setRows((prev) =>
+                      prev.map((r, i) =>
+                        i === rowIdx ? { ...r, fields: [...r.fields, newField()] } : r,
+                      ),
+                    )
+                  }
+                  renderIcon={Add}
                 >
-                  Remover linha
+                  Adicionar campo
                 </Button>
-              )}
-            </div>
-          </fieldset>
-        ))}
+                {rows.length > 1 && (
+                  <Button
+                    type="button"
+                    kind="ghost"
+                    size="sm"
+                    onClick={() => setRows((prev) => prev.filter((_, i) => i !== rowIdx))}
+                    renderIcon={TrashCan}
+                  >
+                    Remover linha
+                  </Button>
+                )}
+              </div>
+            </fieldset>
+          ))}
 
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => setRows((prev) => [...prev, newRow()])}
-        >
-          + Adicionar linha
+          <Button
+            type="button"
+            kind="tertiary"
+            size="sm"
+            onClick={() => setRows((prev) => [...prev, newRow()])}
+            renderIcon={Add}
+          >
+            Adicionar linha
+          </Button>
+        </section>
+
+        {error && (
+          <InlineNotification
+            kind="error"
+            title="Não foi possível guardar"
+            subtitle={error}
+            lowContrast
+            hideCloseButton
+          />
+        )}
+
+        <Button type="submit" kind="primary" size="lg" disabled={isPending} renderIcon={Checkmark}>
+          {isPending ? "A criar…" : "Criar modelo"}
         </Button>
-      </section>
-
-      {error && <Alert variant="destructive">{error}</Alert>}
-
-      <Button type="submit" disabled={isPending} size="lg">
-        {isPending ? "A criar…" : "Criar modelo"}
-      </Button>
+      </Stack>
     </form>
   );
 }

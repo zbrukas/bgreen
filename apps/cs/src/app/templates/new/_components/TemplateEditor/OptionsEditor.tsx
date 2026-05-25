@@ -1,8 +1,7 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Add, TrashCan } from "@carbon/icons-react";
+import { Button, TextInput } from "@carbon/react";
 import type { EditorField } from "./template-editor-build";
 
 export function OptionsEditor({
@@ -20,35 +19,53 @@ export function OptionsEditor({
   }
   return (
     <div className="space-y-2">
-      <Label className="text-xs">Opções</Label>
+      <p className="cds--label" style={{ marginBottom: 0 }}>
+        Opções
+      </p>
       {field.options.length === 0 && (
-        <p className="text-xs text-muted-foreground">Sem opções ainda — adicione pelo menos uma.</p>
+        <p className="text-xs text-neutral-600">Sem opções ainda — adicione pelo menos uma.</p>
       )}
       {field.options.map((opt, optIdx) => (
-        <div key={`${field.uiKey}-opt-${optIdx}`} className="grid grid-cols-[1fr_1fr_auto] gap-2">
-          <Input
+        <div
+          key={`${field.uiKey}-opt-${optIdx}`}
+          className="grid grid-cols-[1fr_1fr_auto] items-end gap-2"
+        >
+          <TextInput
+            id={`${field.uiKey}-opt-value-${optIdx}`}
+            labelText=""
+            hideLabel
             placeholder="valor"
             value={opt.value}
             onChange={(e) => update(optIdx, { value: e.target.value })}
-            className="font-mono"
+            style={{ fontFamily: "'IBM Plex Mono', monospace" }}
           />
-          <Input
+          <TextInput
+            id={`${field.uiKey}-opt-label-${optIdx}`}
+            labelText=""
+            hideLabel
             placeholder="etiqueta"
             value={opt.label}
             onChange={(e) => update(optIdx, { label: e.target.value })}
           />
-          <Button type="button" variant="ghost" size="sm" onClick={() => remove(optIdx)}>
-            ✕
-          </Button>
+          <Button
+            type="button"
+            kind="ghost"
+            size="sm"
+            onClick={() => remove(optIdx)}
+            renderIcon={TrashCan}
+            iconDescription="Remover"
+            hasIconOnly
+          />
         </div>
       ))}
       <Button
         type="button"
-        variant="outline"
+        kind="tertiary"
         size="sm"
         onClick={() => onPatch({ options: [...field.options, { value: "", label: "" }] })}
+        renderIcon={Add}
       >
-        + Opção
+        Opção
       </Button>
     </div>
   );

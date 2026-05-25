@@ -12,15 +12,14 @@
 // Confirmation invalidates the profile list query so the parent table
 // refreshes without a manual reload.
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   DIMENSAO_LABEL,
   type OrganizationEconomicProfile,
 } from "@/lib/economic-profile-types";
+import { Button, Tag } from "@carbon/react";
 import { useState } from "react";
 import { DimensaoEditor } from "./_components/DimensaoEditor";
-import { DIMENSAO_BADGE_VARIANT } from "./_components/dimensao-options";
+import { DIMENSAO_TAG_TYPE } from "./_components/dimensao-options";
 
 export function DimensaoCell({ profile }: { profile: OrganizationEconomicProfile }) {
   const [editing, setEditing] = useState(false);
@@ -28,12 +27,10 @@ export function DimensaoCell({ profile }: { profile: OrganizationEconomicProfile
   if (!editing && profile.dimensao !== null) {
     return (
       <div className="flex items-center gap-2">
-        <Badge variant={DIMENSAO_BADGE_VARIANT[profile.dimensao]}>
-          {DIMENSAO_LABEL[profile.dimensao]}
-        </Badge>
+        <Tag type={DIMENSAO_TAG_TYPE[profile.dimensao]}>{DIMENSAO_LABEL[profile.dimensao]}</Tag>
         <button
           type="button"
-          className="text-xs text-muted-foreground underline-offset-4 hover:underline"
+          className="text-xs text-neutral-600 hover:underline"
           onClick={() => setEditing(true)}
         >
           Alterar
@@ -44,7 +41,7 @@ export function DimensaoCell({ profile }: { profile: OrganizationEconomicProfile
 
   if (!editing) {
     return (
-      <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
+      <Button size="sm" kind="tertiary" onClick={() => setEditing(true)}>
         Classificar
       </Button>
     );

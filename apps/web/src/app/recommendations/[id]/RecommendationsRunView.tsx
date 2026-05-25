@@ -5,9 +5,6 @@
 // and let the user record feedback; on failure we render the pt-PT
 // error message.
 
-import { Alert } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   getRecommendation,
   submitRecommendationFeedback,
@@ -18,8 +15,9 @@ import {
   type RecommendationFeedback,
   isTerminalRecStatus,
 } from "@/lib/recommendations-types";
+import { ArrowLeft } from "@carbon/icons-react";
+import { Button, InlineNotification, Tile } from "@carbon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import Link from "next/link";
 import { useState } from "react";
 import { AiBanner } from "../_components/AiBanner";
 import { statusLabel } from "../_components/status";
@@ -42,18 +40,11 @@ export function RecommendationsRunView({
     refetchInterval: (q) => {
       const status = q.state.data?.status;
       if (status && isTerminalRecStatus(status)) return false;
-      // 2s polling — same cadence as IES extraction. The AI call takes
-      // 60-90s so this still gives the user a smooth progress signal
-      // without hammering the server.
       return 2000;
     },
     refetchIntervalInBackground: true,
   });
 
-  // Local cache of the current user's selected kind per item. The
-  // server is the source of truth, but we don't roundtrip a full
-  // history fetch on every chip click — instead the mutation onSuccess
-  // patches this state and the next history refresh confirms.
   const [feedbackByIndex, setFeedbackByIndex] = useState<Record<number, FeedbackKind>>({});
 
   const feedback = useMutation({
@@ -70,16 +61,17 @@ export function RecommendationsRunView({
   });
 
   if (query.isLoading) {
-    return <p className="text-sm text-muted-foreground">A carregar geração…</p>;
+    return <p className="text-sm text-neutral-600">A carregar geração…</p>;
   }
   if (query.isError || !query.data) {
     return (
-      <Alert variant="destructive">
-        Não foi possível obter o estado desta geração.{" "}
-        <Link href="/recommendations" className="underline">
-          Voltar ao histórico
-        </Link>
-      </Alert>
+      <InlineNotification
+        kind="error"
+        title="Sem estado"
+        subtitle="Não foi possível obter o estado desta geração."
+        lowContrast
+        hideCloseButton
+      />
     );
   }
 
@@ -90,32 +82,48 @@ export function RecommendationsRunView({
     <div className="space-y-6">
       <AiBanner />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{statusLabel(generation.status)}</CardTitle>
-          <CardDescription>
-            {COMPLETENESS_LABEL[generation.completenessMode]}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm text-muted-foreground">
+      <Tile>
+        <h2 style={{ fontSize: "1rem", fontWeight: 600, lineHeight: 1.375, margin: 0 }}>
+          {statusLabel(generation.status)}
+        </h2>
+        <p className="mt-1 text-sm text-neutral-600">
+          {COMPLETENESS_LABEL[generation.completenessMode]}
+        </p>
+        <div className="mt-4 space-y-3">
           {generation.status === "pending" || generation.status === "running" ? (
-            <div className="flex items-center gap-3">
-              <span className="inline-block h-3 w-3 animate-pulse rounded-full bg-primary" />
-              A gerar recomendações. Esta página atualiza automaticamente. Pode
-              demorar entre 60 e 90 segundos.
+            <div className="flex items-center gap-3 text-sm text-neutral-700">
+              <span className="inline-block h-3 w-3 animate-pulse rounded-full bg-[var(--cds-interactive)]" />
+              A gerar recomendações. Esta página atualiza automaticamente. Pode demorar entre 60 e
+              90 segundos.
             </div>
           ) : null}
           {generation.status === "failed" && generation.errorMessage ? (
-            <Alert variant="destructive">{generation.errorMessage}</Alert>
+            <InlineNotification
+              kind="error"
+              title="Geração falhou"
+              subtitle={generation.errorMessage}
+              lowContrast
+              hideCloseButton
+            />
           ) : null}
           {generation.status === "cancelled" ? (
-            <Alert variant="info">Esta geração foi cancelada.</Alert>
+            <InlineNotification
+              kind="info"
+              title="Cancelada"
+              subtitle="Esta geração foi cancelada."
+              lowContrast
+              hideCloseButton
+            />
           ) : null}
           {generation.status === "ready" && isOwner ? (
-            <RegenerateRow />
+            <div className="flex justify-end">
+              <Button kind="tertiary" size="sm" href="/recommendations" renderIcon={ArrowLeft}>
+                Voltar ao histórico
+              </Button>
+            </div>
           ) : null}
-        </CardContent>
-      </Card>
+        </div>
+      </Tile>
 
       {generation.status === "ready" && generation.recommendations ? (
         <section className="space-y-4">
@@ -133,20 +141,6 @@ export function RecommendationsRunView({
           ))}
         </section>
       ) : null}
-    </div>
-  );
-}
-
-// Small inline component because it's used only here and only inside
-// the ready-state branch. Lives at the same depth as the card body.
-function RegenerateRow() {
-  return (
-    <div className="flex justify-end">
-      <Link href="/recommendations">
-        <Button variant="outline" size="sm">
-          Voltar ao histórico
-        </Button>
-      </Link>
     </div>
   );
 }

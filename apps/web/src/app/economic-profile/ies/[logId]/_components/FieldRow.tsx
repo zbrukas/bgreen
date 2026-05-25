@@ -1,14 +1,12 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import type {
   ExtractedEconomicProfile,
   ProfileField,
   ValidatorWarning,
 } from "@/lib/economic-profile-types";
-import { CONFIDENCE_LABEL, CONFIDENCE_VARIANT, FIELD_LABELS } from "./copy";
+import { Tag, TextInput } from "@carbon/react";
+import { CONFIDENCE_LABEL, CONFIDENCE_TAG_TYPE, FIELD_LABELS } from "./copy";
 
 export function FieldRow({
   field,
@@ -26,23 +24,29 @@ export function FieldRow({
   onChange: (value: number | string | null | undefined) => void;
 }) {
   const id = `field-${field}`;
-  // Display value: edit if present (even if null), otherwise the
-  // extracted value. Null → empty string in the input.
   const effective = edit !== undefined ? edit : extracted.value;
   const inputValue = effective === null || effective === undefined ? "" : String(effective);
+  const warningText =
+    warnings.length > 0 ? warnings.map((w) => `⚠︎ ${w.message}`).join(" ") : undefined;
 
   return (
-    <div className="grid gap-1.5">
-      <div className="flex items-center gap-2">
-        <Label htmlFor={id}>{FIELD_LABELS[field]}</Label>
-        <Badge variant={CONFIDENCE_VARIANT[extracted.confidence]}>
+    <div>
+      <div className="mb-1 flex items-center gap-2">
+        <span className="cds--label" style={{ marginBottom: 0 }}>
+          {FIELD_LABELS[field]}
+        </span>
+        <Tag type={CONFIDENCE_TAG_TYPE[extracted.confidence]} size="sm">
           {CONFIDENCE_LABEL[extracted.confidence]}
-        </Badge>
+        </Tag>
       </div>
-      <Input
+      <TextInput
         id={id}
+        labelText=""
+        hideLabel
         type={isNumeric ? "number" : "text"}
         value={inputValue}
+        warn={warnings.length > 0}
+        warnText={warningText}
         onChange={(e) => {
           const raw = e.target.value;
           if (raw === "") {
@@ -57,13 +61,6 @@ export function FieldRow({
           }
         }}
       />
-      {warnings.length > 0 ? (
-        <ul className="text-xs text-amber-700">
-          {warnings.map((w) => (
-            <li key={w.rule}>⚠︎ {w.message}</li>
-          ))}
-        </ul>
-      ) : null}
     </div>
   );
 }

@@ -1,23 +1,7 @@
 "use client";
 
 // V10.4 — interactive coverage matrix.
-//
-// SSR loads the deterministic matrix and passes it as a prop. This
-// client component owns:
-//   - status filter chips
-//   - "applicable to my sector only" toggle (default on; flipping it
-//     navigates to ?includeNonApplicable=true so the server re-renders
-//     with the broader matrix — keeping the SSR boundary the source
-//     of truth)
-//   - "Explicar cobertura" mutation that calls POST /check and merges
-//     the explanations back onto the rows
-//   - per-row expansion to surface the AI explanation + suggested
-//     next step
 
-import { Alert } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
 import { checkCoverage } from "@/lib/coverage-actions";
 import {
   type CoverageCheckResult,
@@ -28,6 +12,8 @@ import {
   type RowExplanation,
   STATUS_LABEL,
 } from "@/lib/coverage-types";
+import { Recommend } from "@carbon/icons-react";
+import { Button, Checkbox, InlineNotification, Tile } from "@carbon/react";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -50,8 +36,6 @@ export function CoverageMatrixView({
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Toggle drives a server re-render via URL state. The matrix prop
-  // updates on the next request; we don't try to merge client-side.
   const onToggleApplicable = (next: boolean) => {
     const params = new URLSearchParams(searchParams?.toString() ?? "");
     if (next) params.set("includeNonApplicable", "true");
@@ -59,8 +43,6 @@ export function CoverageMatrixView({
     router.push(`/coverage?${params.toString()}`);
   };
 
-  // Client-side state for status filter + per-run explanations. The
-  // matrix itself stays in props (server source of truth).
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [explanations, setExplanations] = useState<RowExplanation[]>([]);
   const [aiError, setAiError] = useState<string | null>(null);
@@ -74,8 +56,6 @@ export function CoverageMatrixView({
     onSuccess: (result: CoverageCheckResult) => {
       setExplanations(result.explanations);
       setAiError(result.aiError);
-      // Expand every row with a new explanation so the user sees the
-      // narrative without clicking through each row.
       setExpandedRows(new Set(result.explanations.map((e) => e.datapointId)));
     },
   });
@@ -133,33 +113,40 @@ export function CoverageMatrixView({
         </div>
 
         <div className="flex items-center gap-3">
-          <label className="flex items-center gap-2 text-sm text-muted-foreground">
-            <input
-              type="checkbox"
-              checked={!initialIncludeNonApplicable}
-              onChange={(e) => onToggleApplicable(!e.target.checked)}
-              className="h-4 w-4"
-            />
-            Apenas aplicáveis ao meu setor
-          </label>
+          <Checkbox
+            id="applicable-only"
+            labelText="Apenas aplicáveis ao meu setor"
+            checked={!initialIncludeNonApplicable}
+            onChange={(_e, { checked }) => onToggleApplicable(!checked)}
+          />
           <Button
+            kind="primary"
             onClick={() => check.mutate()}
             disabled={check.isPending || initialMatrix.rows.length === 0}
             size="sm"
+            renderIcon={Recommend}
           >
             {check.isPending ? "A gerar…" : "Explicar cobertura"}
           </Button>
         </div>
       </div>
 
-      {aiError ? <Alert variant="warning">{aiError}</Alert> : null}
+      {aiError ? (
+        <InlineNotification
+          kind="warning"
+          title="Atenção"
+          subtitle={aiError}
+          lowContrast
+          hideCloseButton
+        />
+      ) : null}
 
       {filteredRows.length === 0 ? (
-        <Card>
-          <CardContent className="p-8 text-center text-sm text-muted-foreground">
+        <Tile>
+          <p className="py-6 text-center text-sm text-neutral-600">
             Nenhum datapoint corresponde ao filtro actual.
-          </CardContent>
-        </Card>
+          </p>
+        </Tile>
       ) : (
         <div className="space-y-3">
           {filteredRows.map((row) => (
@@ -190,12 +177,11 @@ function StatusFilterChip({ label, count, active, onClick }: StatusFilterChipPro
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={cn(
-        "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+      className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
         active
-          ? "border-primary bg-primary text-primary-foreground"
-          : "border-input bg-background text-foreground hover:bg-accent hover:text-accent-foreground",
-      )}
+          ? "border-[var(--cds-interactive)] bg-[var(--cds-interactive)] text-[#37323e]"
+          : "border-neutral-300 bg-white text-neutral-900 hover:bg-neutral-100"
+      }`}
     >
       {label}
       <span className="ml-1 opacity-80">({count})</span>
@@ -214,58 +200,55 @@ function CoverageRowCard({ row, explanation, expanded, onToggle }: CoverageRowCa
   const { datapoint, status, applicable, evidence } = row;
   const isMissing = status === "missing";
   return (
-    <Card>
-      <CardHeader className="space-y-2">
-        <div className="flex flex-wrap items-baseline gap-3">
-          <span className="text-xs font-mono text-muted-foreground">{datapoint.code}</span>
-          <CardTitle className="text-base">{datapoint.title}</CardTitle>
-          <div className="ml-auto flex items-center gap-2">
-            <StatusBadge status={status} />
-            {!applicable ? (
-              <span className="text-xs text-muted-foreground">não aplicável</span>
-            ) : null}
-          </div>
+    <Tile>
+      <div className="flex flex-wrap items-baseline gap-3">
+        <span
+          className="text-xs text-neutral-600"
+          style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+        >
+          {datapoint.code}
+        </span>
+        <h3 style={{ fontSize: "1rem", fontWeight: 600, margin: 0 }}>{datapoint.title}</h3>
+        <div className="ml-auto flex items-center gap-2">
+          <StatusBadge status={status} />
+          {!applicable ? <span className="text-xs text-neutral-600">não aplicável</span> : null}
         </div>
-        <CardDescription>{datapoint.description}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3 text-sm">
+      </div>
+      <p className="mt-2 text-sm text-neutral-700">{datapoint.description}</p>
+      <div className="mt-3 space-y-3 text-sm">
         {status !== "missing" ? (
-          <p className="text-xs text-muted-foreground">
-            {evidence.templateIds.length} modelo(s) mapeado(s) ·{" "}
-            {evidence.recordIds.length} registo(s) submetido(s)
+          <p className="text-xs text-neutral-600">
+            {evidence.templateIds.length} modelo(s) mapeado(s) · {evidence.recordIds.length}{" "}
+            registo(s) submetido(s)
           </p>
         ) : null}
 
         <button
           type="button"
           onClick={onToggle}
-          className="text-xs font-medium text-primary hover:underline"
+          className="text-xs font-medium text-[var(--cds-link-primary)] hover:underline"
         >
-          {expanded
-            ? "Esconder"
-            : isMissing
-              ? "Como começar"
-              : "Ver detalhes"}
+          {expanded ? "Esconder" : isMissing ? "Como começar" : "Ver detalhes"}
         </button>
 
         {expanded ? (
-          <div className="space-y-2 rounded-md border bg-muted/30 p-3">
+          <div className="space-y-2 rounded-md border border-neutral-200 bg-neutral-50 p-3">
             {explanation ? (
               <>
                 <p className="text-sm leading-relaxed">{explanation.explanation}</p>
-                <p className="text-xs font-medium text-foreground">Próximo passo</p>
-                <p className="text-sm leading-relaxed text-muted-foreground">
+                <p className="text-xs font-medium">Próximo passo</p>
+                <p className="text-sm leading-relaxed text-neutral-600">
                   {explanation.suggestedNextStep}
                 </p>
               </>
             ) : (
-              <p className="text-xs text-muted-foreground">
-                Clique em &laquo;Explicar cobertura&raquo; para gerar explicações.
+              <p className="text-xs text-neutral-600">
+                Clique em «Explicar cobertura» para gerar explicações.
               </p>
             )}
           </div>
         ) : null}
-      </CardContent>
-    </Card>
+      </div>
+    </Tile>
   );
 }

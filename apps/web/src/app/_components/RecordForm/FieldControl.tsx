@@ -1,9 +1,8 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { Add } from "@carbon/icons-react";
+import { Button, Checkbox, Select, SelectItem, TextInput } from "@carbon/react";
 import type { Field, LeafField } from "@bgreen/types";
 import type { FormValues } from "./record-form-helpers";
 import { RepeatingRow } from "./RepeatingRow";
@@ -41,8 +40,10 @@ export function FieldControl({
   switch (field.kind) {
     case "text":
       return (
-        <Input
+        <TextInput
           id={path}
+          labelText=""
+          hideLabel
           value={typeof value === "string" ? value : ""}
           maxLength={field.maxLength}
           onChange={(e) => onChange(e.target.value)}
@@ -50,8 +51,10 @@ export function FieldControl({
       );
     case "number":
       return (
-        <Input
+        <TextInput
           id={path}
+          labelText=""
+          hideLabel
           inputMode="decimal"
           value={value === undefined || value === null ? "" : String(value)}
           onChange={(e) => onChange(e.target.value)}
@@ -59,8 +62,10 @@ export function FieldControl({
       );
     case "date":
       return (
-        <Input
+        <TextInput
           id={path}
+          labelText=""
+          hideLabel
           type="date"
           value={typeof value === "string" ? value : ""}
           min={field.min}
@@ -72,14 +77,14 @@ export function FieldControl({
       return (
         <Select
           id={path}
+          labelText=""
+          hideLabel
           value={typeof value === "string" ? value : ""}
           onChange={(e) => onChange(e.target.value)}
         >
-          <option value="">— escolha —</option>
+          <SelectItem value="" text="— escolha —" />
           {field.options.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
+            <SelectItem key={opt.value} value={opt.value} text={opt.label} />
           ))}
         </Select>
       );
@@ -88,20 +93,18 @@ export function FieldControl({
       return (
         <div className="space-y-1.5">
           {field.options.map((opt) => (
-            <label key={opt.value} className="inline-flex w-full items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={selected.has(opt.value)}
-                onChange={(e) => {
-                  const next = new Set(selected);
-                  if (e.target.checked) next.add(opt.value);
-                  else next.delete(opt.value);
-                  onChange(Array.from(next));
-                }}
-                className="h-4 w-4 rounded border-input text-primary focus:ring-ring"
-              />
-              {opt.label}
-            </label>
+            <Checkbox
+              key={opt.value}
+              id={`${path}-${opt.value}`}
+              labelText={opt.label}
+              checked={selected.has(opt.value)}
+              onChange={(_e, { checked }) => {
+                const next = new Set(selected);
+                if (checked) next.add(opt.value);
+                else next.delete(opt.value);
+                onChange(Array.from(next));
+              }}
+            />
           ))}
         </div>
       );
@@ -112,9 +115,10 @@ export function FieldControl({
         <output
           id={path}
           className={cn(
-            "block rounded-md border bg-muted px-3 py-2 font-mono text-sm",
-            display.kind === "value" ? "text-primary" : "text-muted-foreground",
+            "block rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm",
+            display.kind === "value" ? "text-[var(--cds-link-primary)]" : "text-neutral-600",
           )}
+          style={{ fontFamily: "'IBM Plex Mono', monospace" }}
         >
           {display.kind === "value"
             ? `${formatNumber(display.value)}${field.unit ? ` ${field.unit}` : ""}`
@@ -142,8 +146,14 @@ export function FieldControl({
             />
           ))}
           {(field.maxRows === undefined || rows.length < field.maxRows) && (
-            <Button type="button" variant="outline" size="sm" onClick={onAddRow}>
-              + Adicionar {field.rowLabel.toLowerCase()}
+            <Button
+              type="button"
+              kind="tertiary"
+              size="sm"
+              onClick={onAddRow}
+              renderIcon={Add}
+            >
+              Adicionar {field.rowLabel.toLowerCase()}
             </Button>
           )}
         </div>

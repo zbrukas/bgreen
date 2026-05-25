@@ -9,9 +9,9 @@ export const DIMENSAO_OPTIONS: Array<{ value: Dimensao; label: string }> = [
   { value: "grande", label: "GRANDE" },
 ];
 
-export const DIMENSAO_BADGE_VARIANT: Record<Dimensao, "secondary" | "info" | "purple" | "success"> = {
-  micro: "secondary",
-  pequena: "info",
+export const DIMENSAO_TAG_TYPE: Record<Dimensao, "cool-gray" | "blue" | "purple" | "green"> = {
+  micro: "cool-gray",
+  pequena: "blue",
   media: "purple",
-  grande: "success",
+  grande: "green",
 };

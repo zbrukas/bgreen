@@ -1,12 +1,15 @@
 "use client";
 
-import { Alert } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
 import type { PostalCodeLookupResult, ViesLookupResult } from "@/lib/api-client";
-import { cn } from "@/lib/utils";
+import { Checkmark } from "@carbon/icons-react";
+import {
+  Button,
+  InlineNotification,
+  Select,
+  SelectItem,
+  Stack,
+  TextInput,
+} from "@carbon/react";
 import { validateNif } from "@bgreen/pt-data";
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -143,134 +146,131 @@ export function CreateOrganizationForm() {
     setPostalCode(digits.length > 4 ? `${digits.slice(0, 4)}-${digits.slice(4)}` : digits);
   }
 
-  return (
-    <form action={formAction} className="max-w-lg space-y-4">
-      <div>
-        <h2 className="text-lg font-medium">Criar a sua organização</h2>
-        <p className="text-sm text-muted-foreground">
-          Indique o NIF — se a sua empresa estiver registada no VIES, preenchemos o nome
-          automaticamente.
-        </p>
-      </div>
+  // NIF helper-text resolves to ok/loading/warn/error variants. Carbon
+  // exposes invalid/warn/helperText as discrete props — only one fires
+  // at a time visually.
+  const nifInvalid = nifFeedback?.kind === "error";
+  const nifInvalidText = nifInvalid
+    ? (nifReasonCopy[nifFeedback.reason] ?? "NIF inválido.")
+    : undefined;
+  const nifWarn = !nifInvalid && !viesLoading && vies?.source === "unreachable";
+  const nifWarnText = nifWarn ? "VIES indisponível — preencha manualmente." : undefined;
+  const nifHelperText =
+    nifInvalid || nifWarn
+      ? undefined
+      : nifFeedback?.kind === "ok"
+        ? viesLoading
+          ? "✓ NIF válido. A consultar VIES…"
+          : vies?.valid === false
+            ? "✓ NIF válido. Não registado no VIES."
+            : "✓ NIF válido."
+        : undefined;
 
-      <div className="space-y-1.5">
-        <Label htmlFor="nif">NIF</Label>
-        <Input
+  const postalInvalid = postalCode !== "" && !postalCodeValid;
+  const postalWarn = !postalInvalid && !postalLoading && postalLookup?.found === false;
+
+  return (
+    <form action={formAction} className="max-w-lg">
+      <Stack gap={5}>
+        <div>
+          <h2 style={{ fontSize: "1.125rem", fontWeight: 500, margin: 0 }}>
+            Criar a sua organização
+          </h2>
+          <p className="mt-1 text-sm text-neutral-700">
+            Indique o NIF — se a sua empresa estiver registada no VIES, preenchemos o nome
+            automaticamente.
+          </p>
+        </div>
+
+        <TextInput
           id="nif"
           name="nif"
+          labelText="NIF"
           inputMode="numeric"
           autoComplete="off"
           maxLength={11}
           value={nif}
           onChange={(e) => setNif(e.target.value)}
-          className={cn(
-            nifFeedback?.kind === "ok" && "border-emerald-500",
-            nifFeedback?.kind === "error" && "border-destructive",
+          invalid={nifInvalid}
+          invalidText={nifInvalidText}
+          warn={nifWarn}
+          warnText={nifWarnText}
+          helperText={nifHelperText}
+        />
+
+        <div>
+          <TextInput
+            id="org-name"
+            name="name"
+            labelText="Nome"
+            required
+            autoComplete="organization"
+            maxLength={200}
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value);
+              setNameTouched(true);
+            }}
+            helperText={
+              nameWasAutoFilled ? "✓ Verificado via VIES — pode editar se necessário." : undefined
+            }
+          />
+          {vies?.valid && vies.address && !nameTouched && (
+            <p className="mt-1 text-xs text-neutral-600">{vies.address}</p>
           )}
-        />
-        {nifFeedback?.kind === "ok" && (
-          <p className="text-xs text-emerald-700">
-            ✓ NIF válido.
-            {viesLoading && <span className="text-muted-foreground"> A consultar VIES…</span>}
-            {!viesLoading && vies?.source === "unreachable" && (
-              <span className="text-amber-700"> VIES indisponível — preencha manualmente.</span>
-            )}
-            {!viesLoading && vies?.valid === false && (
-              <span className="text-muted-foreground"> Não registado no VIES.</span>
-            )}
-          </p>
-        )}
-        {nifFeedback?.kind === "error" && (
-          <p className="text-xs text-destructive">
-            {nifReasonCopy[nifFeedback.reason] ?? "NIF inválido."}
-          </p>
-        )}
-      </div>
+        </div>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="org-name">Nome</Label>
-        <Input
-          id="org-name"
-          name="name"
-          required
-          autoComplete="organization"
-          maxLength={200}
-          value={name}
-          onChange={(e) => {
-            setName(e.target.value);
-            setNameTouched(true);
-          }}
-          className={cn(nameWasAutoFilled && "border-emerald-500")}
-        />
-        {nameWasAutoFilled && (
-          <p className="text-xs text-emerald-700">
-            ✓ Verificado via VIES — pode editar se necessário.
-          </p>
-        )}
-        {vies?.valid && vies.address && !nameTouched && (
-          <p className="text-xs text-muted-foreground">{vies.address}</p>
-        )}
-      </div>
+        <CaePicker name="caeCode" />
 
-      <CaePicker name="caeCode" />
-
-      <div className="space-y-1.5">
-        <Label htmlFor="legalForm">Forma jurídica</Label>
-        <Select id="legalForm" name="legalForm" defaultValue="">
+        <Select id="legalForm" name="legalForm" labelText="Forma jurídica" defaultValue="">
           {legalFormOptions.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
+            <SelectItem key={opt.value} value={opt.value} text={opt.label} />
           ))}
         </Select>
-      </div>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="selfReportedSize">Dimensão</Label>
-        <Select id="selfReportedSize" name="selfReportedSize" defaultValue="">
+        <Select
+          id="selfReportedSize"
+          name="selfReportedSize"
+          labelText="Dimensão"
+          defaultValue=""
+        >
           {sizeOptions.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
+            <SelectItem key={opt.value} value={opt.value} text={opt.label} />
           ))}
         </Select>
-      </div>
 
-      <fieldset className="space-y-3 rounded-md border p-4">
-        <legend className="px-2 text-xs text-muted-foreground">Endereço (opcional)</legend>
+        <fieldset className="space-y-4 rounded-md border border-neutral-200 p-4">
+          <legend className="px-2 text-xs text-neutral-600">Endereço (opcional)</legend>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="postalCode">Código postal</Label>
-          <Input
+          <TextInput
             id="postalCode"
             name="postalCode"
+            labelText="Código postal"
             inputMode="numeric"
             autoComplete="postal-code"
             placeholder="0000-000"
             maxLength={8}
             value={postalCode}
             onChange={(e) => onPostalCodeChange(e.target.value)}
-            className={cn(
-              postalLookup?.found === true && "border-emerald-500",
-              postalCode !== "" && !postalCodeValid && "border-destructive",
-            )}
+            invalid={postalInvalid}
+            invalidText={postalInvalid ? "Use o formato XXXX-XXX." : undefined}
+            warn={postalWarn}
+            warnText={
+              postalWarn ? "Código postal não encontrado — preencha manualmente." : undefined
+            }
+            helperText={
+              postalLoading
+                ? "A consultar morada…"
+                : addressWasAutoFilled
+                  ? "✓ Morada preenchida automaticamente."
+                  : undefined
+            }
           />
-          {postalLoading && <p className="text-xs text-muted-foreground">A consultar morada…</p>}
-          {!postalLoading && postalLookup?.found === false && (
-            <p className="text-xs text-amber-700">
-              Código postal não encontrado — preencha manualmente.
-            </p>
-          )}
-          {!postalLoading && addressWasAutoFilled && (
-            <p className="text-xs text-emerald-700">✓ Morada preenchida automaticamente.</p>
-          )}
-        </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="addressLine">Morada</Label>
-          <Input
+          <TextInput
             id="addressLine"
             name="addressLine"
+            labelText="Morada"
             autoComplete="street-address"
             placeholder="Rua, número, andar…"
             maxLength={200}
@@ -280,14 +280,12 @@ export function CreateOrganizationForm() {
               setAddressTouched(true);
             }}
           />
-        </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="freguesia">Freguesia</Label>
-            <Input
+          <div className="grid grid-cols-2 gap-3">
+            <TextInput
               id="freguesia"
               name="freguesia"
+              labelText="Freguesia"
               maxLength={100}
               value={freguesia}
               onChange={(e) => {
@@ -295,12 +293,10 @@ export function CreateOrganizationForm() {
                 setAddressTouched(true);
               }}
             />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="concelho">Concelho</Label>
-            <Input
+            <TextInput
               id="concelho"
               name="concelho"
+              labelText="Concelho"
               maxLength={100}
               value={concelho}
               onChange={(e) => {
@@ -309,13 +305,11 @@ export function CreateOrganizationForm() {
               }}
             />
           </div>
-        </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="distrito">Distrito</Label>
-          <Input
+          <TextInput
             id="distrito"
             name="distrito"
+            labelText="Distrito"
             maxLength={100}
             value={distrito}
             onChange={(e) => {
@@ -323,20 +317,30 @@ export function CreateOrganizationForm() {
               setAddressTouched(true);
             }}
           />
-        </div>
-      </fieldset>
+        </fieldset>
 
-      {state.error && <Alert variant="destructive">{state.error}</Alert>}
+        {state.error && (
+          <InlineNotification
+            kind="error"
+            title="Não foi possível criar a organização"
+            subtitle={state.error}
+            lowContrast
+            hideCloseButton
+          />
+        )}
 
-      <Button
-        type="submit"
-        disabled={
-          isPending || nifFeedback?.kind === "error" || (postalCode !== "" && !postalCodeValid)
-        }
-        size="lg"
-      >
-        {isPending ? "A criar…" : "Criar organização"}
-      </Button>
+        <Button
+          type="submit"
+          kind="primary"
+          size="lg"
+          disabled={
+            isPending || nifFeedback?.kind === "error" || (postalCode !== "" && !postalCodeValid)
+          }
+          renderIcon={Checkmark}
+        >
+          {isPending ? "A criar…" : "Criar organização"}
+        </Button>
+      </Stack>
     </form>
   );
 }

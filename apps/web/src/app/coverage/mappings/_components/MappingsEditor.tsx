@@ -1,27 +1,14 @@
 "use client";
 
-// CS-only mapping editor. The page bundles templates + datapoints +
-// existing mappings; this client component owns:
-//   - per-template list of mapped datapoints (chips with X to remove)
-//   - "+ Adicionar datapoint" picker that opens a framework-scoped
-//     selector
-//   - optimistic UI via tanstack-query mutations
-
-import { Alert } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
-import {
-  createMapping,
-  deleteMapping,
-} from "@/lib/coverage-actions";
+import { createMapping, deleteMapping } from "@/lib/coverage-actions";
 import {
   FRAMEWORK_LABEL,
   type Framework,
   type FrameworkDatapoint,
   type TemplateDatapointMapping,
 } from "@/lib/coverage-types";
+import { Add } from "@carbon/icons-react";
+import { Button, InlineNotification, Tag, Tile } from "@carbon/react";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -95,15 +82,27 @@ export function MappingsEditor({
 
   if (templates.length === 0) {
     return (
-      <Alert variant="info">
-        Ainda não existem modelos publicados para mapear.
-      </Alert>
+      <InlineNotification
+        kind="info"
+        title="Sem modelos"
+        subtitle="Ainda não existem modelos publicados para mapear."
+        lowContrast
+        hideCloseButton
+      />
     );
   }
 
   return (
     <div className="space-y-6">
-      {errorMessage ? <Alert variant="destructive">{errorMessage}</Alert> : null}
+      {errorMessage ? (
+        <InlineNotification
+          kind="error"
+          title="Erro"
+          subtitle={errorMessage}
+          lowContrast
+          hideCloseButton
+        />
+      ) : null}
 
       {templates.map((tpl) => {
         const mapped = mappingsByTemplate.get(tpl.id) ?? [];
@@ -113,110 +112,95 @@ export function MappingsEditor({
           (dp) => dp.framework === pickerFramework && !alreadyMappedIds.has(dp.id),
         );
         return (
-          <Card key={tpl.id}>
-            <CardHeader>
-              <CardTitle className="text-base">{tpl.name}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex flex-wrap gap-2">
-                {mapped.length === 0 ? (
-                  <span className="text-xs text-muted-foreground">
-                    Sem datapoints mapeados.
-                  </span>
-                ) : (
-                  mapped.map((m) => {
-                    const dp = datapointById.get(m.frameworkDatapointId);
-                    return (
-                      <Badge
-                        key={m.id}
-                        variant="secondary"
-                        className="flex items-center gap-1"
-                      >
-                        <span>
-                          {dp ? `${FRAMEWORK_LABEL[dp.framework]} ${dp.code}` : m.frameworkDatapointId}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => remove.mutate(m.id)}
-                          disabled={remove.isPending}
-                          className="ml-1 text-xs text-muted-foreground hover:text-destructive"
-                          aria-label={`Remover ${dp?.code ?? m.frameworkDatapointId}`}
-                        >
-                          ×
-                        </button>
-                      </Badge>
-                    );
-                  })
-                )}
-              </div>
-
-              <div>
-                {!isOpen ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setOpenTemplateId(tpl.id)}
-                  >
-                    + Adicionar datapoint
-                  </Button>
-                ) : (
-                  <div className="space-y-2 rounded-md border bg-muted/20 p-3">
-                    <div className="flex gap-1">
-                      {FRAMEWORKS.map((f) => (
-                        <button
-                          key={f}
-                          type="button"
-                          onClick={() => setPickerFramework(f)}
-                          className={cn(
-                            "rounded px-2 py-1 text-xs font-medium",
-                            pickerFramework === f
-                              ? "bg-primary text-primary-foreground"
-                              : "text-muted-foreground hover:text-foreground",
-                          )}
-                        >
-                          {FRAMEWORK_LABEL[f]}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="max-h-64 space-y-1 overflow-y-auto">
-                      {pickerOptions.length === 0 ? (
-                        <p className="text-xs text-muted-foreground">
-                          Todos os datapoints deste framework já estão mapeados.
-                        </p>
-                      ) : (
-                        pickerOptions.map((dp) => (
-                          <button
-                            key={dp.id}
-                            type="button"
-                            onClick={() =>
-                              add.mutate({
-                                templateId: tpl.id,
-                                frameworkDatapointId: dp.id,
-                              })
-                            }
-                            disabled={add.isPending}
-                            className="flex w-full items-baseline gap-2 rounded px-2 py-1 text-left text-sm hover:bg-accent hover:text-accent-foreground"
-                          >
-                            <span className="font-mono text-xs text-muted-foreground">
-                              {dp.code}
-                            </span>
-                            <span>{dp.title}</span>
-                          </button>
-                        ))
-                      )}
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setOpenTemplateId(null)}
+          <Tile key={tpl.id}>
+            <h3 style={{ fontSize: "1rem", fontWeight: 600, lineHeight: 1.375, margin: 0 }}>
+              {tpl.name}
+            </h3>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {mapped.length === 0 ? (
+                <span className="text-xs text-neutral-600">Sem datapoints mapeados.</span>
+              ) : (
+                mapped.map((m) => {
+                  const dp = datapointById.get(m.frameworkDatapointId);
+                  return (
+                    <Tag
+                      key={m.id}
+                      type="cool-gray"
+                      filter
+                      onClose={() => remove.mutate(m.id)}
                     >
-                      Fechar
-                    </Button>
+                      {dp ? `${FRAMEWORK_LABEL[dp.framework]} ${dp.code}` : m.frameworkDatapointId}
+                    </Tag>
+                  );
+                })
+              )}
+            </div>
+
+            <div className="mt-3">
+              {!isOpen ? (
+                <Button
+                  kind="tertiary"
+                  size="sm"
+                  onClick={() => setOpenTemplateId(tpl.id)}
+                  renderIcon={Add}
+                >
+                  Adicionar datapoint
+                </Button>
+              ) : (
+                <div className="space-y-2 rounded-md border border-neutral-200 bg-neutral-50 p-3">
+                  <div className="flex gap-1">
+                    {FRAMEWORKS.map((f) => (
+                      <button
+                        key={f}
+                        type="button"
+                        onClick={() => setPickerFramework(f)}
+                        className={`rounded px-2 py-1 text-xs font-medium ${
+                          pickerFramework === f
+                            ? "bg-[var(--cds-interactive)] text-[#37323e]"
+                            : "text-neutral-600 hover:text-neutral-900"
+                        }`}
+                      >
+                        {FRAMEWORK_LABEL[f]}
+                      </button>
+                    ))}
                   </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                  <div className="max-h-64 space-y-1 overflow-y-auto">
+                    {pickerOptions.length === 0 ? (
+                      <p className="text-xs text-neutral-600">
+                        Todos os datapoints deste framework já estão mapeados.
+                      </p>
+                    ) : (
+                      pickerOptions.map((dp) => (
+                        <button
+                          key={dp.id}
+                          type="button"
+                          onClick={() =>
+                            add.mutate({
+                              templateId: tpl.id,
+                              frameworkDatapointId: dp.id,
+                            })
+                          }
+                          disabled={add.isPending}
+                          className="flex w-full items-baseline gap-2 rounded px-2 py-1 text-left text-sm hover:bg-neutral-100"
+                        >
+                          <span
+                            className="text-xs text-neutral-600"
+                            style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                          >
+                            {dp.code}
+                          </span>
+                          <span>{dp.title}</span>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                  <Button kind="ghost" size="sm" onClick={() => setOpenTemplateId(null)}>
+                    Fechar
+                  </Button>
+                </div>
+              )}
+            </div>
+          </Tile>
         );
       })}
     </div>

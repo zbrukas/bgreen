@@ -56,15 +56,15 @@ export const STATUS_LABEL: Record<ReportInstanceStatus, string> = {
   cancelled: "Cancelado",
 };
 
-export const STATUS_BADGE: Record<
+export const STATUS_TAG_TYPE: Record<
   ReportInstanceStatus,
-  "info" | "warning" | "success" | "destructive" | "secondary"
+  "blue" | "green" | "red" | "cool-gray"
 > = {
-  pending: "info",
-  running: "info",
-  ready: "success",
-  failed: "destructive",
-  cancelled: "secondary",
+  pending: "blue",
+  running: "blue",
+  ready: "green",
+  failed: "red",
+  cancelled: "cool-gray",
 };
 
 // Terminal states stop the detail page's poll.

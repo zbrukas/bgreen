@@ -1,14 +1,19 @@
 "use client";
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
+import { type CreateInviteFormState, createInviteAction } from "@/app/actions";
+import { Add } from "@carbon/icons-react";
+import {
+  Button,
+  Checkbox,
+  InlineNotification,
+  Select,
+  SelectItem,
+  Stack,
+  TextInput,
+  Tile,
+} from "@carbon/react";
 import type { Topic } from "@bgreen/types";
 import { useActionState } from "react";
-import { type CreateInviteFormState, createInviteAction } from "@/app/actions";
 
 const initialState: CreateInviteFormState = {
   error: null,
@@ -29,97 +34,114 @@ export function InviteMemberForm({ organizationId, topics }: InviteMemberFormPro
 
   return (
     <div className="max-w-lg space-y-6">
-      <form action={formAction} className="space-y-4">
-        <div>
-          <h2 className="text-lg font-medium">Convidar membro</h2>
-          <p className="text-sm text-muted-foreground">
-            O convidado tem de iniciar sessão com este email para aceitar.
-          </p>
-        </div>
+      <form action={formAction}>
+        <Stack gap={5}>
+          <div>
+            <h2 style={{ fontSize: "1.125rem", fontWeight: 500, margin: 0 }}>Convidar membro</h2>
+            <p className="mt-1 text-sm text-neutral-700">
+              O convidado tem de iniciar sessão com este email para aceitar.
+            </p>
+          </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="invite-email">Email</Label>
-          <Input
+          <TextInput
             id="invite-email"
             name="email"
+            labelText="Email"
             type="email"
             required
             autoComplete="email"
             maxLength={254}
           />
-        </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="invite-role">Papel</Label>
-          <Select id="invite-role" name="role" defaultValue="org_user_write">
-            <option value="org_user_write">Membro</option>
-            <option value="org_admin">Administrador</option>
+          <Select id="invite-role" name="role" labelText="Papel" defaultValue="org_user_write">
+            <SelectItem value="org_user_write" text="Membro" />
+            <SelectItem value="org_admin" text="Administrador" />
           </Select>
-        </div>
 
-        {topics.length > 0 && (
-          <fieldset className="space-y-1.5 rounded-md border p-3">
-            <legend className="px-1 text-sm font-medium">Âmbito de tópicos</legend>
-            <p className="text-xs text-muted-foreground">
-              Deixe sem seleção para visibilidade total. Marque tópicos para restringir o que o
-              membro consegue ver e editar.
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              {topics.map((t) => (
-                <label key={t.id} className="inline-flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
+          {topics.length > 0 && (
+            <fieldset className="rounded-md border border-neutral-200 p-3">
+              <legend className="px-1 text-sm font-medium">Âmbito de tópicos</legend>
+              <p className="mb-2 text-xs text-neutral-600">
+                Deixe sem seleção para visibilidade total. Marque tópicos para restringir o que o
+                membro consegue ver e editar.
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {topics.map((t) => (
+                  <Checkbox
+                    key={t.id}
+                    id={`topic-${t.slug}`}
                     name="topicScope"
                     value={t.slug}
-                    className="h-4 w-4 rounded border-input text-primary focus:ring-ring"
+                    labelText={
+                      <span>
+                        {t.name}{" "}
+                        <span
+                          className="text-xs text-neutral-600"
+                          style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                        >
+                          ({t.slug})
+                        </span>
+                      </span>
+                    }
                   />
-                  <span>
-                    {t.name}{" "}
-                    <span className="font-mono text-xs text-muted-foreground">({t.slug})</span>
-                  </span>
-                </label>
-              ))}
-            </div>
-          </fieldset>
-        )}
+                ))}
+              </div>
+            </fieldset>
+          )}
 
-        {state.error && <Alert variant="destructive">{state.error}</Alert>}
+          {state.error && (
+            <InlineNotification
+              kind="error"
+              title="Não foi possível criar o convite"
+              subtitle={state.error}
+              lowContrast
+              hideCloseButton
+            />
+          )}
 
-        <Button type="submit" disabled={isPending} size="lg">
-          {isPending ? "A criar…" : "Criar convite"}
-        </Button>
+          <Button type="submit" kind="primary" size="lg" disabled={isPending} renderIcon={Add}>
+            {isPending ? "A criar…" : "Criar convite"}
+          </Button>
+        </Stack>
       </form>
 
       {state.acceptUrl && (
-        <Card>
-          <CardContent className="space-y-3 p-4">
-            <p className="font-medium">Convite criado para {state.invitedEmail}.</p>
+        <Tile>
+          <p className="font-medium">Convite criado para {state.invitedEmail}.</p>
 
-            {state.emailDelivered === true && (
-              <Alert variant="success">
-                <AlertDescription>✓ Email enviado.</AlertDescription>
-              </Alert>
-            )}
-            {state.emailDelivered === false && (
-              <Alert variant="warning">
-                <AlertTitle>Email não foi enviado</AlertTitle>
-                <AlertDescription>
-                  {state.emailReason ? `(${state.emailReason}). ` : ""}Partilhe o link manualmente.
-                </AlertDescription>
-              </Alert>
-            )}
-
-            <div className="space-y-1.5">
-              <Label className="text-xs">Link (validade: 7 dias)</Label>
-              <Input
-                readOnly
-                value={state.acceptUrl}
-                onFocus={(e) => e.currentTarget.select()}
-                className="font-mono text-xs"
+          {state.emailDelivered === true && (
+            <div className="mt-3">
+              <InlineNotification
+                kind="success"
+                title="Email enviado"
+                lowContrast
+                hideCloseButton
               />
             </div>
-          </CardContent>
-        </Card>
+          )}
+          {state.emailDelivered === false && (
+            <div className="mt-3">
+              <InlineNotification
+                kind="warning"
+                title="Email não foi enviado"
+                subtitle={`${state.emailReason ? `(${state.emailReason}). ` : ""}Partilhe o link manualmente.`}
+                lowContrast
+                hideCloseButton
+              />
+            </div>
+          )}
+
+          <div className="mt-3">
+            <TextInput
+              id="invite-accept-url"
+              labelText="Link (validade: 7 dias)"
+              readOnly
+              value={state.acceptUrl}
+              onFocus={(e) => e.currentTarget.select()}
+              style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+            />
+          </div>
+        </Tile>
       )}
     </div>
   );

@@ -24,7 +24,6 @@
     "@tailwindcss/postcss": "^4",
     "@tanstack/react-query": "^5.66.0",
     "@workos-inc/authkit-nextjs": "^2.0.0",
-    "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dotenv": "^16.4.7",
     "hono": "^4.6.14",

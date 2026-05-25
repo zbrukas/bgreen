@@ -1,22 +1,17 @@
 "use client";
 
-// Fires a startRecommendations mutation and routes to /recommendations/:id
-// on success so the user sees the polling page. PRD acceptance criterion:
-// "Loading state during Inngest run" — the button shows "A iniciar…"
-// during the brief queue-and-redirect window.
-
-import { Alert } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
 import { startRecommendations } from "@/lib/recommendations-actions";
+import { Recommend } from "@carbon/icons-react";
+import { Button, InlineNotification } from "@carbon/react";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 
 interface GerarButtonProps {
   label?: string;
-  variant?: "default" | "outline";
+  kind?: "primary" | "tertiary";
 }
 
-export function GerarButton({ label = "Gerar recomendações", variant = "default" }: GerarButtonProps) {
+export function GerarButton({ label = "Gerar recomendações", kind = "primary" }: GerarButtonProps) {
   const router = useRouter();
   const start = useMutation({
     mutationFn: () => startRecommendations(),
@@ -27,16 +22,22 @@ export function GerarButton({ label = "Gerar recomendações", variant = "defaul
   return (
     <div className="space-y-2">
       <Button
+        kind={kind}
         onClick={() => start.mutate()}
         disabled={start.isPending}
-        variant={variant}
+        renderIcon={Recommend}
+        size="sm"
       >
         {start.isPending ? "A iniciar…" : label}
       </Button>
       {start.isError ? (
-        <Alert variant="destructive">
-          Não foi possível iniciar a geração. Tente novamente.
-        </Alert>
+        <InlineNotification
+          kind="error"
+          title="Não foi possível iniciar"
+          subtitle="A geração falhou. Tente novamente."
+          lowContrast
+          hideCloseButton
+        />
       ) : null}
     </div>
   );

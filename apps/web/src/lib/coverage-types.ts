@@ -77,13 +77,10 @@ export const STATUS_LABEL: Record<CoverageStatus, string> = {
   missing: "Em falta",
 };
 
-export const STATUS_BADGE_VARIANT: Record<
-  CoverageStatus,
-  "success" | "warning" | "destructive"
-> = {
-  covered: "success",
-  partial: "warning",
-  missing: "destructive",
+export const STATUS_TAG_TYPE: Record<CoverageStatus, "green" | "warm-gray" | "red"> = {
+  covered: "green",
+  partial: "warm-gray",
+  missing: "red",
 };
 
 // Server-actions throw via this so the UI can branch on `.message`.

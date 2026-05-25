@@ -1,9 +1,14 @@
 "use client";
 
-import { Alert } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
+import { Save } from "@carbon/icons-react";
+import {
+  Button,
+  Checkbox,
+  InlineNotification,
+  Select,
+  SelectItem,
+  Stack,
+} from "@carbon/react";
 import type { MembershipRole, Topic } from "@bgreen/types";
 import { useActionState } from "react";
 import { type UpdateMemberFormState, updateMemberAction } from "../../../../actions";
@@ -32,58 +37,77 @@ export function MemberEditForm({
   const selected = new Set(currentScope);
 
   return (
-    <form action={formAction} className="space-y-4">
-      <div className="space-y-1.5">
-        <Label htmlFor="role">Papel</Label>
-        <Select id="role" name="role" defaultValue={currentRole}>
-          <option value="org_admin">Administrador</option>
-          <option value="org_user_write">Membro</option>
-          <option value="org_user_read">Leitor</option>
+    <form action={formAction}>
+      <Stack gap={5}>
+        <Select
+          id="role"
+          name="role"
+          labelText="Papel"
+          defaultValue={currentRole}
+          helperText={
+            isSelf
+              ? "Não pode rebaixar-se a si próprio — apenas outro administrador o pode fazer."
+              : undefined
+          }
+        >
+          <SelectItem value="org_admin" text="Administrador" />
+          <SelectItem value="org_user_write" text="Membro" />
+          <SelectItem value="org_user_read" text="Leitor" />
         </Select>
-        {isSelf && (
-          <p className="text-xs text-muted-foreground">
-            Não pode rebaixar-se a si próprio — apenas outro administrador o pode fazer.
-          </p>
-        )}
-      </div>
 
-      <fieldset className="space-y-1.5 rounded-md border p-3">
-        <legend className="px-1 text-sm font-medium">Âmbito de tópicos</legend>
-        <p className="text-xs text-muted-foreground">
-          Sem seleção = visibilidade total. Marque tópicos para restringir o que o membro vê e edita
-          nos sub-modelos.
-        </p>
-        {topics.length === 0 ? (
-          <p className="text-xs text-muted-foreground">
-            Sem tópicos no catálogo. Pergunte aos serviços centrais.
+        <fieldset className="rounded-md border border-neutral-200 p-3">
+          <legend className="px-1 text-sm font-medium">Âmbito de tópicos</legend>
+          <p className="mb-2 text-xs text-neutral-600">
+            Sem seleção = visibilidade total. Marque tópicos para restringir o que o membro vê e
+            edita nos sub-modelos.
           </p>
-        ) : (
-          <div className="grid grid-cols-2 gap-2">
-            {topics.map((t) => (
-              <label key={t.id} className="inline-flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
+          {topics.length === 0 ? (
+            <p className="text-xs text-neutral-600">
+              Sem tópicos no catálogo. Pergunte aos serviços centrais.
+            </p>
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              {topics.map((t) => (
+                <Checkbox
+                  key={t.id}
+                  id={`scope-${t.slug}`}
                   name="topicScope"
                   value={t.slug}
                   defaultChecked={selected.has(t.slug)}
-                  className="h-4 w-4 rounded border-input text-primary focus:ring-ring"
+                  labelText={
+                    <span>
+                      {t.name}{" "}
+                      <span
+                        className="text-xs text-neutral-600"
+                        style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                      >
+                        ({t.slug})
+                      </span>
+                    </span>
+                  }
                 />
-                <span>
-                  {t.name}{" "}
-                  <span className="font-mono text-xs text-muted-foreground">({t.slug})</span>
-                </span>
-              </label>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
+        </fieldset>
+
+        {state.error && (
+          <InlineNotification
+            kind="error"
+            title="Erro"
+            subtitle={state.error}
+            lowContrast
+            hideCloseButton
+          />
         )}
-      </fieldset>
+        {state.saved && (
+          <InlineNotification kind="success" title="Atualizado" lowContrast hideCloseButton />
+        )}
 
-      {state.error && <Alert variant="destructive">{state.error}</Alert>}
-      {state.saved && <Alert variant="success">Atualizado.</Alert>}
-
-      <Button type="submit" disabled={isPending}>
-        {isPending ? "A guardar…" : "Guardar"}
-      </Button>
+        <Button type="submit" kind="primary" disabled={isPending} renderIcon={Save}>
+          {isPending ? "A guardar…" : "Guardar"}
+        </Button>
+      </Stack>
     </form>
   );
 }

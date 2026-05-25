@@ -1,11 +1,5 @@
 "use client";
 
-// One card per AI recommendation. Renders title + impact/effort/horizon
-// badges, the description, an expandable rationale block (collapsed by
-// default to keep the screen scannable), and the feedback chip row.
-
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type {
   FeedbackKind,
   Recommendation,
@@ -13,6 +7,7 @@ import type {
   RecommendationImpact,
   RecommendationTimeHorizon,
 } from "@/lib/recommendations-types";
+import { Tag, Tile } from "@carbon/react";
 import { useState } from "react";
 import { FeedbackChips } from "./FeedbackChips";
 
@@ -22,10 +17,10 @@ const IMPACT_LABEL: Record<RecommendationImpact, string> = {
   baixo: "Impacto baixo",
 };
 
-const IMPACT_VARIANT: Record<RecommendationImpact, "success" | "info" | "secondary"> = {
-  alto: "success",
-  medio: "info",
-  baixo: "secondary",
+const IMPACT_TAG_TYPE: Record<RecommendationImpact, "green" | "blue" | "cool-gray"> = {
+  alto: "green",
+  medio: "blue",
+  baixo: "cool-gray",
 };
 
 const EFFORT_LABEL: Record<RecommendationEffort, string> = {
@@ -34,10 +29,10 @@ const EFFORT_LABEL: Record<RecommendationEffort, string> = {
   baixo: "Esforço baixo",
 };
 
-const EFFORT_VARIANT: Record<RecommendationEffort, "warning" | "info" | "secondary"> = {
-  alto: "warning",
-  medio: "info",
-  baixo: "secondary",
+const EFFORT_TAG_TYPE: Record<RecommendationEffort, "warm-gray" | "blue" | "cool-gray"> = {
+  alto: "warm-gray",
+  medio: "blue",
+  baixo: "cool-gray",
 };
 
 const HORIZON_LABEL: Record<RecommendationTimeHorizon, string> = {
@@ -63,35 +58,36 @@ export function RecommendationCard({
 }: RecommendationCardProps) {
   const [showRationale, setShowRationale] = useState(false);
   return (
-    <Card>
-      <CardHeader className="space-y-3">
-        <div className="flex items-baseline gap-3">
-          <span className="text-sm font-mono text-muted-foreground">
-            {String(index + 1).padStart(2, "0")}
-          </span>
-          <CardTitle className="text-base">{recommendation.title}</CardTitle>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Badge variant={IMPACT_VARIANT[recommendation.estimatedImpact]}>
-            {IMPACT_LABEL[recommendation.estimatedImpact]}
-          </Badge>
-          <Badge variant={EFFORT_VARIANT[recommendation.implementationEffort]}>
-            {EFFORT_LABEL[recommendation.implementationEffort]}
-          </Badge>
-          <Badge variant="outline">{HORIZON_LABEL[recommendation.timeHorizon]}</Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3">
+    <Tile>
+      <div className="flex items-baseline gap-3">
+        <span
+          className="text-sm text-neutral-600"
+          style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+        >
+          {String(index + 1).padStart(2, "0")}
+        </span>
+        <h3 style={{ fontSize: "1rem", fontWeight: 600, margin: 0 }}>{recommendation.title}</h3>
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Tag type={IMPACT_TAG_TYPE[recommendation.estimatedImpact]}>
+          {IMPACT_LABEL[recommendation.estimatedImpact]}
+        </Tag>
+        <Tag type={EFFORT_TAG_TYPE[recommendation.implementationEffort]}>
+          {EFFORT_LABEL[recommendation.implementationEffort]}
+        </Tag>
+        <Tag type="outline">{HORIZON_LABEL[recommendation.timeHorizon]}</Tag>
+      </div>
+      <div className="mt-4 space-y-3">
         <p className="text-sm leading-relaxed">{recommendation.description}</p>
         <button
           type="button"
           onClick={() => setShowRationale((v) => !v)}
-          className="text-xs font-medium text-primary hover:underline"
+          className="text-xs font-medium text-[var(--cds-link-primary)] hover:underline"
         >
           {showRationale ? "Esconder justificação" : "Ver justificação"}
         </button>
         {showRationale ? (
-          <p className="text-xs leading-relaxed text-muted-foreground">
+          <p className="text-xs leading-relaxed text-neutral-600">
             {recommendation.rationale}
           </p>
         ) : null}
@@ -100,7 +96,7 @@ export function RecommendationCard({
           onSelect={onFeedback}
           disabled={feedbackDisabled}
         />
-      </CardContent>
-    </Card>
+      </div>
+    </Tile>
   );
 }

@@ -1,12 +1,9 @@
 "use client";
 
-import { Alert } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { manualEntry } from "@/lib/economic-profile-actions";
 import type { ManualEntryInput } from "@/lib/economic-profile-types";
+import { Save } from "@carbon/icons-react";
+import { Button, InlineNotification, Stack, TextInput, Tile } from "@carbon/react";
 import { useMutation } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -25,7 +22,6 @@ function errorMessage(error: unknown): string {
   return ERROR_COPY[code] ?? "Não foi possível guardar. Verifique os valores e tente novamente.";
 }
 
-// Parse "" → null; numeric strings → number; leave the rest unchanged.
 function parseMoney(value: string): number | null {
   if (value.trim() === "") return null;
   const n = Number(value);
@@ -60,97 +56,102 @@ export function ManualEntryForm() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Entrada manual</CardTitle>
-        <CardDescription>
-          Introduza os valores diretamente. Pode preencher só os campos que tem em mão — não obriga
-          os restantes.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid gap-1.5">
-          <Label htmlFor="year">Ano de exercício</Label>
-          <Input
+    <Tile>
+      <h2 style={{ fontSize: "1rem", fontWeight: 600, lineHeight: 1.375, margin: 0 }}>
+        Entrada manual
+      </h2>
+      <p className="mt-1 text-sm text-neutral-700">
+        Introduza os valores diretamente. Pode preencher só os campos que tem em mão — não obriga
+        os restantes.
+      </p>
+      <div className="mt-4">
+        <Stack gap={5}>
+          <TextInput
             id="year"
+            labelText="Ano de exercício"
             type="number"
             min={1990}
             max={CURRENT_YEAR + 1}
-            value={year}
+            value={String(year)}
             onChange={(e) => setYear(Number(e.target.value))}
           />
-        </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="grid gap-1.5">
-            <Label htmlFor="employees">Colaboradores</Label>
-            <Input
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <TextInput
               id="employees"
+              labelText="Colaboradores"
               type="number"
               min={0}
               value={employees}
               onChange={(e) => setEmployees(e.target.value)}
               placeholder="—"
             />
-          </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="cae">CAE</Label>
-            <Input
+            <TextInput
               id="cae"
+              labelText="CAE"
               type="text"
               value={cae}
               onChange={(e) => setCae(e.target.value)}
               placeholder="ex. 62010"
               maxLength={64}
             />
-          </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="turnover">Volume de negócios (€)</Label>
-            <Input
+            <TextInput
               id="turnover"
+              labelText="Volume de negócios (€)"
               type="number"
               min={0}
               value={turnover}
               onChange={(e) => setTurnover(e.target.value)}
               placeholder="—"
             />
-          </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="ebitda">EBITDA (€)</Label>
-            <Input
+            <TextInput
               id="ebitda"
+              labelText="EBITDA (€)"
               type="number"
               value={ebitda}
               onChange={(e) => setEbitda(e.target.value)}
               placeholder="—"
             />
+            <div className="sm:col-span-2">
+              <TextInput
+                id="balanceSheetTotal"
+                labelText="Ativo total (€)"
+                type="number"
+                min={0}
+                value={balanceSheetTotal}
+                onChange={(e) => setBalanceSheetTotal(e.target.value)}
+                placeholder="—"
+              />
+            </div>
           </div>
-          <div className="grid gap-1.5 sm:col-span-2">
-            <Label htmlFor="balanceSheetTotal">Ativo total (€)</Label>
-            <Input
-              id="balanceSheetTotal"
-              type="number"
-              min={0}
-              value={balanceSheetTotal}
-              onChange={(e) => setBalanceSheetTotal(e.target.value)}
-              placeholder="—"
+
+          {mutation.isError ? (
+            <InlineNotification
+              kind="error"
+              title="Não foi possível guardar"
+              subtitle={errorMessage(mutation.error)}
+              lowContrast
+              hideCloseButton
             />
+          ) : null}
+
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              kind="primary"
+              onClick={submit}
+              disabled={mutation.isPending}
+              renderIcon={Save}
+            >
+              {mutation.isPending ? "A guardar…" : "Guardar"}
+            </Button>
+            <Link
+              href="/economic-profile"
+              className="text-sm text-[var(--cds-link-primary)] hover:underline"
+            >
+              Voltar
+            </Link>
           </div>
-        </div>
-
-        {mutation.isError ? <Alert variant="destructive">{errorMessage(mutation.error)}</Alert> : null}
-
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={submit} disabled={mutation.isPending}>
-            {mutation.isPending ? "A guardar…" : "Guardar"}
-          </Button>
-          <Link
-            href="/economic-profile"
-            className="self-center text-sm text-muted-foreground underline-offset-4 hover:underline"
-          >
-            Voltar
-          </Link>
-        </div>
-      </CardContent>
-    </Card>
+        </Stack>
+      </div>
+    </Tile>
   );
 }
