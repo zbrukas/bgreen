@@ -1,9 +1,9 @@
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/shell/PageHeader";
 import { getActiveOrgId } from "@/lib/active-org";
 import { getTrendData } from "@/lib/economic-profile-actions";
+import { ChartLineSmooth } from "@carbon/icons-react";
+import { Tag, Tile } from "@carbon/react";
 import { withAuth } from "@workos-inc/authkit-nextjs";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { TrendChart } from "./TrendChart";
 import { YearList } from "./_components/YearList";
@@ -26,53 +26,43 @@ export default async function TrendPage() {
 
   return (
     <>
-      <main className="mx-auto max-w-3xl space-y-6 p-8">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight">Tendências</h1>
-            <p className="text-sm text-muted-foreground">
-              Volume de negócios e margem EBITDA ao longo dos exercícios, com a mediana setorial
-              em sobreposição.
-            </p>
-          </div>
-          <Link
-            href="/economic-profile"
-            className="text-sm text-muted-foreground underline-offset-4 hover:underline"
-          >
-            ← Perfil económico
-          </Link>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>
+      <PageHeader
+        title="Tendências"
+        description="Volume de negócios e margem EBITDA ao longo dos exercícios, com a mediana setorial em sobreposição."
+        icon={ChartLineSmooth}
+        breadcrumbs={[
+          { label: "Perfil económico", href: "/economic-profile" },
+          { label: "Tendências" },
+        ]}
+      />
+      <div className="space-y-6 px-8 py-6">
+        <Tile>
+          <div className="flex items-baseline justify-between gap-2">
+            <h2 style={{ fontSize: "1rem", fontWeight: 600, lineHeight: 1.375, margin: 0 }}>
               {years.length === 0
                 ? "Sem exercícios"
                 : years.length === 1
-                  ? `1 exercício carregado`
+                  ? "1 exercício carregado"
                   : `${years.length} exercícios carregados`}
-            </CardTitle>
-            <CardDescription>
-              {peerSample ? (
-                <>
-                  Mediana setorial baseada em dados de {peerSample.peerVintageYear}, n={" "}
-                  {peerSample.peerNCompanies} empresas{" "}
-                  <Badge variant="outline" className="ml-1">
-                    placeholder_v1
-                  </Badge>
-                </>
-              ) : (
-                "Sem mediana setorial disponível para os exercícios atuais."
-              )}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+            </h2>
+            {peerSample && (
+              <Tag type="cool-gray" size="sm">
+                placeholder_v1
+              </Tag>
+            )}
+          </div>
+          <p className="mt-1 text-sm text-neutral-600">
+            {peerSample
+              ? `Mediana setorial baseada em dados de ${peerSample.peerVintageYear}, n = ${peerSample.peerNCompanies} empresas.`
+              : "Sem mediana setorial disponível para os exercícios atuais."}
+          </p>
+          <div className="mt-4">
             <TrendChart rows={years} />
-          </CardContent>
-        </Card>
+          </div>
+        </Tile>
 
         {years.length > 0 ? <YearList rows={years} /> : null}
-      </main>
+      </div>
     </>
   );
 }

@@ -1,4 +1,6 @@
+import { PageHeader } from "@/components/shell/PageHeader";
 import { getActiveOrgId } from "@/lib/active-org";
+import { DocumentBlank } from "@carbon/icons-react";
 import { withAuth } from "@workos-inc/authkit-nextjs";
 import { redirect } from "next/navigation";
 import { ManualEntryForm } from "./ManualEntryForm";
@@ -14,15 +16,18 @@ export default async function ManualEntryPage() {
 
   return (
     <>
-      <main className="mx-auto max-w-2xl space-y-6 p-8">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Perfil económico — manual</h1>
-          <p className="text-sm text-muted-foreground">
-            Alternativa ao IES quando prefere introduzir os valores diretamente.
-          </p>
-        </div>
+      <PageHeader
+        title="Perfil económico — manual"
+        description="Alternativa ao IES quando prefere introduzir os valores diretamente."
+        icon={DocumentBlank}
+        breadcrumbs={[
+          { label: "Perfil económico", href: "/economic-profile" },
+          { label: "Manual" },
+        ]}
+      />
+      <div className="mx-auto max-w-2xl px-8 py-6">
         <ManualEntryForm />
-      </main>
+      </div>
     </>
   );
 }

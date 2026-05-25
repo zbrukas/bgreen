@@ -1,8 +1,9 @@
-import { InviteMemberForm } from "./_components/InviteMemberForm";
+import { PageHeader } from "@/components/shell/PageHeader";
 import { fetchMe, fetchTopics } from "@/lib/api-client";
+import { Add, UserMultiple } from "@carbon/icons-react";
 import { withAuth } from "@workos-inc/authkit-nextjs";
-import Link from "next/link";
 import { redirect } from "next/navigation";
+import { InviteMemberForm } from "./_components/InviteMemberForm";
 
 export const dynamic = "force-dynamic";
 
@@ -19,27 +20,30 @@ export default async function NewInvitePage({ params }: PageProps) {
 
   if (!me || me.activeOrganizationId !== orgId || me.activeOrganizationRole !== "org_admin") {
     return (
-      <main className="mx-auto max-w-3xl space-y-4 p-8">
-        <p>
-          <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
-            ← Voltar
-          </Link>
-        </p>
-        <p>Apenas administradores da organização ativa podem convidar membros.</p>
-      </main>
+      <PageHeader
+        title="Acesso restrito"
+        description="Apenas administradores da organização activa podem convidar membros."
+        icon={UserMultiple}
+      />
     );
   }
 
   const topics = await fetchTopics();
 
   return (
-    <main className="mx-auto max-w-3xl space-y-6 p-8">
-      <p>
-        <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
-          ← Voltar
-        </Link>
-      </p>
-      <InviteMemberForm organizationId={orgId} topics={topics} />
-    </main>
+    <>
+      <PageHeader
+        title="Convidar membro"
+        description="Envie um convite por email com o papel e o âmbito de tópicos desejado."
+        icon={Add}
+        breadcrumbs={[
+          { label: "Membros", href: `/organizations/${orgId}/members` },
+          { label: "Convidar" },
+        ]}
+      />
+      <div className="mx-auto max-w-3xl px-8 py-6">
+        <InviteMemberForm organizationId={orgId} topics={topics} />
+      </div>
+    </>
   );
 }

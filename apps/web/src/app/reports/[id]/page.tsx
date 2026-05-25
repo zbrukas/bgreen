@@ -1,7 +1,8 @@
+import { PageHeader } from "@/components/shell/PageHeader";
 import { getActiveOrgId } from "@/lib/active-org";
 import { fetchMe } from "@/lib/api-client";
+import { DocumentPdf } from "@carbon/icons-react";
 import { withAuth } from "@workos-inc/authkit-nextjs";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ReportRunView } from "./ReportRunView";
 
@@ -20,22 +21,19 @@ export default async function ReportRunPage({
   if (!activeOrgId || !me) redirect("/");
 
   return (
-    <main className="mx-auto max-w-3xl space-y-6 p-8">
-      <p>
-        <Link
-          href="/reports"
-          className="text-sm text-muted-foreground hover:text-foreground"
-        >
-          ← Voltar ao histórico
-        </Link>
-      </p>
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Relatório</h1>
-        <p className="text-sm text-muted-foreground">
-          Acompanhe a geração e descarregue o PDF quando pronto.
-        </p>
+    <>
+      <PageHeader
+        title="Relatório"
+        description="Acompanhe a geração e descarregue o PDF quando pronto."
+        icon={DocumentPdf}
+        breadcrumbs={[
+          { label: "Relatórios", href: "/reports" },
+          { label: id.slice(0, 8) },
+        ]}
+      />
+      <div className="mx-auto max-w-3xl px-8 py-6">
+        <ReportRunView reportId={id} />
       </div>
-      <ReportRunView reportId={id} />
-    </main>
+    </>
   );
 }

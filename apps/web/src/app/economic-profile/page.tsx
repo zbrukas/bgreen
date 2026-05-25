@@ -1,11 +1,12 @@
-import { buttonVariants } from "@/components/ui/button";
+import { EmptyState } from "@/components/shell/EmptyState";
+import { PageHeader } from "@/components/shell/PageHeader";
 import { getActiveOrgId } from "@/lib/active-org";
 import { listProfiles } from "@/lib/economic-profile-actions";
 import type { OrganizationEconomicProfile } from "@/lib/economic-profile-types";
+import { Building, DocumentBlank, Upload } from "@carbon/icons-react";
 import { withAuth } from "@workos-inc/authkit-nextjs";
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { EmptyState } from "./_components/EmptyState";
+import { ProfileActions } from "./_components/ProfileActions";
 import { ProfileTable } from "./_components/ProfileTable";
 
 export const dynamic = "force-dynamic";
@@ -21,39 +22,28 @@ export default async function EconomicProfilePage() {
 
   return (
     <>
-      <main className="mx-auto max-w-4xl space-y-6 p-8">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight">Perfil económico</h1>
-            <p className="text-sm text-muted-foreground">
-              Dados económicos por exercício. Carregue um IES para extrair automaticamente, ou
-              introduza os valores manualmente.
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Link
-              href="/economic-profile/ies/new"
-              className={buttonVariants({ size: "sm" })}
-            >
-              Carregar IES
-            </Link>
-            <Link
-              href="/economic-profile/manual"
-              className={buttonVariants({ size: "sm", variant: "outline" })}
-            >
-              Entrada manual
-            </Link>
-            <Link
-              href="/economic-profile/trend"
-              className={buttonVariants({ size: "sm", variant: "ghost" })}
-            >
-              Tendências
-            </Link>
-          </div>
-        </div>
-
-        {profiles.length === 0 ? <EmptyState /> : <ProfileTable profiles={profiles} />}
-      </main>
+      <PageHeader
+        title="Perfil económico"
+        description="Dados económicos por exercício. Carregue um IES para extrair automaticamente, ou introduza os valores manualmente."
+        icon={Building}
+        actions={<ProfileActions />}
+      />
+      <div className="space-y-6 px-8 py-6">
+        {profiles.length === 0 ? (
+          <EmptyState
+            title="Sem dados económicos ainda"
+            description="Carregue o seu IES para desbloquear recomendações e comparações setoriais."
+            primaryAction={{ label: "Carregar IES", href: "/economic-profile/ies/new", icon: Upload }}
+            secondaryAction={{
+              label: "Entrada manual",
+              href: "/economic-profile/manual",
+              icon: DocumentBlank,
+            }}
+          />
+        ) : (
+          <ProfileTable profiles={profiles} />
+        )}
+      </div>
     </>
   );
 }

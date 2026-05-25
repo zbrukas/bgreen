@@ -2,13 +2,15 @@
 // framework + applicability toggle from search params, fetches the
 // deterministic matrix, hands it off to the client view.
 
+import { PageHeader } from "@/components/shell/PageHeader";
 import { getActiveOrgId } from "@/lib/active-org";
 import { fetchMe } from "@/lib/api-client";
 import { getCoverageMatrix } from "@/lib/coverage-actions";
 import type { CoverageMatrix, Framework } from "@/lib/coverage-types";
+import { ListChecked } from "@carbon/icons-react";
 import { withAuth } from "@workos-inc/authkit-nextjs";
-import Link from "next/link";
 import { redirect } from "next/navigation";
+import { CoverageHeaderAction } from "./_components/CoverageHeaderAction";
 import { CoverageMatrixView } from "./_components/CoverageMatrixView";
 import { FrameworkPicker } from "./_components/FrameworkPicker";
 
@@ -54,38 +56,23 @@ export default async function CoveragePage({
 
   return (
     <>
-      <main className="mx-auto max-w-5xl space-y-6 p-8">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight">Cobertura regulamentar</h1>
-            <p className="text-sm text-muted-foreground">
-              Datapoints do framework escolhido com o estado actual: coberto,
-              parcial ou em falta.
-            </p>
-          </div>
-          {isCs ? (
-            <Link
-              href="/coverage/mappings"
-              className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-            >
-              Gerir mapeamentos →
-            </Link>
-          ) : null}
-        </div>
-
+      <PageHeader
+        title="Cobertura regulamentar"
+        description="Datapoints do framework escolhido com o estado actual: coberto, parcial ou em falta."
+        icon={ListChecked}
+        actions={isCs ? <CoverageHeaderAction /> : undefined}
+      />
+      <div className="space-y-6 px-8 py-6">
         <FrameworkPicker
           active={framework}
-          extraSearch={
-            includeNonApplicable ? "includeNonApplicable=true" : undefined
-          }
+          extraSearch={includeNonApplicable ? "includeNonApplicable=true" : undefined}
         />
-
         <CoverageMatrixView
           framework={framework}
           initialMatrix={matrix}
           initialIncludeNonApplicable={includeNonApplicable}
         />
-      </main>
+      </div>
     </>
   );
 }

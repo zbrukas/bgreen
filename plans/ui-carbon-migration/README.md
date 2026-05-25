@@ -1,6 +1,6 @@
 # UI Carbon Migration — bGreen
 
-> **Status:** Phase 1 complete (2026-05-25). Both apps have Carbon UI Shell at layout level. Awaiting visual check before Phase 2 (page-by-page migration).
+> **Status:** Phase 2 complete on apps/web (2026-05-25). Every authenticated web route uses Carbon chrome (PageHeader / DataTable / Tile / Tag / InlineNotification / EmptyState / StatCard). Phase 3 (apps/cs migration) pending.
 > **Scope:** Visual overhaul of `apps/web` and `apps/cs`. Replaces the current `shadcn/ui` + `lucide-react` + bespoke Tailwind tokens with **IBM Carbon Design System** themed for bGreen. Not a feature vertical.
 > **Parent PRD:** [../bgreen-greenfield-rewrite.md](../bgreen-greenfield-rewrite.md)
 > **Source:** Review performed 2026-05-25. Direction agreed in session: Carbon Design System, emerald primary preserved, both apps in parallel.
@@ -99,23 +99,24 @@ Goal: replace the current top-wrapping header with Carbon's UI Shell. Establish 
 
 **Deliverable:** both apps render Carbon UI Shell on every authenticated route. Inner page content is still shadcn — that's Phase 2/3. ✅ Shipped.
 
-### Phase 2 — Migrate `apps/web` pages
+### Phase 2 — Migrate `apps/web` pages — ✅ COMPLETE 2026-05-25
 
-Goal: replace shadcn primitives with Carbon equivalents page-by-page. Roughly one PR per page; each PR is self-contained and reviewable.
+Goal: replace shadcn primitives with Carbon equivalents page-by-page.
 
-Order chosen for impact-per-effort: most-visited pages first.
+- [x] **`/`** (home) — PageHeader + EconomicProfileCta as Tile + EconomicProfileSummary as 3 StatCards + system-health as StructuredListWrapper.
+- [x] **`/dashboard`** — PageHeader + ScoreCard rebuilt over shared StatCard (sparkline + tier Tag + delta vs prior submission) + PeerRankCard as Tile + horizontal bar comparison + RecommendationsCta as Tile. Local EmptyState deleted (replaced by shared one).
+- [x] **`/records` + `/records/new` + `/records/[id]`** — list uses Carbon DataTable (extracted to RecordsListView client component), per-template tertiary "new record" buttons, EmptyState when zero records. Detail page wraps with PageHeader + status Tag + InlineNotification for review comment. RecordForm itself untouched (separate scope).
+- [x] **`/inbox`** — DataTable (InboxTable client wrapper) + shared EmptyState + state Tag column.
+- [x] **`/templates` + `/templates/[id]`** — list as DataTable (TemplatesTable). Detail keeps the recursive FieldRow visual but with Tag + Plex Mono styling. (StructuredList was the original proposal but the recursive nested-fields shape fits a Tile + custom list better.)
+- [x] **`/economic-profile/*`** — six sub-pages. List → PageHeader + DataTable + ProfileActions. Manual/IES/trend/benchmark all wrapped with PageHeader + breadcrumbs; inner forms/chart/status views left intact. Benchmark uses InlineNotification. Trend uses Tile + Tag.
+- [x] **`/organizations/*` + `/invites/[token]`** — new-org, members list (with MembersHeaderActions client wrapper), member edit, invite form, branding settings, invite-accept all wrapped with PageHeader + breadcrumbs. Members table → DataTable. CreateOrganizationForm itself unchanged. Invite-accept is a hero Tile centred in viewport.
+- [x] **`/recommendations` + `/coverage` + `/reports`** — added since the plan was written; all wrapped with PageHeader. Coverage uses InlineNotification + small client wrapper for the CS-only header action. Reports nav item added to AppShell.
 
-- [ ] **`/`** (home) — `PageHeader` + `EconomicProfileCta` rebuilt as a Carbon `Tile` with `EmptyState`; `EconomicProfileSummary` as `StatCard`s; system-health card → Carbon `StructuredListWrapper`.
-- [ ] **`/dashboard`** — `PageHeader`; per-template `ScoreCard` → `StatCard` (big number, sparkline, tier tag, delta); `PeerRankCard` → simple bar comparison using `@carbon/charts-react` or hand-rolled Tailwind bars (decide during the page).
-- [ ] **`/records` + `/records/new` + `/records/[id]`** — list uses Carbon `DataTable` with sortable columns, status-tag column, overflow-menu actions; detail page gets `PageHeader` with status tag + audit/review side panel; new-record CTA becomes an icon-led primary button per template.
-- [ ] **`/inbox`** — same `DataTable` pattern; empty state uses the shared `EmptyState`.
-- [ ] **`/templates` + `/templates/[id]`** — `DataTable` for list; detail uses `StructuredList` for the read-only schema view.
-- [ ] **`/economic-profile/*`** — six sub-pages. List → `DataTable`. `UploadIesForm` → Carbon `FileUploader` with drag-and-drop affordance and a progress notification. `ManualEntryForm` → Carbon form primitives. `trend` chart re-styled with Carbon tokens (don't rewrite). `benchmark` page reuses the dashboard's peer-comparison bars.
-- [ ] **`/organizations/*`** — `CreateOrganizationForm` keeps every behaviour (NIF/VIES/auto-fill); inputs swap to Carbon `TextInput` with `invalid` / `warn` / helper props. Member list → `DataTable`. Invite form → Carbon form pattern.
-- [ ] **`/invites/[token]`** — single-tile sign-up surface.
-- [ ] Remove `apps/web/src/components/ui/*` files as each page stops importing them. Final removal at end of phase.
+**Pattern established:** any page that needs a `<Button renderIcon={...}>` in its `actions` slot (server-rendered PageHeader) requires a small `"use client"` wrapper component, since Carbon Button is client and icon component refs can't cross the server→client boundary. Extracted: `ProfileActions`, `MembersHeaderActions`, `CoverageHeaderAction`, `ReportsHeaderActions`, `AcceptInviteButton`.
 
-**Deliverable:** `apps/web` fully on Carbon. No remaining shadcn imports.
+**What's left (deferred to Phase 4):** shadcn primitives in `apps/web/src/components/ui/*` are still imported by `RecordForm` (form-engine internals), `CreateOrganizationForm`, `ManualEntryForm`, `BrandingForm`, `MemberEditForm`, `InviteMemberForm`, `UploadIesForm`, `GenerateForm`, plus a few coverage/recommendations sub-components. Form-engine migration is its own concern; shell + page chrome is done.
+
+**Deliverable:** every authenticated web route renders Carbon-themed chrome. ✅ Shipped.
 
 ### Phase 3 — Migrate `apps/cs` pages
 

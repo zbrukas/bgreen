@@ -1,4 +1,6 @@
+import { PageHeader } from "@/components/shell/PageHeader";
 import { getActiveOrgId } from "@/lib/active-org";
+import { DocumentPdf } from "@carbon/icons-react";
 import { withAuth } from "@workos-inc/authkit-nextjs";
 import { redirect } from "next/navigation";
 import { ExtractionStatusView } from "./ExtractionStatusView";
@@ -19,15 +21,18 @@ export default async function IesExtractionPage({
 
   return (
     <>
-      <main className="mx-auto max-w-3xl space-y-6 p-8">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Extração de IES</h1>
-          <p className="text-sm text-muted-foreground">
-            Acompanhe o processamento e confirme os dados extraídos.
-          </p>
-        </div>
+      <PageHeader
+        title="Extração de IES"
+        description="Acompanhe o processamento e confirme os dados extraídos."
+        icon={DocumentPdf}
+        breadcrumbs={[
+          { label: "Perfil económico", href: "/economic-profile" },
+          { label: "Extração" },
+        ]}
+      />
+      <div className="mx-auto max-w-3xl px-8 py-6">
         <ExtractionStatusView logId={logId} />
-      </main>
+      </div>
     </>
   );
 }

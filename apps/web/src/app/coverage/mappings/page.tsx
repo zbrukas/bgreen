@@ -3,7 +3,7 @@
 // matching the "auth at the page boundary; FGA at the action" pattern
 // used elsewhere in the app.
 
-import { Alert } from "@/components/ui/alert";
+import { PageHeader } from "@/components/shell/PageHeader";
 import { getActiveOrgId } from "@/lib/active-org";
 import { fetchMe, fetchTemplates } from "@/lib/api-client";
 import { getFrameworkDatapoints, getMappings } from "@/lib/coverage-actions";
@@ -11,8 +11,9 @@ import type {
   FrameworkDatapoint,
   TemplateDatapointMapping,
 } from "@/lib/coverage-types";
+import { Settings } from "@carbon/icons-react";
+import { InlineNotification } from "@carbon/react";
 import { withAuth } from "@workos-inc/authkit-nextjs";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { MappingsEditor } from "./_components/MappingsEditor";
 
@@ -42,32 +43,24 @@ export default async function MappingsPage() {
 
   return (
     <>
-      <main className="mx-auto max-w-5xl space-y-6 p-8">
-        <p>
-          <Link
-            href="/coverage"
-            className="text-sm text-muted-foreground hover:text-foreground"
-          >
-            ← Voltar à cobertura
-          </Link>
-        </p>
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">
-            Mapeamentos de datapoints
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Para cada modelo, escolha os datapoints regulamentares que ele
-            satisfaz. As alterações afetam a matriz de cobertura de todas as
-            organizações.
-          </p>
-        </div>
-
+      <PageHeader
+        title="Mapeamentos de datapoints"
+        description="Para cada modelo, escolha os datapoints regulamentares que ele satisfaz. As alterações afetam a matriz de cobertura de todas as organizações."
+        icon={Settings}
+        breadcrumbs={[
+          { label: "Cobertura", href: "/coverage" },
+          { label: "Mapeamentos" },
+        ]}
+      />
+      <div className="space-y-6 px-8 py-6">
         {!isCs ? (
-          <Alert variant="warning">
-            Apenas utilizadores dos serviços centrais podem editar mapeamentos.
-            Pode consultar os mapeamentos existentes; qualquer alteração será
-            rejeitada.
-          </Alert>
+          <InlineNotification
+            kind="warning"
+            title="Acesso limitado"
+            subtitle="Apenas utilizadores dos serviços centrais podem editar mapeamentos. Pode consultar os existentes; qualquer alteração será rejeitada."
+            lowContrast
+            hideCloseButton
+          />
         ) : null}
 
         <MappingsEditor
@@ -75,7 +68,7 @@ export default async function MappingsPage() {
           datapoints={datapoints}
           mappings={mappings}
         />
-      </main>
+      </div>
     </>
   );
 }

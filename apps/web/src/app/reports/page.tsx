@@ -2,16 +2,17 @@
 // "Gerar relatório PDF" CTA links to /reports/new where the picker +
 // period selector live.
 
-import { buttonVariants } from "@/components/ui/button";
+import { PageHeader } from "@/components/shell/PageHeader";
 import { getActiveOrgId } from "@/lib/active-org";
 import { fetchMe } from "@/lib/api-client";
 import { getReportsHistory } from "@/lib/reports-actions";
 import type { ReportInstance } from "@/lib/reports-types";
+import { DocumentPdf } from "@carbon/icons-react";
 import { withAuth } from "@workos-inc/authkit-nextjs";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AiBanner } from "./_components/AiBanner";
 import { HistoryTable } from "./_components/HistoryTable";
+import { ReportsHeaderActions } from "./_components/ReportsHeaderActions";
 
 export const dynamic = "force-dynamic";
 
@@ -28,24 +29,17 @@ export default async function ReportsPage() {
   const isAdmin = me.activeOrganizationRole === "org_admin";
 
   return (
-    <main className="mx-auto max-w-4xl space-y-6 p-8">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Relatórios</h1>
-          <p className="text-sm text-muted-foreground">
-            Gere relatórios ESG em PDF com base no seu perfil + registos.
-          </p>
-        </div>
-        {isAdmin ? (
-          <Link href="/reports/new" className={buttonVariants({ size: "sm" })}>
-            Gerar relatório PDF
-          </Link>
-        ) : null}
+    <>
+      <PageHeader
+        title="Relatórios"
+        description="Gere relatórios ESG em PDF com base no seu perfil + registos."
+        icon={DocumentPdf}
+        actions={isAdmin ? <ReportsHeaderActions /> : undefined}
+      />
+      <div className="space-y-6 px-8 py-6">
+        <AiBanner />
+        <HistoryTable reports={reports} />
       </div>
-
-      <AiBanner />
-
-      <HistoryTable reports={reports} />
-    </main>
+    </>
   );
 }

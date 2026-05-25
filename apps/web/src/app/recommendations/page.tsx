@@ -1,7 +1,9 @@
+import { PageHeader } from "@/components/shell/PageHeader";
 import { getActiveOrgId } from "@/lib/active-org";
 import { fetchMe } from "@/lib/api-client";
 import { getRecommendationsHistory } from "@/lib/recommendations-actions";
 import type { HistoryEntry } from "@/lib/recommendations-types";
+import { Recommend } from "@carbon/icons-react";
 import { withAuth } from "@workos-inc/authkit-nextjs";
 import { redirect } from "next/navigation";
 import { AiBanner } from "./_components/AiBanner";
@@ -24,22 +26,16 @@ export default async function RecommendationsPage() {
 
   return (
     <>
-      <main className="mx-auto max-w-4xl space-y-6 p-8">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight">Recomendações</h1>
-            <p className="text-sm text-muted-foreground">
-              Gere recomendações ESG accionáveis com base no seu perfil e dê
-              feedback em cada item.
-            </p>
-          </div>
-          <GerarButton />
-        </div>
-
+      <PageHeader
+        title="Recomendações"
+        description="Gere recomendações ESG accionáveis com base no seu perfil e dê feedback em cada item."
+        icon={Recommend}
+        actions={<GerarButton />}
+      />
+      <div className="space-y-6 px-8 py-6">
         <AiBanner />
-
         <HistoryTable entries={history} />
-      </main>
+      </div>
     </>
   );
 }

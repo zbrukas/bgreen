@@ -1,4 +1,6 @@
+import { PageHeader } from "@/components/shell/PageHeader";
 import { getActiveOrgId } from "@/lib/active-org";
+import { Upload } from "@carbon/icons-react";
 import { withAuth } from "@workos-inc/authkit-nextjs";
 import { redirect } from "next/navigation";
 import { UploadIesForm } from "./UploadIesForm";
@@ -14,16 +16,18 @@ export default async function NewIesUploadPage() {
 
   return (
     <>
-      <main className="mx-auto max-w-2xl space-y-6 p-8">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Carregar IES</h1>
-          <p className="text-sm text-muted-foreground">
-            Carregue um IES (Informação Empresarial Simplificada) e a IA extrai os dados económicos
-            chave do documento.
-          </p>
-        </div>
+      <PageHeader
+        title="Carregar IES"
+        description="Carregue um IES (Informação Empresarial Simplificada) e a IA extrai os dados económicos chave do documento."
+        icon={Upload}
+        breadcrumbs={[
+          { label: "Perfil económico", href: "/economic-profile" },
+          { label: "Carregar IES" },
+        ]}
+      />
+      <div className="mx-auto max-w-2xl px-8 py-6">
         <UploadIesForm />
-      </main>
+      </div>
     </>
   );
 }

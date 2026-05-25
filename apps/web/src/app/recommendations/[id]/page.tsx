@@ -1,5 +1,7 @@
+import { PageHeader } from "@/components/shell/PageHeader";
 import { getActiveOrgId } from "@/lib/active-org";
 import { fetchMe } from "@/lib/api-client";
+import { Recommend } from "@carbon/icons-react";
 import { withAuth } from "@workos-inc/authkit-nextjs";
 import { redirect } from "next/navigation";
 import { RecommendationsRunView } from "./RecommendationsRunView";
@@ -20,15 +22,18 @@ export default async function RecommendationsRunPage({
 
   return (
     <>
-      <main className="mx-auto max-w-3xl space-y-6 p-8">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Recomendações</h1>
-          <p className="text-sm text-muted-foreground">
-            Acompanhe a geração e dê feedback em cada item.
-          </p>
-        </div>
+      <PageHeader
+        title="Recomendações"
+        description="Acompanhe a geração e dê feedback em cada item."
+        icon={Recommend}
+        breadcrumbs={[
+          { label: "Recomendações", href: "/recommendations" },
+          { label: id.slice(0, 8) },
+        ]}
+      />
+      <div className="mx-auto max-w-3xl px-8 py-6">
         <RecommendationsRunView generationId={id} currentUserId={me.id} />
-      </main>
+      </div>
     </>
   );
 }

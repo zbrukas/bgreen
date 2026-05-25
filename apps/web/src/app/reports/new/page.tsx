@@ -1,7 +1,8 @@
+import { PageHeader } from "@/components/shell/PageHeader";
 import { getActiveOrgId } from "@/lib/active-org";
 import { fetchMe } from "@/lib/api-client";
+import { Add } from "@carbon/icons-react";
 import { withAuth } from "@workos-inc/authkit-nextjs";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { GenerateForm } from "./_components/GenerateForm";
 
@@ -20,25 +21,16 @@ export default async function GenerateReportPage() {
   if (me.activeOrganizationRole !== "org_admin") redirect("/reports");
 
   return (
-    <main className="mx-auto max-w-2xl space-y-6 p-8">
-      <p>
-        <Link
-          href="/reports"
-          className="text-sm text-muted-foreground hover:text-foreground"
-        >
-          ← Voltar
-        </Link>
-      </p>
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight">
-          Gerar relatório PDF
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Escolha o modelo, o período, e (para Custom) o título a usar
-          na capa.
-        </p>
+    <>
+      <PageHeader
+        title="Gerar relatório PDF"
+        description="Escolha o modelo, o período, e (para Custom) o título a usar na capa."
+        icon={Add}
+        breadcrumbs={[{ label: "Relatórios", href: "/reports" }, { label: "Novo" }]}
+      />
+      <div className="mx-auto max-w-2xl px-8 py-6">
+        <GenerateForm />
       </div>
-      <GenerateForm />
-    </main>
+    </>
   );
 }

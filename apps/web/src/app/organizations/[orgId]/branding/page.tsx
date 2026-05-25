@@ -3,11 +3,12 @@
 // to /reports (the API rejects writes anyway, but mirroring at the
 // page boundary keeps the surface clean).
 
-import { Alert } from "@/components/ui/alert";
+import { PageHeader } from "@/components/shell/PageHeader";
 import { getActiveOrgId } from "@/lib/active-org";
 import { fetchActiveOrganization, fetchMe } from "@/lib/api-client";
+import { ColorPalette } from "@carbon/icons-react";
+import { InlineNotification } from "@carbon/react";
 import { withAuth } from "@workos-inc/authkit-nextjs";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { BrandingForm } from "./_components/BrandingForm";
 
@@ -34,32 +35,30 @@ export default async function BrandingSettingsPage({
   if (me.activeOrganizationRole !== "org_admin") redirect("/reports");
 
   return (
-    <main className="mx-auto max-w-2xl space-y-6 p-8">
-      <p>
-        <Link
-          href={`/organizations/${orgId}/members`}
-          className="text-sm text-muted-foreground hover:text-foreground"
-        >
-          ← Voltar
-        </Link>
-      </p>
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Identidade visual</h1>
-        <p className="text-sm text-muted-foreground">
-          Define o logótipo e a cor primária da{" "}
-          <strong>{activeOrgFull?.name ?? "organização"}</strong>. Estas opções
-          surgem na capa e nos cabeçalhos dos relatórios PDF.
-        </p>
-      </div>
-      <Alert variant="info">
-        O logótipo e a cor afetam apenas os relatórios gerados a partir
-        de agora.
-      </Alert>
-      <BrandingForm
-        organizationId={orgId}
-        initialLogoKey={activeOrgFull?.logoUrl ?? null}
-        initialPrimaryColor={activeOrgFull?.brandPrimaryColor ?? null}
+    <>
+      <PageHeader
+        title="Identidade visual"
+        description={`Logótipo e cor primária de ${activeOrgFull?.name ?? "organização"}. Surgem na capa e nos cabeçalhos dos relatórios PDF.`}
+        icon={ColorPalette}
+        breadcrumbs={[
+          { label: "Membros", href: `/organizations/${orgId}/members` },
+          { label: "Identidade visual" },
+        ]}
       />
-    </main>
+      <div className="mx-auto max-w-2xl space-y-6 px-8 py-6">
+        <InlineNotification
+          kind="info"
+          title="Só afecta relatórios futuros"
+          subtitle="O logótipo e a cor afectam apenas os relatórios gerados a partir de agora."
+          lowContrast
+          hideCloseButton
+        />
+        <BrandingForm
+          organizationId={orgId}
+          initialLogoKey={activeOrgFull?.logoUrl ?? null}
+          initialPrimaryColor={activeOrgFull?.brandPrimaryColor ?? null}
+        />
+      </div>
+    </>
   );
 }

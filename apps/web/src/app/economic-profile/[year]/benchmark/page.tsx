@@ -1,8 +1,9 @@
-import { Alert } from "@/components/ui/alert";
+import { PageHeader } from "@/components/shell/PageHeader";
 import { getActiveOrgId } from "@/lib/active-org";
 import { getBenchmarkComparison } from "@/lib/economic-profile-actions";
+import { ChartBar } from "@carbon/icons-react";
+import { InlineNotification } from "@carbon/react";
 import { withAuth } from "@workos-inc/authkit-nextjs";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { BenchmarkBody } from "./_components/BenchmarkBody";
 
@@ -29,32 +30,28 @@ export default async function BenchmarkPage({
 
   return (
     <>
-      <main className="mx-auto max-w-3xl space-y-6 p-8">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight">
-              Comparação setorial — {year}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              O seu desempenho frente à mediana das empresas do mesmo CAE-3 e dimensão.
-            </p>
-          </div>
-          <Link
-            href="/economic-profile"
-            className="text-sm text-muted-foreground underline-offset-4 hover:underline"
-          >
-            ← Perfil económico
-          </Link>
-        </div>
-
+      <PageHeader
+        title={`Comparação setorial — ${year}`}
+        description="O seu desempenho frente à mediana das empresas do mesmo CAE-3 e dimensão."
+        icon={ChartBar}
+        breadcrumbs={[
+          { label: "Perfil económico", href: "/economic-profile" },
+          { label: String(year) },
+        ]}
+      />
+      <div className="space-y-6 px-8 py-6">
         {comparison === null ? (
-          <Alert variant="destructive">
-            Não foi possível encontrar um perfil económico para {year}.
-          </Alert>
+          <InlineNotification
+            kind="error"
+            title="Sem perfil económico"
+            subtitle={`Não foi possível encontrar um perfil económico para ${year}.`}
+            lowContrast
+            hideCloseButton
+          />
         ) : (
           <BenchmarkBody comparison={comparison} />
         )}
-      </main>
+      </div>
     </>
   );
 }

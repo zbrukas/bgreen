@@ -5,12 +5,13 @@ import {
   Building,
   Dashboard,
   Document,
+  DocumentPdf,
   ListChecked,
   Logout,
   Notification as NotificationIcon,
   Recommend,
-  UserMultiple,
   UserAvatar,
+  UserMultiple,
 } from "@carbon/icons-react";
 import {
   Header,
@@ -80,6 +81,12 @@ const BASE_NAV: NavItem[] = [
     label: "Modelos",
     icon: Document,
     match: (p) => p.startsWith("/templates"),
+  },
+  {
+    href: "/reports",
+    label: "Relatórios",
+    icon: DocumentPdf,
+    match: (p) => p.startsWith("/reports"),
   },
 ];
 

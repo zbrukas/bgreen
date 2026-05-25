@@ -1,17 +1,21 @@
-import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
+import { EmptyState } from "@/components/shell/EmptyState";
+import { PageHeader } from "@/components/shell/PageHeader";
+import { fetchMe, fetchMembers } from "@/lib/api-client";
+import { Add, UserMultiple } from "@carbon/icons-react";
 import {
   Table,
   TableBody,
   TableCell,
+  TableContainer,
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { fetchMe, fetchMembers } from "@/lib/api-client";
+  Tag,
+} from "@carbon/react";
 import { withAuth } from "@workos-inc/authkit-nextjs";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { MembersHeaderActions } from "./MembersHeaderActions";
 
 export const dynamic = "force-dynamic";
 
@@ -33,95 +37,97 @@ export default async function MembersPage({ params }: PageProps) {
   const me = await fetchMe();
   if (!me || me.activeOrganizationId !== orgId || me.activeOrganizationRole !== "org_admin") {
     return (
-      <main className="mx-auto max-w-3xl space-y-4 p-8">
-        <p>
-          <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
-            ← Voltar
-          </Link>
-        </p>
-        <p>Apenas administradores da organização activa podem ver os membros.</p>
-      </main>
+      <>
+        <PageHeader
+          title="Acesso restrito"
+          description="Apenas administradores da organização activa podem ver os membros."
+          icon={UserMultiple}
+        />
+      </>
     );
   }
 
   const members = await fetchMembers(orgId);
 
   return (
-    <main className="mx-auto max-w-5xl space-y-6 p-8">
-      <p>
-        <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
-          ← Voltar
-        </Link>
-      </p>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Membros</h1>
-          <p className="text-sm text-muted-foreground">
-            Defina o papel e o âmbito de tópicos de cada membro da organização.
-          </p>
-        </div>
-        <Link
-          href={`/organizations/${orgId}/invites/new`}
-          className={buttonVariants({ variant: "outline" })}
-        >
-          + Convidar
-        </Link>
-      </div>
-
-      {members.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Sem membros ainda.</p>
-      ) : (
-        <div className="rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Membro</TableHead>
-                <TableHead>Papel</TableHead>
-                <TableHead>Âmbito</TableHead>
-                <TableHead className="text-right" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {members.map((m) => (
-                <TableRow key={m.userId}>
-                  <TableCell>
-                    <div className="font-medium">{m.user?.email ?? m.userId.slice(0, 8)}</div>
-                    {(m.user?.firstName || m.user?.lastName) && (
-                      <div className="text-xs text-muted-foreground">
-                        {[m.user.firstName, m.user.lastName].filter(Boolean).join(" ")}
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{roleLabel[m.role] ?? m.role}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    {m.topicScope.length === 0 ? (
-                      <span className="text-xs text-muted-foreground">— todos os tópicos —</span>
-                    ) : (
-                      <div className="flex flex-wrap gap-1">
-                        {m.topicScope.map((slug) => (
-                          <Badge key={slug} variant="info" className="font-mono text-[10px]">
-                            {slug}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Link
-                      href={`/organizations/${orgId}/members/${m.userId}`}
-                      className="text-sm text-primary underline-offset-4 hover:underline"
-                    >
-                      Editar
-                    </Link>
-                  </TableCell>
+    <>
+      <PageHeader
+        title="Membros"
+        description="Defina o papel e o âmbito de tópicos de cada membro da organização."
+        icon={UserMultiple}
+        actions={<MembersHeaderActions orgId={orgId} />}
+      />
+      <div className="space-y-6 px-8 py-6">
+        {members.length === 0 ? (
+          <EmptyState
+            title="Sem membros ainda"
+            description="Convide a primeira pessoa para começar a colaborar."
+            primaryAction={{
+              label: "Convidar membro",
+              href: `/organizations/${orgId}/invites/new`,
+              icon: Add,
+            }}
+          />
+        ) : (
+          <TableContainer title={`Membros (${members.length})`}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableHeader>Membro</TableHeader>
+                  <TableHeader>Papel</TableHeader>
+                  <TableHeader>Âmbito</TableHeader>
+                  <TableHeader className="text-right" />
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
-    </main>
+              </TableHead>
+              <TableBody>
+                {members.map((m) => (
+                  <TableRow key={m.userId}>
+                    <TableCell>
+                      <div className="font-medium">{m.user?.email ?? m.userId.slice(0, 8)}</div>
+                      {(m.user?.firstName || m.user?.lastName) && (
+                        <div className="text-xs text-neutral-600">
+                          {[m.user.firstName, m.user.lastName].filter(Boolean).join(" ")}
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Tag type="cool-gray" size="sm">
+                        {roleLabel[m.role] ?? m.role}
+                      </Tag>
+                    </TableCell>
+                    <TableCell>
+                      {m.topicScope.length === 0 ? (
+                        <span className="text-xs text-neutral-600">— todos os tópicos —</span>
+                      ) : (
+                        <div className="flex flex-wrap gap-1">
+                          {m.topicScope.map((slug) => (
+                            <Tag
+                              key={slug}
+                              type="blue"
+                              size="sm"
+                              style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                            >
+                              {slug}
+                            </Tag>
+                          ))}
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Link
+                        href={`/organizations/${orgId}/members/${m.userId}`}
+                        className="text-sm text-[var(--cds-link-primary)] hover:underline"
+                      >
+                        Editar
+                      </Link>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
+      </div>
+    </>
   );
 }
