@@ -2,13 +2,14 @@
 
 import {
   Building,
+  ChartLineSmooth,
   Document,
+  Globe,
   Logout,
   Notification as NotificationIcon,
   Tag as TagIcon,
   UserAvatar,
   UserMultiple,
-  Globe,
 } from "@carbon/icons-react";
 import {
   Header,
@@ -55,6 +56,12 @@ const NAV: NavItem[] = [
     label: "Organizações",
     icon: Building,
     match: (p) => p.startsWith("/orgs"),
+  },
+  {
+    href: "/health",
+    label: "Saúde",
+    icon: ChartLineSmooth,
+    match: (p) => p.startsWith("/health"),
   },
   {
     href: "/topics",

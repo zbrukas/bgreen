@@ -2,6 +2,8 @@ import type { AppType } from "@bgreen/api/rpc";
 import type {
   Record as BgRecord,
   CentralServicesRole,
+  CsHealthRow,
+  CsHealthTier,
   FormSchema,
   RecordTemplate,
   Topic,
@@ -408,5 +410,89 @@ export async function deleteCsUser(
     return { ok: true };
   } catch {
     return { ok: false, error: "network_error" };
+  }
+}
+
+// ---- V12.3 — CS health dashboard ------------------------------------
+
+export interface CsHealthListEntry {
+  row: CsHealthRow;
+  healthScore: number;
+  healthTier: CsHealthTier;
+}
+
+export interface CsHealthDetail {
+  row: CsHealthRow;
+  healthScore: number;
+  healthTier: CsHealthTier;
+  snapshots: Array<{ snapshotDate: string; metrics: CsHealthRow }>;
+}
+
+export interface CsCohortActivationResult {
+  cohortMonth: string;
+  totalOrgs: number;
+  activatedIn30d: number;
+  percentActivated: number;
+}
+
+export interface CsHealthListFilter {
+  tier?: CsHealthTier;
+  hasStagnantWork?: boolean;
+  sortBy?:
+    | "tier"
+    | "daysSinceLastLogin"
+    | "stagnantWorkflowsCount"
+    | "oldestStagnantWorkflowDays";
+}
+
+export async function fetchCsHealth(
+  filter: CsHealthListFilter = {},
+): Promise<CsHealthListEntry[]> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return [];
+    const query: Record<string, string> = {};
+    if (filter.tier) query.tier = filter.tier;
+    if (filter.hasStagnantWork) query.hasStagnantWork = "true";
+    if (filter.sortBy) query.sortBy = filter.sortBy;
+    const res = await api.cs.health.$get({ query }, { headers });
+    if (!res.ok) return [];
+    return (await res.json()) as CsHealthListEntry[];
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchCsHealthDetail(
+  organizationId: string,
+): Promise<CsHealthDetail | null> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return null;
+    const res = await api.cs.health[":organizationId"].$get(
+      { param: { organizationId } },
+      { headers },
+    );
+    if (!res.ok) return null;
+    return (await res.json()) as CsHealthDetail;
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchCsCohortActivation(
+  cohortMonth: string,
+): Promise<CsCohortActivationResult | null> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return null;
+    const res = await api.cs.cohorts.activation.$get(
+      { query: { cohortMonth } },
+      { headers },
+    );
+    if (!res.ok) return null;
+    return (await res.json()) as CsCohortActivationResult;
+  } catch {
+    return null;
   }
 }
