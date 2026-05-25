@@ -12,6 +12,7 @@ export type {
   AiCallObserver,
   AiTokenUsage,
 } from "./observer";
+export { composeObservers } from "./observer";
 export { type Result, err, ok } from "./result";
 export { PT_PT_SYSTEM_PREFIX } from "./system-prompt";
 export {

@@ -47,3 +47,26 @@ export interface AiCallObservation {
 }
 
 export type AiCallObserver = (observation: AiCallObservation) => void | Promise<void>;
+
+// Chain multiple observers behind the single observer hook on
+// AnthropicAiClient. Each runs in order; one observer's exception does
+// NOT prevent the others from firing (so an audit-write failure
+// doesn't drop the PostHog event, and vice versa). Each observer also
+// awaits independently — a slow observer can't stall the others.
+export function composeObservers(observers: AiCallObserver[]): AiCallObserver {
+  return async (observation) => {
+    // Run in parallel; collect outcomes via allSettled so a rejected
+    // promise from one observer never reaches the AnthropicAiClient
+    // (which swallows observer errors at the top level too, but we
+    // localise the isolation here for clarity).
+    //
+    // The async-wrapper IIFE catches *synchronous* throws as well — a
+    // bare `obs(observation)` that throws synchronously would escape
+    // Promise.resolve and break the map call.
+    await Promise.allSettled(
+      observers.map(async (obs) => {
+        await obs(observation);
+      }),
+    );
+  };
+}

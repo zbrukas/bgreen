@@ -17,6 +17,7 @@ export type {
   InngestEventSender,
 } from "./application/ies-upload-service.js";
 export { createAiToolCallObserver } from "./application/audit-observer.js";
+export { createAiToolCallPostHogObserver } from "./application/posthog-observer.js";
 export {
   EconomicProfileService,
   type ManualEntryError,

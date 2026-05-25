@@ -1,4 +1,4 @@
-import { AnthropicAiClient } from "@bgreen/ai";
+import { AnthropicAiClient, composeObservers } from "@bgreen/ai";
 import { HttpViesClient } from "@bgreen/pt-data";
 import { AwsS3Uploader, InMemoryS3Uploader, type S3Uploader } from "@bgreen/storage";
 import { AuditService, DrizzleAuditRepository } from "./modules/audit/module.js";
@@ -10,7 +10,9 @@ import {
   IesExtractionService,
   IesUploadService,
   createAiToolCallObserver,
+  createAiToolCallPostHogObserver,
 } from "./modules/economic-profile/module.js";
+import { buildPostHogTelemetry } from "./telemetry/posthog.js";
 import { inngest } from "./inngest.js";
 import {
   DrizzleCompositionRepository,
@@ -89,11 +91,18 @@ export const csAuthService = new CsAuthService();
 
 // AI + storage wiring for V6 (IES extraction).
 //
-// The AnthropicAiClient observer writes audit_log rows for every tool call.
-// One observer instance is shared by all callers — context (org, actor,
-// correlation id) is passed per call via the third arg of client.call().
+// Two observers fan out from one client hook:
+//   - audit: writes audit_log rows (regulated record, never optional).
+//   - PostHog: product analytics (no-op when POSTHOG_API_KEY is absent).
+// composeObservers isolates failures — an audit-write blip doesn't drop
+// the PostHog event, and vice versa.
+export const posthogTelemetry = buildPostHogTelemetry();
+
 export const anthropicAiClient = new AnthropicAiClient({
-  observer: createAiToolCallObserver(auditService),
+  observer: composeObservers([
+    createAiToolCallObserver(auditService),
+    createAiToolCallPostHogObserver(posthogTelemetry),
+  ]),
 });
 
 // S3 wiring. In production we point at a real EU bucket via env vars.

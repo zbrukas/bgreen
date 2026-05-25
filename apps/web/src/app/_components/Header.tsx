@@ -37,6 +37,12 @@ export function Header({
         <Link href="/records" className="text-sm text-muted-foreground hover:text-foreground">
           Registos
         </Link>
+        <Link
+          href="/economic-profile"
+          className="text-sm text-muted-foreground hover:text-foreground"
+        >
+          Perfil económico
+        </Link>
         <Link href="/templates" className="text-sm text-muted-foreground hover:text-foreground">
           Modelos
         </Link>

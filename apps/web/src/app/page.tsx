@@ -2,10 +2,20 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getActiveOrgId, setActiveOrgId } from "@/lib/active-org";
 import { fetchHealth, fetchMe, fetchMyOrganizations } from "@/lib/api-client";
+import { listProfiles } from "@/lib/economic-profile-actions";
+import type { OrganizationEconomicProfile } from "@/lib/economic-profile-types";
 import { getSignInUrl, withAuth } from "@workos-inc/authkit-nextjs";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CreateOrganizationForm } from "./_components/CreateOrganizationForm";
 import { Header } from "./_components/Header";
+
+// pt-PT money formatter — vírgula decimal, espaço como separador.
+const EUR = new Intl.NumberFormat("pt-PT", {
+  style: "currency",
+  currency: "EUR",
+  maximumFractionDigits: 0,
+});
 
 export const dynamic = "force-dynamic";
 
@@ -68,6 +78,12 @@ export default async function Home() {
   }
   const activeOrg = orgs.find((o) => o.id === activeOrgId) ?? null;
 
+  // Drives the dashboard CTA: empty list → prominent upload prompt;
+  // non-empty → compact summary card. Catch network/auth failures
+  // silently so a transient API blip doesn't break the homepage.
+  const profiles = await listProfiles().catch(() => [] as OrganizationEconomicProfile[]);
+  const latestProfile = profiles[0] ?? null;
+
   return (
     <>
       <Header
@@ -88,6 +104,12 @@ export default async function Home() {
           </p>
         </div>
 
+        {latestProfile === null ? (
+          <EconomicProfileCta />
+        ) : (
+          <EconomicProfileSummary profile={latestProfile} count={profiles.length} />
+        )}
+
         <Card>
           <CardHeader>
             <CardTitle>Estado do sistema</CardTitle>
@@ -106,5 +128,77 @@ export default async function Home() {
         </Card>
       </main>
     </>
+  );
+}
+
+// V6.6 — prominent CTA when the org hasn't uploaded an IES yet.
+// PRD §40 user story. Two ways forward: AI extraction or manual entry.
+function EconomicProfileCta() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Carregue o seu IES para desbloquear recomendações</CardTitle>
+        <CardDescription>
+          A IA extrai os dados económicos chave (volume de negócios, EBITDA, colaboradores, CAE) e
+          o bGreen pode começar a sugerir medidas adequadas ao seu perfil.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-wrap gap-2">
+        <Link href="/economic-profile/ies/new" className={buttonVariants()}>
+          Carregar IES
+        </Link>
+        <Link
+          href="/economic-profile/manual"
+          className={buttonVariants({ variant: "outline" })}
+        >
+          Entrada manual
+        </Link>
+      </CardContent>
+    </Card>
+  );
+}
+
+function EconomicProfileSummary({
+  profile,
+  count,
+}: {
+  profile: OrganizationEconomicProfile;
+  count: number;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Perfil económico</CardTitle>
+        <CardDescription>
+          {count === 1
+            ? `1 exercício registado.`
+            : `${count} exercícios registados. Mais recente: ${profile.year}.`}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-2 text-sm sm:grid-cols-3">
+        <div>
+          <div className="text-xs text-muted-foreground">Ano</div>
+          <div className="font-medium">{profile.year}</div>
+        </div>
+        <div>
+          <div className="text-xs text-muted-foreground">Colaboradores</div>
+          <div className="font-medium">{profile.employees ?? "—"}</div>
+        </div>
+        <div>
+          <div className="text-xs text-muted-foreground">Volume de negócios</div>
+          <div className="font-medium">
+            {profile.turnover === null ? "—" : EUR.format(profile.turnover)}
+          </div>
+        </div>
+        <div className="sm:col-span-3">
+          <Link
+            href="/economic-profile"
+            className="text-sm text-muted-foreground underline-offset-4 hover:underline"
+          >
+            Ver perfil económico completo →
+          </Link>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
