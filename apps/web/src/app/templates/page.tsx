@@ -1,5 +1,5 @@
-import { EmptyState } from "@/components/shell/EmptyState";
-import { PageHeader } from "@/components/shell/PageHeader";
+import { EmptyState } from "@bgreen/ui";
+import { PageHeader } from "@bgreen/ui";
 import { fetchTemplates } from "@/lib/api-client";
 import { Document } from "@carbon/icons-react";
 import { withAuth } from "@workos-inc/authkit-nextjs";

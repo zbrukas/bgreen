@@ -1,4 +1,4 @@
-import { PageHeader } from "@/components/shell/PageHeader";
+import { PageHeader } from "@bgreen/ui";
 import { fetchMe } from "@/lib/api-client";
 import { Dashboard } from "@carbon/icons-react";
 import {

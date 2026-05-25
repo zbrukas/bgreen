@@ -1,6 +1,6 @@
 "use client";
 
-import { StatCard } from "@/components/shell/StatCard";
+import { StatCard } from "@bgreen/ui";
 import type { OrganizationEconomicProfile } from "@/lib/economic-profile-types";
 import { ArrowRight, Calendar, Money, UserMultiple } from "@carbon/icons-react";
 import { Button } from "@carbon/react";

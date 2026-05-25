@@ -2,7 +2,7 @@
 // framework + applicability toggle from search params, fetches the
 // deterministic matrix, hands it off to the client view.
 
-import { PageHeader } from "@/components/shell/PageHeader";
+import { PageHeader } from "@bgreen/ui";
 import { getActiveOrgId } from "@/lib/active-org";
 import { fetchMe } from "@/lib/api-client";
 import { getCoverageMatrix } from "@/lib/coverage-actions";

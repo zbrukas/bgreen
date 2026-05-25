@@ -1,5 +1,5 @@
-import { EmptyState } from "@/components/shell/EmptyState";
-import { PageHeader } from "@/components/shell/PageHeader";
+import { EmptyState } from "@bgreen/ui";
+import { PageHeader } from "@bgreen/ui";
 import { fetchMe, fetchTemplates } from "@/lib/api-client";
 import { Add, Document } from "@carbon/icons-react";
 import { redirect } from "next/navigation";

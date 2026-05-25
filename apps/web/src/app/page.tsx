@@ -1,4 +1,4 @@
-import { PageHeader } from "@/components/shell/PageHeader";
+import { PageHeader } from "@bgreen/ui";
 import { getActiveOrgId, setActiveOrgId } from "@/lib/active-org";
 import { fetchHealth, fetchMe, fetchMyOrganizations } from "@/lib/api-client";
 import { listProfiles } from "@/lib/economic-profile-actions";

@@ -1,5 +1,5 @@
 import { CreateOrganizationForm } from "@/app/_components/CreateOrganizationForm/CreateOrganizationForm";
-import { PageHeader } from "@/components/shell/PageHeader";
+import { PageHeader } from "@bgreen/ui";
 import { Building } from "@carbon/icons-react";
 import { withAuth } from "@workos-inc/authkit-nextjs";
 import { redirect } from "next/navigation";

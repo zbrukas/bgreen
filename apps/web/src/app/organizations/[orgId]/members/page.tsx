@@ -1,5 +1,5 @@
-import { EmptyState } from "@/components/shell/EmptyState";
-import { PageHeader } from "@/components/shell/PageHeader";
+import { EmptyState } from "@bgreen/ui";
+import { PageHeader } from "@bgreen/ui";
 import { fetchMe, fetchMembers } from "@/lib/api-client";
 import { Add, UserMultiple } from "@carbon/icons-react";
 import {

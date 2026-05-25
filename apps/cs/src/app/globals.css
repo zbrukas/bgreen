@@ -1,12 +1,11 @@
-/* IBM Plex Sans + Mono — Carbon's CSS hardcodes the family name, so we load
-   the real fonts from Google Fonts and let Carbon's rules resolve them.
-   When Phase 4 cleanup runs, consider switching to self-hosted @ibm/plex-*. */
-@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap");
+/* IBM Plex Sans + Mono are self-hosted — see layout.tsx where the
+   @ibm/plex-* css bundles register the @font-face rules under the
+   "IBM Plex Sans" / "IBM Plex Mono" family names Carbon's CSS expects. */
 @import "tailwindcss";
 
-/* shadcn-style design tokens — kept while shadcn primitives are still in use
-   (will be stripped in Phase 4 of the Carbon migration). Bg primary =
-   emerald-700 to match the legacy #1f7a3d accent. */
+/* shadcn-style design tokens — kept while the TemplateEditor sub-components
+   still use Tailwind utility classes that reference these tokens. Strip in
+   a follow-up pass once TemplateEditor is migrated to Carbon primitives. */
 
 @theme inline {
   --color-background: oklch(0.99 0 0);

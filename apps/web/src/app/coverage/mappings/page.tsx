@@ -3,7 +3,7 @@
 // matching the "auth at the page boundary; FGA at the action" pattern
 // used elsewhere in the app.
 
-import { PageHeader } from "@/components/shell/PageHeader";
+import { PageHeader } from "@bgreen/ui";
 import { getActiveOrgId } from "@/lib/active-org";
 import { fetchMe, fetchTemplates } from "@/lib/api-client";
 import { getFrameworkDatapoints, getMappings } from "@/lib/coverage-actions";

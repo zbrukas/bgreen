@@ -1,4 +1,4 @@
-import { PageHeader } from "@/components/shell/PageHeader";
+import { PageHeader } from "@bgreen/ui";
 import { fetchMe, fetchTopics } from "@/lib/api-client";
 import { Tag as TagIcon } from "@carbon/icons-react";
 import { redirect } from "next/navigation";

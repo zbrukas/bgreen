@@ -3,7 +3,7 @@
 // to /reports (the API rejects writes anyway, but mirroring at the
 // page boundary keeps the surface clean).
 
-import { PageHeader } from "@/components/shell/PageHeader";
+import { PageHeader } from "@bgreen/ui";
 import { getActiveOrgId } from "@/lib/active-org";
 import { fetchActiveOrganization, fetchMe } from "@/lib/api-client";
 import { ColorPalette } from "@carbon/icons-react";

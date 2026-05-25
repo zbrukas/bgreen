@@ -1,4 +1,4 @@
-import { PageHeader } from "@/components/shell/PageHeader";
+import { PageHeader } from "@bgreen/ui";
 import { getActiveOrgId } from "@/lib/active-org";
 import { DocumentBlank } from "@carbon/icons-react";
 import { withAuth } from "@workos-inc/authkit-nextjs";

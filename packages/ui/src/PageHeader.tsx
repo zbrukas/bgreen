@@ -11,9 +11,8 @@ interface PageHeaderProps {
   actions?: ReactNode;
 }
 
-// Shared page chrome. Replaces the inline `← Voltar` + <h1> + <p> + actions
-// pattern repeated across every page in the shadcn era. Sits inside the
-// AppShell main content area.
+// Shared page chrome used by both apps/web and apps/cs. Sits inside the
+// per-app AppShell main content area.
 export function PageHeader({
   title,
   description,

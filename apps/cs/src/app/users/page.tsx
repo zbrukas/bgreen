@@ -1,4 +1,4 @@
-import { PageHeader } from "@/components/shell/PageHeader";
+import { PageHeader } from "@bgreen/ui";
 import { fetchCsUsers, fetchMe } from "@/lib/api-client";
 import { UserMultiple } from "@carbon/icons-react";
 import { InlineNotification } from "@carbon/react";

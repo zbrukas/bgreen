@@ -1,5 +1,5 @@
 import { RecordForm } from "@/app/_components/RecordForm/RecordForm";
-import { PageHeader } from "@/components/shell/PageHeader";
+import { PageHeader } from "@bgreen/ui";
 import { fetchMe, fetchRecord, fetchTemplate, fetchTopics } from "@/lib/api-client";
 import { Document } from "@carbon/icons-react";
 import { InlineNotification, Tag } from "@carbon/react";

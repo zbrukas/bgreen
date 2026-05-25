@@ -1,4 +1,4 @@
-import { PageHeader } from "@/components/shell/PageHeader";
+import { PageHeader } from "@bgreen/ui";
 import { fetchMe, fetchMembers, fetchTopics } from "@/lib/api-client";
 import { UserAvatar, UserMultiple } from "@carbon/icons-react";
 import { withAuth } from "@workos-inc/authkit-nextjs";

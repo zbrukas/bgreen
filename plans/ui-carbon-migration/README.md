@@ -1,6 +1,6 @@
 # UI Carbon Migration — bGreen
 
-> **Status:** Phase 3 complete (2026-05-25). Both apps fully on Carbon. Only Phase 4 (cleanup: remove shadcn primitives, lucide-react, audit globals.css) remains.
+> **Status:** Phase 4 partially complete (2026-05-25). lucide-react removed, dead Header files deleted, packages/ui extracted (PageHeader/EmptyState/StatCard), CLAUDE.md files updated, IBM Plex self-hosted via @ibm/plex-* (no more Google Fonts). shadcn `src/components/ui/*` deletion deferred to a follow-up — inner form bodies still import from there and need their own Carbon migration.
 > **Scope:** Visual overhaul of `apps/web` and `apps/cs`. Replaces the current `shadcn/ui` + `lucide-react` + bespoke Tailwind tokens with **IBM Carbon Design System** themed for bGreen. Not a feature vertical.
 > **Parent PRD:** [../bgreen-greenfield-rewrite.md](../bgreen-greenfield-rewrite.md)
 > **Source:** Review performed 2026-05-25. Direction agreed in session: Carbon Design System, emerald primary preserved, both apps in parallel.

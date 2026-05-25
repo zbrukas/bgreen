@@ -1,4 +1,4 @@
-import { PageHeader } from "@/components/shell/PageHeader";
+import { PageHeader } from "@bgreen/ui";
 import { getActiveOrgId } from "@/lib/active-org";
 import { getBenchmarkComparison } from "@/lib/economic-profile-actions";
 import { ChartBar } from "@carbon/icons-react";

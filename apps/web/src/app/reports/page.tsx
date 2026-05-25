@@ -2,7 +2,7 @@
 // "Gerar relatório PDF" CTA links to /reports/new where the picker +
 // period selector live.
 
-import { PageHeader } from "@/components/shell/PageHeader";
+import { PageHeader } from "@bgreen/ui";
 import { getActiveOrgId } from "@/lib/active-org";
 import { fetchMe } from "@/lib/api-client";
 import { getReportsHistory } from "@/lib/reports-actions";

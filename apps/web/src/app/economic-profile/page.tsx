@@ -1,5 +1,5 @@
-import { EmptyState } from "@/components/shell/EmptyState";
-import { PageHeader } from "@/components/shell/PageHeader";
+import { EmptyState } from "@bgreen/ui";
+import { PageHeader } from "@bgreen/ui";
 import { getActiveOrgId } from "@/lib/active-org";
 import { listProfiles } from "@/lib/economic-profile-actions";
 import type { OrganizationEconomicProfile } from "@/lib/economic-profile-types";

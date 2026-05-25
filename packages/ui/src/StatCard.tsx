@@ -28,7 +28,7 @@ interface StatCardProps {
   href?: string;
 }
 
-// Used on the home + dashboard. Big number, optional sparkline + delta +
+// Used on home + dashboard. Big number, optional sparkline + delta +
 // tier tag + leading icon. Render as a ClickableTile when href is set so
 // it doubles as a drill-down navigation card.
 export function StatCard(props: StatCardProps) {

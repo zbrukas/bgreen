@@ -1,4 +1,4 @@
-import { PageHeader } from "@/components/shell/PageHeader";
+import { PageHeader } from "@bgreen/ui";
 import { fetchCsRecord, fetchMe, fetchTemplate } from "@/lib/api-client";
 import type { Field, LeafField } from "@bgreen/types";
 import { Document } from "@carbon/icons-react";

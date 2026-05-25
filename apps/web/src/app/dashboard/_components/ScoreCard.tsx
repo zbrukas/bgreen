@@ -1,6 +1,6 @@
 "use client";
 
-import { StatCard } from "@/components/shell/StatCard";
+import { StatCard } from "@bgreen/ui";
 import { Document } from "@carbon/icons-react";
 import type { TemplateScoreHistory } from "@/lib/scores-actions";
 

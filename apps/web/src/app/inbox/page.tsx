@@ -1,5 +1,5 @@
-import { EmptyState } from "@/components/shell/EmptyState";
-import { PageHeader } from "@/components/shell/PageHeader";
+import { EmptyState } from "@bgreen/ui";
+import { PageHeader } from "@bgreen/ui";
 import { fetchInbox, fetchMyRecords, fetchTemplates } from "@/lib/api-client";
 import { ArrowRight, Notification as NotificationIcon } from "@carbon/icons-react";
 import { withAuth } from "@workos-inc/authkit-nextjs";

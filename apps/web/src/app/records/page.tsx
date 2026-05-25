@@ -1,5 +1,5 @@
-import { EmptyState } from "@/components/shell/EmptyState";
-import { PageHeader } from "@/components/shell/PageHeader";
+import { EmptyState } from "@bgreen/ui";
+import { PageHeader } from "@bgreen/ui";
 import { fetchMe, fetchMyRecords, fetchTemplates } from "@/lib/api-client";
 import type { Record as BgRecord } from "@bgreen/types";
 import { Add, ArrowRight, Document } from "@carbon/icons-react";
