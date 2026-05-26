@@ -1,9 +1,26 @@
-/* IBM Plex Sans + Mono are self-hosted — see layout.tsx where the
-   @ibm/plex-* css bundles register the @font-face rules under the
-   "IBM Plex Sans" / "IBM Plex Mono" family names Carbon's CSS expects.
-   Carbon owns components + tokens; Tailwind here is just for layout
-   utilities (grid, spacing, neutral-* greys). */
+/* Cascade layer order (low → high priority):
+     theme < base < components < carbon < utilities
+   - `base` (Tailwind preflight) must come BEFORE `carbon` so Tailwind's
+     element resets don't strip Carbon's button/input/etc. styling.
+   - `carbon` must come BEFORE `utilities` so a Tailwind utility class
+     (e.g. `pt-10` on a <div>) still beats Carbon's Meyer-style element
+     reset (`div { padding: 0 }`).
+   - carbon-theme.css and the self-hosted plex @font-face rules stay
+     unlayered (top priority) so brand --cds-* token overrides and
+     local woff URLs win over Carbon defaults. */
+@layer theme, base, components, carbon, utilities;
+
+@import "@carbon/styles/css/styles.css" layer(carbon);
+@import "@ibm/plex-sans/css/ibm-plex-sans-default.css";
+@import "@ibm/plex-mono/css/ibm-plex-mono-default.css";
+@import "../styles/carbon-theme.css";
+
 @import "tailwindcss";
+
+/* Tailwind v4 auto-scans this app's source tree only. Shared components
+   in packages/ui/ live outside that tree, so their class names (e.g. the
+   PageHeader's pt-10/pb-10/px-8) would otherwise be tree-shaken away. */
+@source "../../../../packages/ui/src/**/*.{ts,tsx}";
 
 @layer base {
   * {

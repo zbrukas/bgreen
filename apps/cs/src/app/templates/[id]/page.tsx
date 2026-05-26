@@ -5,6 +5,7 @@ import { Document } from "@carbon/icons-react";
 import { Tag, Tile } from "@carbon/react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { PreviewTemplateButton } from "./PreviewTemplateButton";
 import { TemplateActions } from "./TemplateActions";
 
 export const dynamic = "force-dynamic";
@@ -47,11 +48,13 @@ export default async function TemplateDetailPage({ params }: PageProps) {
   const me = await fetchMe();
   if (!me) redirect("/login");
 
-  const [tpl, allTemplates, topics] = await Promise.all([
+  const [tpl, templatesResult, topicsResult] = await Promise.all([
     fetchTemplate(id),
     fetchTemplates(),
     fetchTopics(),
   ]);
+  const allTemplates = templatesResult.items;
+  const topics = topicsResult.items;
   if (!tpl) {
     return (
       <PageHeader
@@ -71,6 +74,10 @@ export default async function TemplateDetailPage({ params }: PageProps) {
     id: subId,
     name: templateNameById.get(subId) ?? "sub-template removido",
   }));
+  const previewSubTemplates = tpl.composedSubTemplateIds.flatMap((subId) => {
+    const sub = allTemplates.find((t) => t.id === subId);
+    return sub ? [{ id: sub.id, name: sub.name, formSchema: sub.formSchema }] : [];
+  });
 
   return (
     <>
@@ -80,16 +87,23 @@ export default async function TemplateDetailPage({ params }: PageProps) {
         icon={Document}
         breadcrumbs={[{ label: "Modelos", href: "/templates" }, { label: tpl.name }]}
         actions={
-          canWrite ? (
-            <TemplateActions templateId={tpl.id} status={tpl.status} />
-          ) : (
-            <Tag type={statusType[tpl.status] ?? "cool-gray"}>
-              {statusLabel[tpl.status] ?? tpl.status}
-            </Tag>
-          )
+          <div className="flex items-center gap-2">
+            <PreviewTemplateButton
+              templateName={tpl.name}
+              formSchema={tpl.formSchema}
+              subTemplates={previewSubTemplates}
+            />
+            {canWrite ? (
+              <TemplateActions templateId={tpl.id} status={tpl.status} />
+            ) : (
+              <Tag type={statusType[tpl.status] ?? "cool-gray"}>
+                {statusLabel[tpl.status] ?? tpl.status}
+              </Tag>
+            )}
+          </div>
         }
       />
-      <div className="space-y-8 px-8 py-8">
+      <div className="space-y-10 px-8 py-8">
         <Tile>
           <div className="flex flex-wrap items-baseline gap-3 text-sm">
             <span className="text-neutral-600">Estado:</span>
@@ -125,8 +139,8 @@ export default async function TemplateDetailPage({ params }: PageProps) {
 
         <section>
           <h2
-            className="mb-3"
-            style={{ fontSize: "1rem", fontWeight: 600, lineHeight: 1.375, margin: 0 }}
+            className="mb-4"
+            style={{ fontSize: "1rem", fontWeight: 600, lineHeight: 1.375, marginTop: 0 }}
           >
             Campos
           </h2>

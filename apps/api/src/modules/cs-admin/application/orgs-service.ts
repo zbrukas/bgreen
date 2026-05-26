@@ -1,13 +1,16 @@
 import { db, schema } from "@bgreen/db";
 import type {
   CentralServicesRole,
+  CsOrgListOptions,
   LegalForm,
   MembershipRole,
   Organization,
   OrganizationSize,
   TopicSlug,
 } from "@bgreen/types";
-import { desc, eq } from "drizzle-orm";
+import { type SQL, and, asc, count, desc, eq, ilike, inArray, or } from "drizzle-orm";
+
+const DEFAULT_PAGE_SIZE = 10;
 import type { AuditService } from "../../audit/module.js";
 
 // V12.3 follow-up — read-only CS surface listing every organisation
@@ -78,25 +81,60 @@ function rowToOrganization(row: typeof schema.organizations.$inferSelect): Organ
 export class CsOrgsService {
   constructor(private readonly audit?: AuditService) {}
 
-  // List every organisation in the system with member counts. No
-  // pagination — at <1k orgs this is a single round-trip and reads
-  // cleanly. Convert to keyset pagination if growth makes it noisy.
-  async list(): Promise<OrgListEntry[]> {
-    const orgs = await db
+  // List every organisation in the system with member counts. Paginated
+  // since V12.x — at <1k orgs the count query is still cheap, but slicing
+  // limits the joined membership round-trip too.
+  async list(
+    options: CsOrgListOptions = {},
+  ): Promise<{ items: OrgListEntry[]; total: number }> {
+    const conditions: SQL[] = [];
+    if (options.q) {
+      const like = `%${options.q}%`;
+      const search = or(
+        ilike(schema.organizations.name, like),
+        ilike(schema.organizations.nif, like),
+        ilike(schema.organizations.distrito, like),
+      );
+      if (search) conditions.push(search);
+    }
+    if (options.distrito) {
+      conditions.push(eq(schema.organizations.distrito, options.distrito));
+    }
+    const sortColumn =
+      options.sort === "name" ? schema.organizations.name : schema.organizations.createdAt;
+    const defaultDir = options.sort === "name" ? "asc" : "desc";
+    const dir = options.dir ?? defaultDir;
+    const order = dir === "asc" ? asc(sortColumn) : desc(sortColumn);
+    const where = conditions.length === 0 ? undefined : and(...conditions);
+
+    const paginate = options.page !== undefined || options.pageSize !== undefined;
+    const pageSize = options.pageSize ?? DEFAULT_PAGE_SIZE;
+    const page = options.page ?? 1;
+    const offset = (page - 1) * pageSize;
+
+    const dataQuery = db
       .select()
       .from(schema.organizations)
-      .orderBy(desc(schema.organizations.createdAt));
+      .where(where)
+      .orderBy(order);
+    const [orgs, totalRow] = await Promise.all([
+      paginate ? dataQuery.limit(pageSize).offset(offset) : dataQuery,
+      db.select({ value: count() }).from(schema.organizations).where(where),
+    ]);
+    const total = totalRow[0]?.value ?? 0;
 
-    if (orgs.length === 0) return [];
+    if (orgs.length === 0) return { items: [], total };
 
-    // Single round-trip for membership counts: aggregate per org_id +
-    // count admins separately. Indexed via org_memb_org_idx (V12 H4).
+    // Membership counts: scoped to the paginated org ids so we don't
+    // pull the whole memberships table on a sliced page.
+    const orgIds = orgs.map((o) => o.id);
     const counts = await db
       .select({
         organizationId: schema.organizationMemberships.organizationId,
         role: schema.organizationMemberships.role,
       })
-      .from(schema.organizationMemberships);
+      .from(schema.organizationMemberships)
+      .where(inArray(schema.organizationMemberships.organizationId, orgIds));
 
     const byOrg = new Map<string, { total: number; admin: number }>();
     for (const c of counts) {
@@ -106,7 +144,7 @@ export class CsOrgsService {
       byOrg.set(c.organizationId, acc);
     }
 
-    return orgs.map((row) => {
+    const items = orgs.map((row) => {
       const organization = rowToOrganization(row);
       const tally = byOrg.get(row.id) ?? { total: 0, admin: 0 };
       return {
@@ -115,6 +153,7 @@ export class CsOrgsService {
         adminCount: tally.admin,
       };
     });
+    return { items, total };
   }
 
   async get(organizationId: string): Promise<OrgDetail | null> {

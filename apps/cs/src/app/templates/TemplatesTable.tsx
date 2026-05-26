@@ -11,6 +11,10 @@ import {
   Tag,
 } from "@carbon/react";
 import Link from "next/link";
+import { FilterSelect } from "../_components/table-filter/FilterSelect";
+import { SortHeader } from "../_components/table-filter/SortHeader";
+import { TableFilterToolbar } from "../_components/table-filter/TableFilterToolbar";
+import { TablePagination } from "../_components/table-filter/TablePagination";
 
 type TagType = "cool-gray" | "green" | "warm-gray";
 
@@ -24,14 +28,43 @@ interface TemplateRow {
   fieldCount: number;
 }
 
-export function TemplatesTable({ rows }: { rows: TemplateRow[] }) {
+interface TemplatesTableProps {
+  rows: TemplateRow[];
+  totalItems: number;
+  page: number;
+  pageSize: number;
+}
+
+export function TemplatesTable({ rows, totalItems, page, pageSize }: TemplatesTableProps) {
   return (
-    <TableContainer title={`Modelos (${rows.length})`}>
+    <TableContainer
+      title={`Modelos (${totalItems})`}
+      className="border border-neutral-200 bg-white"
+    >
+      <TableFilterToolbar searchPlaceholder="Pesquisar por nome ou descrição">
+        <FilterSelect
+          paramKey="status"
+          label="Estado"
+          options={[
+            { value: "draft", label: "Rascunho" },
+            { value: "published", label: "Publicado" },
+            { value: "archived", label: "Arquivado" },
+          ]}
+        />
+        <FilterSelect
+          paramKey="sub"
+          label="Sub-template"
+          options={[
+            { value: "yes", label: "Apenas sub-templates" },
+            { value: "no", label: "Apenas modelos principais" },
+          ]}
+        />
+      </TableFilterToolbar>
       <Table>
         <TableHead>
           <TableRow>
-            <TableHeader>Nome</TableHeader>
-            <TableHeader>Estado</TableHeader>
+            <SortHeader sortKey="name">Nome</SortHeader>
+            <SortHeader sortKey="status">Estado</SortHeader>
             <TableHeader>Sub-template</TableHeader>
             <TableHeader>Campos</TableHeader>
             <TableHeader />
@@ -67,6 +100,7 @@ export function TemplatesTable({ rows }: { rows: TemplateRow[] }) {
           ))}
         </TableBody>
       </Table>
+      <TablePagination totalItems={totalItems} page={page} pageSize={pageSize} />
     </TableContainer>
   );
 }

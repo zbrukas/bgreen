@@ -1,4 +1,4 @@
-import { TopicSlugSchema } from "@bgreen/types";
+import { TopicListOptionsSchema, TopicSlugSchema } from "@bgreen/types";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
@@ -20,8 +20,10 @@ async function gateWrite(userId: string): Promise<Response | null> {
 }
 
 export const topicsRoutes = new Hono<AppEnv>()
-  .get("/", async (c) => {
-    return c.json(await topicService.list());
+  .get("/", zValidator("query", TopicListOptionsSchema), async (c) => {
+    const { items, total } = await topicService.list(c.req.valid("query"));
+    c.header("X-Total-Count", String(total));
+    return c.json(items);
   })
   .post("/", zValidator("json", createInput), async (c) => {
     const denied = await gateWrite(c.var.user.id);

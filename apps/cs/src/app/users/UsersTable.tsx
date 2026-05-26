@@ -17,6 +17,10 @@ import {
   Tag,
 } from "@carbon/react";
 import { useActionState } from "react";
+import { FilterSelect } from "../_components/table-filter/FilterSelect";
+import { SortHeader } from "../_components/table-filter/SortHeader";
+import { TableFilterToolbar } from "../_components/table-filter/TableFilterToolbar";
+import { TablePagination } from "../_components/table-filter/TablePagination";
 
 const roleLabel: Record<string, string> = {
   admin: "Admin",
@@ -40,31 +44,59 @@ interface UserRow {
   lastLoginAt: string | null;
 }
 
+interface UsersTableProps {
+  users: UserRow[];
+  isAdmin: boolean;
+  currentUserId: string;
+  totalItems: number;
+  page: number;
+  pageSize: number;
+}
+
 export function UsersTable({
   users,
   isAdmin,
   currentUserId,
-}: {
-  users: UserRow[];
-  isAdmin: boolean;
-  currentUserId: string;
-}) {
-  if (users.length === 0) {
-    return <p className="text-sm text-neutral-600">Sem utilizadores CS registados.</p>;
-  }
+  totalItems,
+  page,
+  pageSize,
+}: UsersTableProps) {
   return (
-    <TableContainer title={`Utilizadores (${users.length})`}>
+    <TableContainer
+      title={`Utilizadores (${totalItems})`}
+      className="border border-neutral-200 bg-white"
+    >
+      <TableFilterToolbar searchPlaceholder="Pesquisar por email ou nome">
+        <FilterSelect
+          paramKey="role"
+          label="Papel"
+          options={[
+            { value: "admin", label: "Admin" },
+            { value: "maintainer", label: "Maintainer" },
+            { value: "promoter", label: "Promoter" },
+          ]}
+        />
+      </TableFilterToolbar>
       <Table>
         <TableHead>
           <TableRow>
-            <TableHeader>Email</TableHeader>
-            <TableHeader>Papel</TableHeader>
+            <SortHeader sortKey="email">Email</SortHeader>
+            <SortHeader sortKey="role">Papel</SortHeader>
             <TableHeader>Estado</TableHeader>
-            <TableHeader>Último login</TableHeader>
+            <SortHeader sortKey="lastLoginAt" defaultDir="desc">
+              Último login
+            </SortHeader>
             <TableHeader />
           </TableRow>
         </TableHead>
         <TableBody>
+          {users.length === 0 && (
+            <TableRow>
+              <TableCell colSpan={5} className="text-center text-sm text-neutral-600">
+                Sem utilizadores para o filtro actual.
+              </TableCell>
+            </TableRow>
+          )}
           {users.map((u) => {
             const isSelf = u.id === currentUserId;
             return (
@@ -105,6 +137,7 @@ export function UsersTable({
           })}
         </TableBody>
       </Table>
+      <TablePagination totalItems={totalItems} page={page} pageSize={pageSize} />
     </TableContainer>
   );
 }
@@ -152,7 +185,7 @@ function DeleteButton({ id }: { id: string }) {
       <input type="hidden" name="id" value={id} />
       <Button
         type="submit"
-        kind="ghost"
+        kind="danger--ghost"
         size="sm"
         renderIcon={TrashCan}
         disabled={isPending}

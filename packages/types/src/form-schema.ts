@@ -254,6 +254,29 @@ export const RecordTemplateSchema = z.object({
 });
 export type RecordTemplate = z.infer<typeof RecordTemplateSchema>;
 
+// V12.x list-query options for the /record-templates index endpoint.
+// `q` is a case-insensitive substring search over name + description.
+// `sub` is tri-state: "yes" → only sub-templates, "no" → only main
+// templates, absent → both. Status is single-value (no multi-select yet).
+export const RecordTemplateListSortSchema = z.enum([
+  "name",
+  "status",
+  "updatedAt",
+  "createdAt",
+]);
+export type RecordTemplateListSort = z.infer<typeof RecordTemplateListSortSchema>;
+
+export const RecordTemplateListOptionsSchema = z.object({
+  q: z.string().trim().min(1).max(200).optional(),
+  sort: RecordTemplateListSortSchema.optional(),
+  dir: z.enum(["asc", "desc"]).optional(),
+  status: RecordTemplateStatusSchema.optional(),
+  sub: z.enum(["yes", "no"]).optional(),
+  page: z.coerce.number().int().min(1).optional(),
+  pageSize: z.coerce.number().int().min(1).max(100).optional(),
+});
+export type RecordTemplateListOptions = z.infer<typeof RecordTemplateListOptionsSchema>;
+
 export const RecordStatusSchema = z.enum([
   "draft",
   "submitted",

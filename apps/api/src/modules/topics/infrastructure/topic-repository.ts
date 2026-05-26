@@ -1,9 +1,11 @@
 import { db, schema } from "@bgreen/db";
-import type { Topic } from "@bgreen/types";
-import { eq } from "drizzle-orm";
+import type { Topic, TopicListOptions } from "@bgreen/types";
+import { type SQL, and, asc, count, desc, eq, ilike, or } from "drizzle-orm";
+
+const DEFAULT_PAGE_SIZE = 10;
 
 export interface TopicRepository {
-  list(): Promise<Topic[]>;
+  list(options?: TopicListOptions): Promise<{ items: Topic[]; total: number }>;
   findById(id: string): Promise<Topic | null>;
   findBySlug(slug: string): Promise<Topic | null>;
   insert(input: { slug: string; name: string; createdByUserId: string | null }): Promise<Topic>;
@@ -21,9 +23,35 @@ function rowToTopic(row: typeof schema.topics.$inferSelect): Topic {
 }
 
 export class DrizzleTopicRepository implements TopicRepository {
-  async list(): Promise<Topic[]> {
-    const rows = await db.select().from(schema.topics).orderBy(schema.topics.slug);
-    return rows.map(rowToTopic);
+  async list(options: TopicListOptions = {}): Promise<{ items: Topic[]; total: number }> {
+    const conditions: SQL[] = [];
+    if (options.q) {
+      const like = `%${options.q}%`;
+      const search = or(ilike(schema.topics.slug, like), ilike(schema.topics.name, like));
+      if (search) conditions.push(search);
+    }
+    const column = (() => {
+      switch (options.sort) {
+        case "name":
+          return schema.topics.name;
+        case "createdAt":
+          return schema.topics.createdAt;
+        default:
+          return schema.topics.slug;
+      }
+    })();
+    const order = options.dir === "desc" ? desc(column) : asc(column);
+    const where = conditions.length === 0 ? undefined : and(...conditions);
+    const paginate = options.page !== undefined || options.pageSize !== undefined;
+    const pageSize = options.pageSize ?? DEFAULT_PAGE_SIZE;
+    const page = options.page ?? 1;
+    const offset = (page - 1) * pageSize;
+    const dataQuery = db.select().from(schema.topics).where(where).orderBy(order);
+    const [rows, totalRow] = await Promise.all([
+      paginate ? dataQuery.limit(pageSize).offset(offset) : dataQuery,
+      db.select({ value: count() }).from(schema.topics).where(where),
+    ]);
+    return { items: rows.map(rowToTopic), total: totalRow[0]?.value ?? 0 };
   }
 
   async findById(id: string): Promise<Topic | null> {

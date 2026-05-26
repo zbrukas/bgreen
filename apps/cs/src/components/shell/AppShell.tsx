@@ -29,7 +29,7 @@ import {
 import type { CentralServicesRole } from "@bgreen/types";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
 interface NavItem {
   href: string;
@@ -106,6 +106,13 @@ export function AppShell({ user, role, signOutAction, children }: AppShellProps)
   const pathname = usePathname() ?? "/";
   const [isSideNavExpanded, setSideNavExpanded] = useState(true);
   const [isAccountOpen, setAccountOpen] = useState(false);
+
+  // Next.js App Router's auto scroll-restoration misses some navigations
+  // here (Carbon SideNavLink uses an onClick + router.push pattern rather
+  // than next/link, and streaming page transitions can race the reset).
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0 });
+  }, [pathname]);
 
   const visibleAdmin = ADMIN_NAV.filter((item) => !item.roles || (role && item.roles.includes(role)));
 

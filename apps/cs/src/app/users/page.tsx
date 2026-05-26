@@ -1,5 +1,6 @@
 import { PageHeader } from "@bgreen/ui";
 import { fetchCsUsers, fetchMe } from "@/lib/api-client";
+import { CsUserListOptionsSchema } from "@bgreen/types";
 import { UserMultiple } from "@carbon/icons-react";
 import { InlineNotification } from "@carbon/react";
 import { redirect } from "next/navigation";
@@ -8,12 +9,21 @@ import { UsersTable } from "./UsersTable";
 
 export const dynamic = "force-dynamic";
 
-export default async function CsUsersPage() {
+interface PageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export default async function CsUsersPage({ searchParams }: PageProps) {
   const me = await fetchMe();
   if (!me) redirect("/login");
 
   const isAdmin = me.centralServicesRole === "admin";
-  const users = await fetchCsUsers();
+  const raw = await searchParams;
+  const parsed = CsUserListOptionsSchema.safeParse(raw);
+  const options = parsed.success ? parsed.data : {};
+  const pageSize = options.pageSize ?? 10;
+  const page = options.page ?? 1;
+  const { items: users, total } = await fetchCsUsers({ ...options, page, pageSize });
 
   return (
     <>
@@ -22,7 +32,7 @@ export default async function CsUsersPage() {
         description="Convide colegas para a consola e defina o papel. Cada novo utilizador define a sua palavra-passe ao iniciar sessão pela primeira vez."
         icon={UserMultiple}
       />
-      <div className="space-y-8 px-8 py-8">
+      <div className="mx-auto max-w-7xl space-y-8 px-8 py-10">
         {!isAdmin && (
           <InlineNotification
             kind="warning"
@@ -47,6 +57,9 @@ export default async function CsUsersPage() {
           }))}
           isAdmin={isAdmin}
           currentUserId={me.id}
+          totalItems={total}
+          page={page}
+          pageSize={pageSize}
         />
       </div>
     </>

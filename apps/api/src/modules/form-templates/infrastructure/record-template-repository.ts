@@ -2,10 +2,15 @@ import { db, schema } from "@bgreen/db";
 import type {
   FormSchema,
   RecordTemplate,
+  RecordTemplateListOptions,
   RecordTemplateStatus,
   WorkflowDefinitionId,
 } from "@bgreen/types";
-import { eq, inArray } from "drizzle-orm";
+import { type SQL, and, asc, count, desc, eq, ilike, inArray, or } from "drizzle-orm";
+
+// Default page size for list endpoints when the caller doesn't pin one.
+// Kept in sync with apps/cs's TablePagination.DEFAULT_PAGE_SIZE.
+const DEFAULT_PAGE_SIZE = 10;
 import type {
   CreateRecordTemplateInput,
   RecordTemplateRepository,
@@ -74,9 +79,59 @@ export class DrizzleRecordTemplateRepository implements RecordTemplateRepository
     return rows.map((row) => rowToTemplate(row));
   }
 
-  async listAll(): Promise<RecordTemplate[]> {
-    const rows = await db.select().from(schema.recordTemplates);
-    return rows.map((row) => rowToTemplate(row));
+  async listAll(
+    options: RecordTemplateListOptions = {},
+  ): Promise<{ items: RecordTemplate[]; total: number }> {
+    const conditions: SQL[] = [];
+    if (options.q) {
+      const like = `%${options.q}%`;
+      const search = or(
+        ilike(schema.recordTemplates.name, like),
+        ilike(schema.recordTemplates.description, like),
+      );
+      if (search) conditions.push(search);
+    }
+    if (options.status) conditions.push(eq(schema.recordTemplates.status, options.status));
+    if (options.sub === "yes") conditions.push(eq(schema.recordTemplates.isSubTemplate, true));
+    if (options.sub === "no") conditions.push(eq(schema.recordTemplates.isSubTemplate, false));
+
+    const column = (() => {
+      switch (options.sort) {
+        case "name":
+          return schema.recordTemplates.name;
+        case "status":
+          return schema.recordTemplates.status;
+        case "createdAt":
+          return schema.recordTemplates.createdAt;
+        default:
+          return schema.recordTemplates.updatedAt;
+      }
+    })();
+    const order = options.dir === "asc" ? asc(column) : desc(column);
+
+    const where = conditions.length === 0 ? undefined : and(...conditions);
+    // Pagination is opt-in: if neither page nor pageSize is provided we
+    // return every matching row (picker-style consumers). Sending either
+    // param activates LIMIT/OFFSET, with the other defaulting.
+    const paginate = options.page !== undefined || options.pageSize !== undefined;
+    const pageSize = options.pageSize ?? DEFAULT_PAGE_SIZE;
+    const page = options.page ?? 1;
+    const offset = (page - 1) * pageSize;
+
+    const dataQuery = db
+      .select()
+      .from(schema.recordTemplates)
+      .where(where)
+      .orderBy(order);
+    const [rows, totalRow] = await Promise.all([
+      paginate ? dataQuery.limit(pageSize).offset(offset) : dataQuery,
+      db
+        .select({ value: count() })
+        .from(schema.recordTemplates)
+        .where(where),
+    ]);
+    const items = rows.map((row) => rowToTemplate(row));
+    return { items, total: totalRow[0]?.value ?? 0 };
   }
 
   async update(id: string, patch: UpdateRecordTemplateInput): Promise<RecordTemplate | null> {

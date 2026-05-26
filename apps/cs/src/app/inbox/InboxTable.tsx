@@ -24,6 +24,7 @@ export function InboxTable({ rows }: { rows: InboxRow[] }) {
     <TableContainer
       title={`Pendentes (${rows.length})`}
       description="Cada item leva-o ao registo para rever."
+      className="overflow-hidden rounded border border-[--cds-border-subtle] bg-white"
     >
       <Table>
         <TableHead>

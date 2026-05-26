@@ -31,7 +31,7 @@ import {
 import type { MembershipRole } from "@bgreen/types";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
 interface NavItem {
   href: string;
@@ -112,6 +112,13 @@ export function AppShell({
   const [isSideNavExpanded, setSideNavExpanded] = useState(true);
   const [isAccountOpen, setAccountOpen] = useState(false);
   const [isOrgOpen, setOrgOpen] = useState(false);
+
+  // Next.js App Router's auto scroll-restoration misses some navigations
+  // here (Carbon SideNavLink uses an onClick + router.push pattern rather
+  // than next/link, and streaming page transitions can race the reset).
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0 });
+  }, [pathname]);
 
   const canInvite = activeOrganizationId !== null && activeOrganizationRole === "org_admin";
   const activeOrg = organizations.find((o) => o.id === activeOrganizationId) ?? null;

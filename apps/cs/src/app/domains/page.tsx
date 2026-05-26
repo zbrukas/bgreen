@@ -1,5 +1,6 @@
 import { PageHeader } from "@bgreen/ui";
 import { fetchCsDomains, fetchMe } from "@/lib/api-client";
+import { CsDomainListOptionsSchema } from "@bgreen/types";
 import { Globe } from "@carbon/icons-react";
 import { redirect } from "next/navigation";
 import { AddDomainForm } from "./AddDomainForm";
@@ -7,12 +8,21 @@ import { DomainsTable } from "./DomainsTable";
 
 export const dynamic = "force-dynamic";
 
-export default async function CsDomainsPage() {
+interface PageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export default async function CsDomainsPage({ searchParams }: PageProps) {
   const me = await fetchMe();
   if (!me) redirect("/login");
 
   const canEdit = me.centralServicesRole === "admin";
-  const domains = await fetchCsDomains();
+  const raw = await searchParams;
+  const parsed = CsDomainListOptionsSchema.safeParse(raw);
+  const options = parsed.success ? parsed.data : {};
+  const pageSize = options.pageSize ?? 10;
+  const page = options.page ?? 1;
+  const { items: domains, total } = await fetchCsDomains({ ...options, page, pageSize });
 
   return (
     <>
@@ -21,7 +31,7 @@ export default async function CsDomainsPage() {
         description="Domínios cujos sign-ups são automaticamente classificados como utilizadores Central Services."
         icon={Globe}
       />
-      <div className="space-y-8 px-8 py-8">
+      <div className="mx-auto max-w-7xl space-y-8 px-8 py-10">
         {canEdit && <AddDomainForm />}
         <DomainsTable
           domains={domains.map((d) => ({
@@ -31,6 +41,9 @@ export default async function CsDomainsPage() {
             createdAt: d.createdAt,
           }))}
           canEdit={canEdit}
+          totalItems={total}
+          page={page}
+          pageSize={pageSize}
         />
       </div>
     </>

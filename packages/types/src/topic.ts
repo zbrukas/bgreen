@@ -23,3 +23,16 @@ export const NewTopicInputSchema = z.object({
   name: z.string().min(1).max(120),
 });
 export type NewTopicInput = z.infer<typeof NewTopicInputSchema>;
+
+// V12.x list-query options for /topics.
+export const TopicListSortSchema = z.enum(["slug", "name", "createdAt"]);
+export type TopicListSort = z.infer<typeof TopicListSortSchema>;
+
+export const TopicListOptionsSchema = z.object({
+  q: z.string().trim().min(1).max(200).optional(),
+  sort: TopicListSortSchema.optional(),
+  dir: z.enum(["asc", "desc"]).optional(),
+  page: z.coerce.number().int().min(1).optional(),
+  pageSize: z.coerce.number().int().min(1).max(100).optional(),
+});
+export type TopicListOptions = z.infer<typeof TopicListOptionsSchema>;

@@ -65,7 +65,7 @@ class FakeCsDomains implements CentralServicesDomainsRepository {
     return this.domains.has(domain.toLowerCase());
   }
   async list() {
-    return [];
+    return { items: [], total: 0 };
   }
   async insert() {}
   async delete() {}

@@ -27,70 +27,65 @@ export function ShowIfPicker({
   }
 
   return (
-    <details className="border-t border-dotted border-neutral-300 pt-3">
-      <summary className="cursor-pointer text-xs text-neutral-600 hover:text-neutral-900">
-        Condição de visibilidade {field.showIf.length > 0 && `(${field.showIf.length})`}
-      </summary>
-      <div className="mt-2 space-y-2">
-        {field.showIf.length > 0 && candidates.length === 0 && (
-          <p className="text-xs text-[var(--cds-text-error)]">
-            Não existem campos anteriores neste âmbito para usar como referência. Reorganize os
-            campos ou remova as condições.
-          </p>
-        )}
-        {field.showIf.map((predicate, idx) => (
-          <div key={predicate.uiKey} className="grid grid-cols-[1fr_1fr_auto] items-end gap-2">
-            <Select
-              id={`${field.uiKey}-showif-field-${idx}`}
-              labelText=""
-              hideLabel
-              size="sm"
-              value={predicate.fieldId}
-              onChange={(e) => update(idx, { fieldId: e.target.value })}
-            >
-              <SelectItem value="" text="— campo anterior —" />
-              {candidates.map((c) => (
-                <SelectItem
-                  key={c.uiKey}
-                  value={c.id.trim()}
-                  text={`${c.id.trim()} (${c.label || "?"})`}
-                />
-              ))}
-            </Select>
-            <TextInput
-              id={`${field.uiKey}-showif-eq-${idx}`}
-              labelText=""
-              hideLabel
-              size="sm"
-              placeholder="valor exacto"
-              value={predicate.equals}
-              onChange={(e) => update(idx, { equals: e.target.value })}
-            />
-            <Button
-              type="button"
-              kind="ghost"
-              size="sm"
-              onClick={() => remove(idx)}
-              renderIcon={TrashCan}
-              iconDescription="Remover"
-              hasIconOnly
-            />
-          </div>
-        ))}
-        <Button
-          type="button"
-          kind="tertiary"
-          size="sm"
-          onClick={() => onPatch({ showIf: [...field.showIf, newShowIf()] })}
-          disabled={candidates.length === 0 && field.showIf.length === 0}
-          renderIcon={Add}
-        >
-          Condição (E)
-        </Button>
-        <p className="text-xs text-neutral-600">
-          Todas as condições devem ser satisfeitas (E lógico). Campos ocultos não são validados.
+    <div className="space-y-2">
+      {field.showIf.length > 0 && candidates.length === 0 && (
+        <p className="text-xs text-[var(--cds-text-error)]">
+          Não existem campos anteriores neste âmbito para usar como referência. Reorganize os
+          campos ou remova as condições.
         </p>
-      </div>
-    </details>
+      )}
+      {field.showIf.map((predicate, idx) => (
+        <div key={predicate.uiKey} className="grid grid-cols-[1fr_1fr_auto] items-end gap-2">
+          <Select
+            id={`${field.uiKey}-showif-field-${idx}`}
+            labelText=""
+            hideLabel
+            size="sm"
+            value={predicate.fieldId}
+            onChange={(e) => update(idx, { fieldId: e.target.value })}
+          >
+            <SelectItem value="" text="— campo anterior —" />
+            {candidates.map((c) => (
+              <SelectItem
+                key={c.uiKey}
+                value={c.id.trim()}
+                text={`${c.id.trim()} (${c.label || "?"})`}
+              />
+            ))}
+          </Select>
+          <TextInput
+            id={`${field.uiKey}-showif-eq-${idx}`}
+            labelText=""
+            hideLabel
+            size="sm"
+            placeholder="valor exacto"
+            value={predicate.equals}
+            onChange={(e) => update(idx, { equals: e.target.value })}
+          />
+          <Button
+            type="button"
+            kind="danger--ghost"
+            size="sm"
+            onClick={() => remove(idx)}
+            renderIcon={TrashCan}
+            iconDescription="Remover"
+            hasIconOnly
+          />
+        </div>
+      ))}
+      <Button
+        type="button"
+        kind="tertiary"
+        size="sm"
+        onClick={() => onPatch({ showIf: [...field.showIf, newShowIf()] })}
+        disabled={candidates.length === 0 && field.showIf.length === 0}
+        renderIcon={Add}
+      >
+        Condição (E)
+      </Button>
+      <p className="text-xs text-neutral-600">
+        Todas as condições devem ser satisfeitas (E lógico). Campos ocultos não são validados.
+      </p>
+    </div>
   );
 }

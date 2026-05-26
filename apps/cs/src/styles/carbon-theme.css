@@ -49,4 +49,72 @@
   --cds-button-danger-secondary: #ff312e;
   --cds-button-danger-hover: #e62825;
   --cds-button-danger-active: #c61f1d;
+
+  /* Tertiary button (outlined): share the mint family with primary so
+     "Adicionar campo", "Adicionar linha", "Pré-visualizar" don't fall back
+     to Carbon's default IBM blue. */
+  --cds-button-tertiary: #63b995;
+  --cds-button-tertiary-hover: #4fa481;
+  --cds-button-tertiary-active: #3d8b6a;
+}
+
+/* Header: same mint tint as SideNav so the top + left chrome read as one
+   branded surface. Carbon's default Header is dark with white text — we
+   flip both: light mint bg, shadow-grey text/icons, mint-shaded hover. */
+.cds--header {
+  background-color: #f0f7f3;
+  border-bottom: 1px solid #d4e7dc;
+}
+
+.cds--header__name,
+.cds--header__name-prefix,
+.cds--header__name:hover {
+  color: #37323e;
+  background-color: transparent;
+}
+
+.cds--header__action,
+.cds--header__menu-trigger {
+  color: #37323e;
+  border: none;
+  box-shadow: none;
+}
+
+.cds--header__action svg {
+  fill: #37323e;
+}
+
+.cds--header__action:hover,
+.cds--header__menu-trigger:hover {
+  background-color: #e2efe7;
+}
+
+.cds--header__action--active,
+.cds--header__action:focus,
+.cds--header__menu-trigger:focus {
+  background-color: #d4e7dc;
+  border: none;
+  box-shadow: none;
+  outline: none;
+}
+
+/* SideNav: soft mint tint so the docked rail reads as branded surface
+   rather than a sheet of white pinned to the page. Hover/selected states
+   use slightly stronger tints of the same hue so the cascade still
+   communicates "this row is hot". */
+.cds--side-nav,
+.cds--side-nav__navigation,
+.cds--side-nav__items {
+  background-color: #f0f7f3;
+}
+
+.cds--side-nav__link:hover,
+.cds--side-nav__menu-item:hover > .cds--side-nav__link {
+  background-color: #e2efe7;
+}
+
+.cds--side-nav__link--current,
+.cds--side-nav__item--active > .cds--side-nav__link,
+a.cds--side-nav__link[aria-current="page"] {
+  background-color: #d4e7dc;
 }

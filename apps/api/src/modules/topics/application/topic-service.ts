@@ -1,4 +1,4 @@
-import type { Topic } from "@bgreen/types";
+import type { Topic, TopicListOptions } from "@bgreen/types";
 import type { TopicRepository } from "../infrastructure/topic-repository.js";
 
 export type CreateTopicResult = { ok: true; topic: Topic } | { ok: false; code: "slug_taken" };
@@ -6,8 +6,8 @@ export type CreateTopicResult = { ok: true; topic: Topic } | { ok: false; code: 
 export class TopicService {
   constructor(private readonly repo: TopicRepository) {}
 
-  list(): Promise<Topic[]> {
-    return this.repo.list();
+  list(options?: TopicListOptions): Promise<{ items: Topic[]; total: number }> {
+    return this.repo.list(options);
   }
 
   get(id: string): Promise<Topic | null> {

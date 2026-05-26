@@ -2,9 +2,14 @@ import type { AppType } from "@bgreen/api/rpc";
 import type {
   Record as BgRecord,
   CentralServicesRole,
+  CsDomainListOptions,
+  CsOrgListOptions,
+  CsUserListOptions,
   FormSchema,
   RecordTemplate,
+  RecordTemplateListOptions,
   Topic,
+  TopicListOptions,
   UserType,
   WorkflowDefinitionId,
 } from "@bgreen/types";
@@ -56,15 +61,38 @@ export async function fetchMe(): Promise<MeResponse | null> {
 
 // ---------- Templates (CS owns these) ----------
 
-export async function fetchTemplates(): Promise<RecordTemplate[]> {
+export interface ListResult<T> {
+  items: T[];
+  total: number;
+}
+
+function totalFromHeader(res: Response, fallback: number): number {
+  const raw = res.headers.get("X-Total-Count");
+  if (!raw) return fallback;
+  const n = Number.parseInt(raw, 10);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+export async function fetchTemplates(
+  options: RecordTemplateListOptions = {},
+): Promise<ListResult<RecordTemplate>> {
   try {
     const headers = await authedHeaders();
-    if (!headers.Authorization) return [];
-    const res = await api["record-templates"].$get(undefined, { headers });
-    if (!res.ok) return [];
-    return (await res.json()) as RecordTemplate[];
+    if (!headers.Authorization) return { items: [], total: 0 };
+    const query: Record<string, string> = {};
+    if (options.q) query.q = options.q;
+    if (options.sort) query.sort = options.sort;
+    if (options.dir) query.dir = options.dir;
+    if (options.status) query.status = options.status;
+    if (options.sub) query.sub = options.sub;
+    if (options.page !== undefined) query.page = String(options.page);
+    if (options.pageSize !== undefined) query.pageSize = String(options.pageSize);
+    const res = await api["record-templates"].$get({ query }, { headers });
+    if (!res.ok) return { items: [], total: 0 };
+    const items = (await res.json()) as RecordTemplate[];
+    return { items, total: totalFromHeader(res, items.length) };
   } catch {
-    return [];
+    return { items: [], total: 0 };
   }
 }
 
@@ -223,15 +251,24 @@ export interface CsDomain {
   createdAt: string;
 }
 
-export async function fetchCsDomains(): Promise<CsDomain[]> {
+export async function fetchCsDomains(
+  options: CsDomainListOptions = {},
+): Promise<ListResult<CsDomain>> {
   try {
     const headers = await authedHeaders();
-    if (!headers.Authorization) return [];
-    const res = await api.cs.domains.$get(undefined, { headers });
-    if (!res.ok) return [];
-    return (await res.json()) as CsDomain[];
+    if (!headers.Authorization) return { items: [], total: 0 };
+    const query: Record<string, string> = {};
+    if (options.q) query.q = options.q;
+    if (options.sort) query.sort = options.sort;
+    if (options.dir) query.dir = options.dir;
+    if (options.page !== undefined) query.page = String(options.page);
+    if (options.pageSize !== undefined) query.pageSize = String(options.pageSize);
+    const res = await api.cs.domains.$get({ query }, { headers });
+    if (!res.ok) return { items: [], total: 0 };
+    const items = (await res.json()) as CsDomain[];
+    return { items, total: totalFromHeader(res, items.length) };
   } catch {
-    return [];
+    return { items: [], total: 0 };
   }
 }
 
@@ -275,15 +312,24 @@ export async function deleteCsDomain(
 
 // ---------- Topics ----------
 
-export async function fetchTopics(): Promise<Topic[]> {
+export async function fetchTopics(
+  options: TopicListOptions = {},
+): Promise<ListResult<Topic>> {
   try {
     const headers = await authedHeaders();
-    if (!headers.Authorization) return [];
-    const res = await api.topics.$get(undefined, { headers });
-    if (!res.ok) return [];
-    return (await res.json()) as Topic[];
+    if (!headers.Authorization) return { items: [], total: 0 };
+    const query: Record<string, string> = {};
+    if (options.q) query.q = options.q;
+    if (options.sort) query.sort = options.sort;
+    if (options.dir) query.dir = options.dir;
+    if (options.page !== undefined) query.page = String(options.page);
+    if (options.pageSize !== undefined) query.pageSize = String(options.pageSize);
+    const res = await api.topics.$get({ query }, { headers });
+    if (!res.ok) return { items: [], total: 0 };
+    const items = (await res.json()) as Topic[];
+    return { items, total: totalFromHeader(res, items.length) };
   } catch {
-    return [];
+    return { items: [], total: 0 };
   }
 }
 
@@ -340,15 +386,25 @@ export interface CsUserRow {
   createdAt: string;
 }
 
-export async function fetchCsUsers(): Promise<CsUserRow[]> {
+export async function fetchCsUsers(
+  options: CsUserListOptions = {},
+): Promise<ListResult<CsUserRow>> {
   try {
     const headers = await authedHeaders();
-    if (!headers.Authorization) return [];
-    const res = await api.cs.users.$get(undefined, { headers });
-    if (!res.ok) return [];
-    return (await res.json()) as CsUserRow[];
+    if (!headers.Authorization) return { items: [], total: 0 };
+    const query: Record<string, string> = {};
+    if (options.q) query.q = options.q;
+    if (options.sort) query.sort = options.sort;
+    if (options.dir) query.dir = options.dir;
+    if (options.role) query.role = options.role;
+    if (options.page !== undefined) query.page = String(options.page);
+    if (options.pageSize !== undefined) query.pageSize = String(options.pageSize);
+    const res = await api.cs.users.$get({ query }, { headers });
+    if (!res.ok) return { items: [], total: 0 };
+    const items = (await res.json()) as CsUserRow[];
+    return { items, total: totalFromHeader(res, items.length) };
   } catch {
-    return [];
+    return { items: [], total: 0 };
   }
 }
 
@@ -492,6 +548,7 @@ export interface OrgListEntry {
     nif: string | null;
     caeCode: string | null;
     selfReportedSize: string | null;
+    distrito: string | null;
     createdAt: string;
     updatedAt: string;
   };
@@ -525,15 +582,25 @@ export interface OrgDetail {
   members: OrgMember[];
 }
 
-export async function fetchCsOrgs(): Promise<OrgListEntry[]> {
+export async function fetchCsOrgs(
+  options: CsOrgListOptions = {},
+): Promise<ListResult<OrgListEntry>> {
   try {
     const headers = await authedHeaders();
-    if (!headers.Authorization) return [];
-    const res = await api.cs.orgs.$get(undefined, { headers });
-    if (!res.ok) return [];
-    return (await res.json()) as OrgListEntry[];
+    if (!headers.Authorization) return { items: [], total: 0 };
+    const query: Record<string, string> = {};
+    if (options.q) query.q = options.q;
+    if (options.sort) query.sort = options.sort;
+    if (options.dir) query.dir = options.dir;
+    if (options.distrito) query.distrito = options.distrito;
+    if (options.page !== undefined) query.page = String(options.page);
+    if (options.pageSize !== undefined) query.pageSize = String(options.pageSize);
+    const res = await api.cs.orgs.$get({ query }, { headers });
+    if (!res.ok) return { items: [], total: 0 };
+    const items = (await res.json()) as OrgListEntry[];
+    return { items, total: totalFromHeader(res, items.length) };
   } catch {
-    return [];
+    return { items: [], total: 0 };
   }
 }
 

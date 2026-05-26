@@ -341,6 +341,18 @@ export async function searchCae(query: string, limit = 20): Promise<CaeEntry[]> 
   }
 }
 
+export async function listAllCaes(): Promise<CaeEntry[]> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return [];
+    const res = await api.lookups.caes.$get({}, { headers });
+    if (!res.ok) return [];
+    return (await res.json()) as CaeEntry[];
+  } catch {
+    return [];
+  }
+}
+
 export async function findCaeByCode(code: string): Promise<CaeEntry | null> {
   try {
     const headers = await authedHeaders();
@@ -399,9 +411,10 @@ export async function fetchTopics(): Promise<Topic[]> {
   try {
     const headers = await authedHeaders();
     if (!headers.Authorization) return [];
-    const res = await api.topics.$get(undefined, { headers });
+    const res = await api.topics.$get({ query: {} }, { headers });
     if (!res.ok) return [];
-    return (await res.json()) as Topic[];
+    const body = (await res.json()) as unknown;
+    return Array.isArray(body) ? (body as Topic[]) : [];
   } catch {
     return [];
   }
@@ -413,9 +426,10 @@ export async function fetchTemplates(): Promise<RecordTemplate[]> {
   try {
     const headers = await authedHeaders();
     if (!headers.Authorization) return [];
-    const res = await api["record-templates"].$get(undefined, { headers });
+    const res = await api["record-templates"].$get({ query: {} }, { headers });
     if (!res.ok) return [];
-    return (await res.json()) as RecordTemplate[];
+    const body = (await res.json()) as unknown;
+    return Array.isArray(body) ? (body as RecordTemplate[]) : [];
   } catch {
     return [];
   }

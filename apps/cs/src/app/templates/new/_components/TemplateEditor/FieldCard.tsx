@@ -1,7 +1,15 @@
 "use client";
 
 import { TrashCan } from "@carbon/icons-react";
-import { Button, Checkbox, Select, SelectItem, TextInput } from "@carbon/react";
+import {
+  Accordion,
+  AccordionItem,
+  Button,
+  Checkbox,
+  Select,
+  SelectItem,
+  TextInput,
+} from "@carbon/react";
 import type { RecordTemplate } from "@bgreen/types";
 import { CalculatedEditor } from "./CalculatedEditor";
 import { LEAF_KINDS, MAPPABLE_KINDS, TOP_LEVEL_KINDS } from "./field-kinds";
@@ -36,7 +44,7 @@ export function FieldCard({
 }: FieldCardProps) {
   const kindOptions = allowRepeating ? TOP_LEVEL_KINDS : LEAF_KINDS;
   return (
-    <div className="space-y-3 rounded-md border border-neutral-200 bg-neutral-50 p-3">
+    <div className="space-y-4 rounded-md border border-neutral-200 bg-neutral-50 p-4">
       <div className="grid grid-cols-2 gap-3">
         <TextInput
           id={`${field.uiKey}-id`}
@@ -174,20 +182,33 @@ export function FieldCard({
         />
       )}
 
-      <ShowIfPicker field={field} siblings={siblings} onPatch={onPatch} />
-
-      {MAPPABLE_KINDS.has(field.kind) && (
-        <SourceMappingPicker
-          field={field}
-          availableTemplates={availableTemplates}
-          onPatch={onPatch}
-        />
-      )}
+      <Accordion size="sm" align="start" className="border-t border-dotted border-neutral-300 pt-1">
+        <AccordionItem
+          title={
+            `Condição de visibilidade${field.showIf.length > 0 ? ` (${field.showIf.length})` : ""}`
+          }
+          open={field.showIf.length > 0}
+        >
+          <ShowIfPicker field={field} siblings={siblings} onPatch={onPatch} />
+        </AccordionItem>
+        {MAPPABLE_KINDS.has(field.kind) && (
+          <AccordionItem
+            title={`Pré-preencher de outro modelo${field.sourceMapping ? " (activo)" : ""}`}
+            open={field.sourceMapping !== null}
+          >
+            <SourceMappingPicker
+              field={field}
+              availableTemplates={availableTemplates}
+              onPatch={onPatch}
+            />
+          </AccordionItem>
+        )}
+      </Accordion>
 
       <div className="flex justify-end">
         <Button
           type="button"
-          kind="ghost"
+          kind="danger--ghost"
           size="sm"
           onClick={onRemove}
           disabled={!removable}

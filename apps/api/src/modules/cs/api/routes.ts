@@ -1,7 +1,11 @@
 import { db, schema } from "@bgreen/db";
-import { CentralServicesRoleSchema } from "@bgreen/types";
+import {
+  CentralServicesRoleSchema,
+  CsDomainListOptionsSchema,
+  CsUserListOptionsSchema,
+} from "@bgreen/types";
 import { zValidator } from "@hono/zod-validator";
-import { and, count, eq, isNotNull, ne } from "drizzle-orm";
+import { type SQL, and, asc, count, desc, eq, ilike, isNotNull, ne, or } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
 import { canCsRelation, canCsWrite } from "../../../auth-helpers.js";
@@ -76,11 +80,12 @@ export const csRoutes = new Hono<AppEnv>()
     }
     return c.json(result.record);
   })
-  .get("/domains", async (c) => {
+  .get("/domains", zValidator("query", CsDomainListOptionsSchema), async (c) => {
     const denied = await gateCsRead(c.var.user.id);
     if (denied) return denied;
-    const list = await repositories.centralServicesDomains.list();
-    return c.json(list);
+    const { items, total } = await repositories.centralServicesDomains.list(c.req.valid("query"));
+    c.header("X-Total-Count", String(total));
+    return c.json(items);
   })
   .post("/domains", zValidator("json", domainInput), async (c) => {
     const denied = await gateCsAdmin(c.var.user.id);
@@ -103,10 +108,43 @@ export const csRoutes = new Hono<AppEnv>()
   // ---- CS user admin (V5.7c) -------------------------------------
   // Admin-only roster management. Listing exposes only fields the
   // console renders; password_hash is intentionally never returned.
-  .get("/users", async (c) => {
+  .get("/users", zValidator("query", CsUserListOptionsSchema), async (c) => {
     const denied = await gateCsAdmin(c.var.user.id);
     if (denied) return denied;
-    const rows = await db
+    const options = c.req.valid("query");
+
+    const conditions: SQL[] = [eq(schema.users.userType, "central_services")];
+    if (options.q) {
+      const like = `%${options.q}%`;
+      const search = or(
+        ilike(schema.users.email, like),
+        ilike(schema.users.firstName, like),
+        ilike(schema.users.lastName, like),
+      );
+      if (search) conditions.push(search);
+    }
+    if (options.role) conditions.push(eq(schema.users.centralServicesRole, options.role));
+
+    const sortColumn = (() => {
+      switch (options.sort) {
+        case "role":
+          return schema.users.centralServicesRole;
+        case "lastLoginAt":
+          return schema.users.lastLoginAt;
+        case "createdAt":
+          return schema.users.createdAt;
+        default:
+          return schema.users.email;
+      }
+    })();
+    const order = options.dir === "desc" ? desc(sortColumn) : asc(sortColumn);
+
+    const paginate = options.page !== undefined || options.pageSize !== undefined;
+    const pageSize = options.pageSize ?? 10;
+    const page = options.page ?? 1;
+    const offset = (page - 1) * pageSize;
+    const where = and(...conditions);
+    const dataQuery = db
       .select({
         id: schema.users.id,
         email: schema.users.email,
@@ -118,8 +156,13 @@ export const csRoutes = new Hono<AppEnv>()
         createdAt: schema.users.createdAt,
       })
       .from(schema.users)
-      .where(eq(schema.users.userType, "central_services"))
-      .orderBy(schema.users.email);
+      .where(where)
+      .orderBy(order);
+    const [rows, totalRow] = await Promise.all([
+      paginate ? dataQuery.limit(pageSize).offset(offset) : dataQuery,
+      db.select({ value: count() }).from(schema.users).where(where),
+    ]);
+    c.header("X-Total-Count", String(totalRow[0]?.value ?? 0));
     return c.json(
       rows.map((r) => ({
         id: r.id,

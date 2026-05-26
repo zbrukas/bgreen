@@ -2,7 +2,7 @@ import { validateNif } from "@bgreen/pt-data";
 import { Hono } from "hono";
 import type { AppEnv } from "../../../context.js";
 import { viesClient } from "../../../services.js";
-import { findCaeByCode, searchCae } from "../application/cae.js";
+import { findCaeByCode, listAllCaes, searchCae } from "../application/cae.js";
 import { lookupPostalCode, normalizePostalCode } from "../application/postal-codes.js";
 
 export const lookupsRoutes = new Hono<AppEnv>()
@@ -11,6 +11,10 @@ export const lookupsRoutes = new Hono<AppEnv>()
     const rawLimit = c.req.query("limit");
     const limit = rawLimit ? Number(rawLimit) : 20;
     const results = await searchCae(q, Number.isFinite(limit) ? limit : 20);
+    return c.json(results);
+  })
+  .get("/caes", async (c) => {
+    const results = await listAllCaes();
     return c.json(results);
   })
   .get("/cae/:code", async (c) => {

@@ -42,6 +42,15 @@ export async function searchCae(query: string, limit = 20): Promise<CaeEntry[]> 
   }));
 }
 
+export async function listAllCaes(): Promise<CaeEntry[]> {
+  const rows = await db.select().from(schema.ptCae).orderBy(schema.ptCae.code);
+  return rows.map((row) => ({
+    code: row.code,
+    description: row.description,
+    level: row.level,
+  }));
+}
+
 export async function findCaeByCode(code: string): Promise<CaeEntry | null> {
   const trimmed = code.trim();
   if (trimmed === "") return null;

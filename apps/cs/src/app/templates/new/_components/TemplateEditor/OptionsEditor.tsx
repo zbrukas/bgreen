@@ -49,7 +49,7 @@ export function OptionsEditor({
           />
           <Button
             type="button"
-            kind="ghost"
+            kind="danger--ghost"
             size="sm"
             onClick={() => remove(optIdx)}
             renderIcon={TrashCan}

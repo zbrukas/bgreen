@@ -23,73 +23,64 @@ export function SourceMappingPicker({
     : [];
 
   return (
-    <details className="border-t border-dotted border-neutral-300 pt-3">
-      <summary
-        className={`cursor-pointer text-xs hover:text-neutral-900 ${
-          mapping ? "text-[var(--cds-link-primary)]" : "text-neutral-600"
-        }`}
-      >
-        Pré-preencher de outro modelo {mapping && "(activo)"}
-      </summary>
-      <div className="mt-2 space-y-2">
-        {eligibleTemplates.length === 0 ? (
+    <div className="space-y-2">
+      {eligibleTemplates.length === 0 ? (
+        <p className="text-xs text-neutral-600">
+          Não existem outros modelos disponíveis na organização.
+        </p>
+      ) : (
+        <>
+          <Select
+            id={`${field.uiKey}-source-template`}
+            labelText="Modelo de origem"
+            size="sm"
+            value={mapping?.sourceTemplateId ?? ""}
+            onChange={(e) => {
+              const sourceTemplateId = e.target.value;
+              onPatch({
+                sourceMapping: sourceTemplateId
+                  ? { sourceTemplateId, sourceFieldId: "" }
+                  : null,
+              });
+            }}
+          >
+            <SelectItem value="" text="— sem pré-preenchimento —" />
+            {eligibleTemplates.map((t) => (
+              <SelectItem key={t.id} value={t.id} text={t.name} />
+            ))}
+          </Select>
+          {mapping && selectedTemplate && (
+            <div>
+              <Select
+                id={`${field.uiKey}-source-field`}
+                labelText={`Campo de origem (tipo deve coincidir: ${field.kind})`}
+                size="sm"
+                value={mapping.sourceFieldId}
+                onChange={(e) =>
+                  onPatch({
+                    sourceMapping: { ...mapping, sourceFieldId: e.target.value },
+                  })
+                }
+                invalid={sourceFields.length === 0}
+                invalidText={
+                  sourceFields.length === 0
+                    ? `O modelo "${selectedTemplate.name}" não tem campos do tipo ${field.kind}.`
+                    : undefined
+                }
+              >
+                <SelectItem value="" text="— escolha um campo —" />
+                {sourceFields.map((sf) => (
+                  <SelectItem key={sf.id} value={sf.id} text={`${sf.id} (${sf.label})`} />
+                ))}
+              </Select>
+            </div>
+          )}
           <p className="text-xs text-neutral-600">
-            Não existem outros modelos disponíveis na organização.
+            Ao criar um novo registo, este campo é pré-preenchido com o valor do campo escolhido
+            no registo submetido mais recente do modelo de origem.
           </p>
-        ) : (
-          <>
-            <Select
-              id={`${field.uiKey}-source-template`}
-              labelText="Modelo de origem"
-              size="sm"
-              value={mapping?.sourceTemplateId ?? ""}
-              onChange={(e) => {
-                const sourceTemplateId = e.target.value;
-                onPatch({
-                  sourceMapping: sourceTemplateId
-                    ? { sourceTemplateId, sourceFieldId: "" }
-                    : null,
-                });
-              }}
-            >
-              <SelectItem value="" text="— sem pré-preenchimento —" />
-              {eligibleTemplates.map((t) => (
-                <SelectItem key={t.id} value={t.id} text={t.name} />
-              ))}
-            </Select>
-            {mapping && selectedTemplate && (
-              <div>
-                <Select
-                  id={`${field.uiKey}-source-field`}
-                  labelText={`Campo de origem (tipo deve coincidir: ${field.kind})`}
-                  size="sm"
-                  value={mapping.sourceFieldId}
-                  onChange={(e) =>
-                    onPatch({
-                      sourceMapping: { ...mapping, sourceFieldId: e.target.value },
-                    })
-                  }
-                  invalid={sourceFields.length === 0}
-                  invalidText={
-                    sourceFields.length === 0
-                      ? `O modelo "${selectedTemplate.name}" não tem campos do tipo ${field.kind}.`
-                      : undefined
-                  }
-                >
-                  <SelectItem value="" text="— escolha um campo —" />
-                  {sourceFields.map((sf) => (
-                    <SelectItem key={sf.id} value={sf.id} text={`${sf.id} (${sf.label})`} />
-                  ))}
-                </Select>
-              </div>
-            )}
-            <p className="text-xs text-neutral-600">
-              Ao criar um novo registo, este campo é pré-preenchido com o valor do campo escolhido
-              no registo submetido mais recente do modelo de origem.
-            </p>
-          </>
-        )}
-      </div>
-    </details>
+        </>
+      )}
+    </div>
   );
 }

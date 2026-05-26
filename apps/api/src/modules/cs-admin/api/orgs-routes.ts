@@ -1,4 +1,8 @@
-import { LegalFormSchema, OrganizationSizeSchema } from "@bgreen/types";
+import {
+  CsOrgListOptionsSchema,
+  LegalFormSchema,
+  OrganizationSizeSchema,
+} from "@bgreen/types";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
@@ -42,11 +46,12 @@ const updateOrgInput = z.object({
 });
 
 export const csOrgsRoutes = new Hono<AppEnv>()
-  .get("/orgs", async (c) => {
+  .get("/orgs", zValidator("query", CsOrgListOptionsSchema), async (c) => {
     const denied = await gateCsRead(c.var.user.id);
     if (denied) return denied;
-    const list = await csOrgsService.list();
-    return c.json(list);
+    const { items, total } = await csOrgsService.list(c.req.valid("query"));
+    c.header("X-Total-Count", String(total));
+    return c.json(items);
   })
   .get("/orgs/:id", zValidator("param", orgIdParam), async (c) => {
     const denied = await gateCsRead(c.var.user.id);

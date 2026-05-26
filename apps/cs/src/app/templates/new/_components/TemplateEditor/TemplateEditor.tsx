@@ -7,6 +7,7 @@ import {
   ArrowUp,
   Checkmark,
   TrashCan,
+  View,
 } from "@carbon/icons-react";
 import {
   Button,
@@ -18,9 +19,13 @@ import {
   TextArea,
   TextInput,
 } from "@carbon/react";
-import type { RecordTemplate, Topic } from "@bgreen/types";
+import type { FormSchema, RecordTemplate, Topic } from "@bgreen/types";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import {
+  type PreviewSubTemplate,
+  TemplatePreview,
+} from "../../../_components/TemplatePreview/TemplatePreview";
 import { FieldCard } from "./FieldCard";
 import {
   type EditorField,
@@ -68,6 +73,31 @@ export function TemplateEditor({ availableTemplates, subTemplates, topics }: Tem
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+  const [preview, setPreview] = useState<{
+    schema: FormSchema;
+    subs: PreviewSubTemplate[];
+  } | null>(null);
+
+  function openPreview() {
+    setError(null);
+    if (isSubTemplate && composedIds.length > 0) {
+      setError("Um sub-template não pode compor outros sub-templates.");
+      return;
+    }
+    const built = buildFormSchema(rows);
+    if (!("ok" in built)) {
+      setError(built.message);
+      return;
+    }
+    const subs: PreviewSubTemplate[] = isSubTemplate
+      ? []
+      : composedIds.flatMap((subId) => {
+          const meta = availableTemplates.find((t) => t.id === subId);
+          if (!meta) return [];
+          return [{ id: meta.id, name: meta.name, formSchema: meta.formSchema }];
+        });
+    setPreview({ schema: built.schema, subs });
+  }
 
   function toggleSub(id: string) {
     setComposedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -161,7 +191,7 @@ export function TemplateEditor({ availableTemplates, subTemplates, topics }: Tem
 
   return (
     <form onSubmit={onSubmit}>
-      <Stack gap={6}>
+      <Stack gap={8}>
         <TextInput
           id="tpl-name"
           labelText="Nome"
@@ -275,14 +305,16 @@ export function TemplateEditor({ availableTemplates, subTemplates, topics }: Tem
           </section>
         )}
 
-        <section className="space-y-4">
+        <section className="space-y-5">
           <h2 className="text-lg font-medium">Linhas e campos</h2>
           {rows.map((row, rowIdx) => (
             <fieldset
               key={row.uiKey}
-              className="space-y-3 rounded-lg border border-neutral-200 bg-white p-4"
+              className="space-y-4 rounded-lg border border-neutral-200 bg-white p-5"
             >
-              <legend className="px-2 text-xs text-neutral-600">Linha {rowIdx + 1}</legend>
+              <legend className="px-2 text-xs uppercase tracking-wide text-neutral-600">
+                Linha {rowIdx + 1}
+              </legend>
 
               <TextInput
                 id={`row-label-${row.uiKey}`}
@@ -337,7 +369,7 @@ export function TemplateEditor({ availableTemplates, subTemplates, topics }: Tem
                 {rows.length > 1 && (
                   <Button
                     type="button"
-                    kind="ghost"
+                    kind="danger--ghost"
                     size="sm"
                     onClick={() => setRows((prev) => prev.filter((_, i) => i !== rowIdx))}
                     renderIcon={TrashCan}
@@ -370,10 +402,30 @@ export function TemplateEditor({ availableTemplates, subTemplates, topics }: Tem
           />
         )}
 
-        <Button type="submit" kind="primary" size="lg" disabled={isPending} renderIcon={Checkmark}>
-          {isPending ? "A criar…" : "Criar modelo"}
-        </Button>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            type="button"
+            kind="tertiary"
+            size="lg"
+            onClick={openPreview}
+            renderIcon={View}
+            disabled={isPending}
+          >
+            Pré-visualizar
+          </Button>
+          <Button type="submit" kind="primary" size="lg" disabled={isPending} renderIcon={Checkmark}>
+            {isPending ? "A criar…" : "Criar modelo"}
+          </Button>
+        </div>
       </Stack>
+
+      <TemplatePreview
+        open={preview !== null}
+        onClose={() => setPreview(null)}
+        templateName={name}
+        formSchema={preview?.schema ?? { version: 1, rows: [] }}
+        subTemplates={preview?.subs ?? []}
+      />
     </form>
   );
 }

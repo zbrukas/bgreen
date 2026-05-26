@@ -1,4 +1,4 @@
-import type { WorkflowDefinitionId } from "@bgreen/types";
+import type { RecordTemplateListOptions, WorkflowDefinitionId } from "@bgreen/types";
 import type {
   FormSchema,
   RecordTemplate,
@@ -35,7 +35,9 @@ export interface RecordTemplateRepository {
   // Batched variant — one round-trip for an arbitrary set of ids.
   // Order of returned rows is not guaranteed to match `ids`.
   findByIds(ids: string[]): Promise<RecordTemplate[]>;
-  listAll(): Promise<RecordTemplate[]>;
+  listAll(
+    options?: RecordTemplateListOptions,
+  ): Promise<{ items: RecordTemplate[]; total: number }>;
   update(id: string, patch: UpdateRecordTemplateInput): Promise<RecordTemplate | null>;
   setStatus(id: string, status: RecordTemplateStatus): Promise<RecordTemplate | null>;
 }
@@ -75,14 +77,19 @@ export class RecordTemplateService {
     return { ...tpl, composedSubTemplateIds };
   }
 
-  async list(): Promise<RecordTemplate[]> {
-    const all = await this.repo.listAll();
-    const ids = all.map((t) => t.id);
+  async list(
+    options: RecordTemplateListOptions = {},
+  ): Promise<{ items: RecordTemplate[]; total: number }> {
+    const { items, total } = await this.repo.listAll(options);
+    const ids = items.map((t) => t.id);
     const compositionMap = await this.compositions.listForMains(ids);
-    return all.map((t) => ({
-      ...t,
-      composedSubTemplateIds: compositionMap.get(t.id) ?? [],
-    }));
+    return {
+      items: items.map((t) => ({
+        ...t,
+        composedSubTemplateIds: compositionMap.get(t.id) ?? [],
+      })),
+      total,
+    };
   }
 
   async update(

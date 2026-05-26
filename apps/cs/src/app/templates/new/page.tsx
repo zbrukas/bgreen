@@ -10,7 +10,10 @@ export default async function NewTemplatePage() {
   const me = await fetchMe();
   if (!me) redirect("/login");
 
-  const [templates, topics] = await Promise.all([fetchTemplates(), fetchTopics()]);
+  const [{ items: templates }, { items: topics }] = await Promise.all([
+    fetchTemplates(),
+    fetchTopics(),
+  ]);
   // Source for prefill mappings: any template's fields.
   const available = templates.map((t) => ({
     id: t.id,
@@ -31,7 +34,7 @@ export default async function NewTemplatePage() {
         icon={Add}
         breadcrumbs={[{ label: "Modelos", href: "/templates" }, { label: "Novo" }]}
       />
-      <div className="mx-auto max-w-3xl px-8 py-10">
+      <div className="mx-auto max-w-3xl px-8 py-12">
         <TemplateEditor
           availableTemplates={available}
           subTemplates={subTemplates}

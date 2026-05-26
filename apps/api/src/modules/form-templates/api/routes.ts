@@ -1,4 +1,4 @@
-import { FormSchemaSchema } from "@bgreen/types";
+import { FormSchemaSchema, RecordTemplateListOptionsSchema } from "@bgreen/types";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
@@ -38,9 +38,10 @@ async function requireCsWriter(userId: string): Promise<Response | null> {
 }
 
 export const recordTemplatesRoutes = new Hono<AppEnv>()
-  .get("/", async (c) => {
-    const list = await recordTemplateService.list();
-    return c.json(list);
+  .get("/", zValidator("query", RecordTemplateListOptionsSchema), async (c) => {
+    const { items, total } = await recordTemplateService.list(c.req.valid("query"));
+    c.header("X-Total-Count", String(total));
+    return c.json(items);
   })
   .get("/:id", async (c) => {
     const tpl = await recordTemplateService.get(c.req.param("id"));

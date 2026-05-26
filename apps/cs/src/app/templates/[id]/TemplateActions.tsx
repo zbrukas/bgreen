@@ -2,7 +2,7 @@
 
 import { archiveTemplateAction, publishTemplateAction } from "@/app/actions";
 import { Archive, Send } from "@carbon/icons-react";
-import { Button, ButtonSet } from "@carbon/react";
+import { Button } from "@carbon/react";
 
 interface TemplateActionsProps {
   templateId: string;
@@ -11,7 +11,7 @@ interface TemplateActionsProps {
 
 export function TemplateActions({ templateId, status }: TemplateActionsProps) {
   return (
-    <ButtonSet>
+    <div className="flex items-center gap-2">
       {status !== "archived" && (
         <form action={archiveTemplateAction}>
           <input type="hidden" name="id" value={templateId} />
@@ -28,6 +28,6 @@ export function TemplateActions({ templateId, status }: TemplateActionsProps) {
           </Button>
         </form>
       )}
-    </ButtonSet>
+    </div>
   );
 }

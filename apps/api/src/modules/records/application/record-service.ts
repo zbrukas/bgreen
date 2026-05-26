@@ -476,7 +476,7 @@ export class RecordService {
     const scopeSet = new Set(actorTopicScope);
     let topicSlugById = new Map<string, string>();
     if (scopeSet.size > 0) {
-      const allTopics = await this.topics.list();
+      const { items: allTopics } = await this.topics.list();
       topicSlugById = new Map(allTopics.map((t) => [t.id, t.slug]));
     }
     const inScope = subs.filter((s) => {

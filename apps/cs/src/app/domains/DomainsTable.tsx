@@ -12,6 +12,9 @@ import {
   TableHeader,
   TableRow,
 } from "@carbon/react";
+import { SortHeader } from "../_components/table-filter/SortHeader";
+import { TableFilterToolbar } from "../_components/table-filter/TableFilterToolbar";
+import { TablePagination } from "../_components/table-filter/TablePagination";
 
 interface DomainRow {
   id: string;
@@ -20,43 +23,71 @@ interface DomainRow {
   createdAt: string;
 }
 
-export function DomainsTable({ domains, canEdit }: { domains: DomainRow[]; canEdit: boolean }) {
-  if (domains.length === 0) {
-    return <p className="text-sm text-neutral-600">Sem domínios registados.</p>;
-  }
+interface DomainsTableProps {
+  domains: DomainRow[];
+  canEdit: boolean;
+  totalItems: number;
+  page: number;
+  pageSize: number;
+}
+
+export function DomainsTable({
+  domains,
+  canEdit,
+  totalItems,
+  page,
+  pageSize,
+}: DomainsTableProps) {
   return (
-    <TableContainer title={`Domínios (${domains.length})`}>
+    <TableContainer
+      title={`Domínios (${totalItems})`}
+      className="border border-neutral-200 bg-white"
+    >
+      <TableFilterToolbar searchPlaceholder="Pesquisar por domínio ou nota" />
       <Table>
         <TableHead>
           <TableRow>
-            <TableHeader>Domínio</TableHeader>
+            <SortHeader sortKey="domain">Domínio</SortHeader>
             <TableHeader>Nota</TableHeader>
-            <TableHeader>Adicionado</TableHeader>
+            <SortHeader sortKey="createdAt" defaultDir="desc">
+              Adicionado
+            </SortHeader>
             <TableHeader />
           </TableRow>
         </TableHead>
         <TableBody>
-          {domains.map((d) => (
-            <TableRow key={d.id}>
-              <TableCell style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{d.domain}</TableCell>
-              <TableCell className="text-neutral-600">{d.note ?? "—"}</TableCell>
-              <TableCell className="text-neutral-600">
-                {new Date(d.createdAt).toLocaleString("pt-PT")}
-              </TableCell>
-              <TableCell className="text-right">
-                {canEdit && (
-                  <form action={deleteDomainAction}>
-                    <input type="hidden" name="id" value={d.id} />
-                    <Button type="submit" kind="ghost" size="sm" renderIcon={TrashCan}>
-                      Remover
-                    </Button>
-                  </form>
-                )}
+          {domains.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={4} className="text-center text-sm text-neutral-600">
+                Sem domínios para o filtro actual.
               </TableCell>
             </TableRow>
-          ))}
+          ) : (
+            domains.map((d) => (
+              <TableRow key={d.id}>
+                <TableCell style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+                  {d.domain}
+                </TableCell>
+                <TableCell className="text-neutral-600">{d.note ?? "—"}</TableCell>
+                <TableCell className="text-neutral-600">
+                  {new Date(d.createdAt).toLocaleString("pt-PT")}
+                </TableCell>
+                <TableCell className="text-right">
+                  {canEdit && (
+                    <form action={deleteDomainAction}>
+                      <input type="hidden" name="id" value={d.id} />
+                      <Button type="submit" kind="danger--ghost" size="sm" renderIcon={TrashCan}>
+                        Remover
+                      </Button>
+                    </form>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))
+          )}
         </TableBody>
       </Table>
+      <TablePagination totalItems={totalItems} page={page} pageSize={pageSize} />
     </TableContainer>
   );
 }

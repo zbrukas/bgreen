@@ -11,6 +11,7 @@ import {
   createRecord,
   fetchMyOrganizations,
   findCaeByCode,
+  listAllCaes,
   lookupPostalCode,
   lookupVies,
   searchCae,
@@ -206,6 +207,10 @@ export async function lookupPostalCodeAction(cp: string): Promise<PostalCodeLook
 export async function searchCaeAction(query: string): Promise<CaeEntry[]> {
   if (typeof query !== "string" || query.trim() === "") return [];
   return searchCae(query.trim(), 30);
+}
+
+export async function listAllCaesAction(): Promise<CaeEntry[]> {
+  return listAllCaes();
 }
 
 export async function findCaeByCodeAction(code: string): Promise<CaeEntry | null> {
