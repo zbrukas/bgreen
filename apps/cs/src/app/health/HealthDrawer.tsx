@@ -12,7 +12,8 @@ import {
   Tag,
 } from "@carbon/react";
 import { useEffect, useState } from "react";
-import { type CsHealthDetail, fetchCsHealthDetail } from "@/lib/api-client";
+import type { CsHealthDetail } from "@/lib/api-client";
+import { getHealthDetail } from "./actions";
 
 interface HealthDrawerProps {
   organizationId: string;
@@ -33,7 +34,7 @@ export function HealthDrawer({
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    fetchCsHealthDetail(organizationId).then((d) => {
+    getHealthDetail(organizationId).then((d) => {
       if (cancelled) return;
       setDetail(d);
       setLoading(false);

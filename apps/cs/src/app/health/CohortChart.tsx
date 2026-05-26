@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { type CsCohortActivationResult, fetchCsCohortActivation } from "@/lib/api-client";
+import type { CsCohortActivationResult } from "@/lib/api-client";
+import { getCohortActivation } from "./actions";
 
 function monthOffset(d: Date, offset: number): string {
   const x = new Date(d.getUTCFullYear(), d.getUTCMonth() + offset, 1);
@@ -16,7 +17,7 @@ export function CohortChart() {
     let cancelled = false;
     const now = new Date();
     const months = Array.from({ length: 6 }, (_, i) => monthOffset(now, -5 + i));
-    Promise.all(months.map((m) => fetchCsCohortActivation(m))).then((arr) => {
+    Promise.all(months.map((m) => getCohortActivation(m))).then((arr) => {
       if (cancelled) return;
       const ok = arr.filter((x): x is CsCohortActivationResult => x !== null);
       setResults(ok);
