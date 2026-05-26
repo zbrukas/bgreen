@@ -62,7 +62,7 @@ export default async function InboxPage() {
             title="Nada pendente"
             description="Quando tiver rascunhos ou registos com alterações pedidas, aparecerão aqui."
             primaryAction={{ label: "Ver todos os registos", href: "/records" }}
-            primaryIcon={ArrowRight}
+            primaryIcon={<ArrowRight />}
           />
         ) : (
           <InboxTable rows={rows} />

@@ -66,7 +66,7 @@ export default async function MembersPage({ params }: PageProps) {
               label: "Convidar membro",
               href: `/organizations/${orgId}/invites/new`,
             }}
-            primaryIcon={Add}
+            primaryIcon={<Add />}
           />
         ) : (
           <TableContainer title={`Membros (${members.length})`}>

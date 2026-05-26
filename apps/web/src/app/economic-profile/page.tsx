@@ -34,12 +34,12 @@ export default async function EconomicProfilePage() {
             title="Sem dados económicos ainda"
             description="Carregue o seu IES para desbloquear recomendações e comparações setoriais."
             primaryAction={{ label: "Carregar IES", href: "/economic-profile/ies/new" }}
-            primaryIcon={Upload}
+            primaryIcon={<Upload />}
             secondaryAction={{
               label: "Entrada manual",
               href: "/economic-profile/manual",
             }}
-            secondaryIcon={DocumentBlank}
+            secondaryIcon={<DocumentBlank />}
           />
         ) : (
           <ProfileTable profiles={profiles} />

@@ -110,12 +110,12 @@ export default async function RecordsListPage() {
                   }
                 : undefined
             }
-            primaryIcon={Add}
+            primaryIcon={<Add />}
             secondaryAction={{
               label: "Ver modelos",
               href: "/templates",
             }}
-            secondaryIcon={ArrowRight}
+            secondaryIcon={<ArrowRight />}
           />
         ) : (
           <RecordsListView

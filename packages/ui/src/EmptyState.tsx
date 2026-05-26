@@ -1,7 +1,7 @@
 "use client";
 
-import type { CarbonIconType } from "@carbon/icons-react";
 import { Button, ButtonSet, Tile } from "@carbon/react";
+import type { ReactNode } from "react";
 
 interface EmptyStateAction {
   label: string;
@@ -13,14 +13,16 @@ interface EmptyStateProps {
   title: string;
   description: string;
   primaryAction?: EmptyStateAction;
-  // Icons travel as separate top-level props (not nested inside the action
-  // object) so Next's client-reference machinery recognises the Carbon icon
-  // and can serialise the prop across a server→client component boundary.
-  // Stuffing an icon into a plain object hides the client reference and
-  // produces the runtime "Only plain objects can be passed" error.
-  primaryIcon?: CarbonIconType;
+  // Pre-rendered icon element (`<Add />`), NOT the component reference
+  // (`Add`). Carbon icons are forwardRef objects that aren't Next client
+  // references, so they can't cross a server→client boundary as a prop
+  // value. JSX elements cross cleanly because they're serialised through
+  // React's normal element protocol — but Carbon's `renderIcon` prop
+  // expects a component type, so we render the element inline next to
+  // the label instead.
+  primaryIcon?: ReactNode;
   secondaryAction?: EmptyStateAction;
-  secondaryIcon?: CarbonIconType;
+  secondaryIcon?: ReactNode;
 }
 
 // Inline-SVG illustration kept local: no extra deps, scales cleanly, and
@@ -63,9 +65,11 @@ export function EmptyState({
                 kind="secondary"
                 href={secondaryAction.href}
                 onClick={secondaryAction.onClick}
-                renderIcon={secondaryIcon}
               >
-                {secondaryAction.label}
+                <span className="inline-flex items-center gap-2">
+                  {secondaryIcon}
+                  {secondaryAction.label}
+                </span>
               </Button>
             )}
             {primaryAction && (
@@ -73,9 +77,11 @@ export function EmptyState({
                 kind="primary"
                 href={primaryAction.href}
                 onClick={primaryAction.onClick}
-                renderIcon={primaryIcon}
               >
-                {primaryAction.label}
+                <span className="inline-flex items-center gap-2">
+                  {primaryIcon}
+                  {primaryAction.label}
+                </span>
               </Button>
             )}
           </ButtonSet>
