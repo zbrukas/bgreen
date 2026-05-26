@@ -1,11 +1,14 @@
 import { db, schema } from "@bgreen/db";
 import type {
   CentralServicesRole,
+  LegalForm,
   MembershipRole,
   Organization,
+  OrganizationSize,
   TopicSlug,
 } from "@bgreen/types";
 import { desc, eq } from "drizzle-orm";
+import type { AuditService } from "../../audit/module.js";
 
 // V12.3 follow-up — read-only CS surface listing every organisation
 // and per-org members. CS-admin gated; cross-tenant by design. Drilling
@@ -33,6 +36,24 @@ export interface OrgDetail {
   members: OrgMember[];
 }
 
+// Whitelist of fields CS can edit. `id`, `workosOrganizationId`,
+// `createdAt`, `updatedAt` are intentionally out — identity and audit
+// fields. New editable fields land here as Carbon-form bindings.
+export interface UpdateOrgInput {
+  name?: string;
+  nif?: string | null;
+  caeCode?: string | null;
+  legalForm?: LegalForm | null;
+  selfReportedSize?: OrganizationSize | null;
+  postalCode?: string | null;
+  addressLine?: string | null;
+  freguesia?: string | null;
+  concelho?: string | null;
+  distrito?: string | null;
+  logoUrl?: string | null;
+  brandPrimaryColor?: string | null;
+}
+
 function rowToOrganization(row: typeof schema.organizations.$inferSelect): Organization {
   return {
     id: row.id,
@@ -55,6 +76,8 @@ function rowToOrganization(row: typeof schema.organizations.$inferSelect): Organ
 }
 
 export class CsOrgsService {
+  constructor(private readonly audit?: AuditService) {}
+
   // List every organisation in the system with member counts. No
   // pagination — at <1k orgs this is a single round-trip and reads
   // cleanly. Convert to keyset pagination if growth makes it noisy.
@@ -134,5 +157,87 @@ export class CsOrgsService {
     }));
 
     return { organization: rowToOrganization(orgRow), members };
+  }
+
+  async update(input: {
+    organizationId: string;
+    patch: UpdateOrgInput;
+    actorUserId: string;
+  }): Promise<Organization | null> {
+    const changedKeys = Object.keys(input.patch).filter(
+      (k) => input.patch[k as keyof UpdateOrgInput] !== undefined,
+    );
+    if (changedKeys.length === 0) {
+      // No-op patch — return current row without writing or auditing.
+      const existing = await db
+        .select()
+        .from(schema.organizations)
+        .where(eq(schema.organizations.id, input.organizationId))
+        .limit(1);
+      const row = existing[0];
+      return row ? rowToOrganization(row) : null;
+    }
+    const [row] = await db
+      .update(schema.organizations)
+      .set({
+        ...(input.patch.name !== undefined ? { name: input.patch.name } : {}),
+        ...(input.patch.nif !== undefined ? { nif: input.patch.nif } : {}),
+        ...(input.patch.caeCode !== undefined ? { caeCode: input.patch.caeCode } : {}),
+        ...(input.patch.legalForm !== undefined ? { legalForm: input.patch.legalForm } : {}),
+        ...(input.patch.selfReportedSize !== undefined
+          ? { selfReportedSize: input.patch.selfReportedSize }
+          : {}),
+        ...(input.patch.postalCode !== undefined ? { postalCode: input.patch.postalCode } : {}),
+        ...(input.patch.addressLine !== undefined ? { addressLine: input.patch.addressLine } : {}),
+        ...(input.patch.freguesia !== undefined ? { freguesia: input.patch.freguesia } : {}),
+        ...(input.patch.concelho !== undefined ? { concelho: input.patch.concelho } : {}),
+        ...(input.patch.distrito !== undefined ? { distrito: input.patch.distrito } : {}),
+        ...(input.patch.logoUrl !== undefined ? { logoUrl: input.patch.logoUrl } : {}),
+        ...(input.patch.brandPrimaryColor !== undefined
+          ? { brandPrimaryColor: input.patch.brandPrimaryColor }
+          : {}),
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.organizations.id, input.organizationId))
+      .returning();
+    if (!row) return null;
+    if (this.audit) {
+      await this.audit.record({
+        actorUserId: input.actorUserId,
+        organizationId: input.organizationId,
+        entityKind: "organization",
+        entityId: input.organizationId,
+        action: "organization.cs_edit",
+        payload: { changedKeys },
+      });
+    }
+    return rowToOrganization(row);
+  }
+
+  async delete(input: {
+    organizationId: string;
+    actorUserId: string;
+  }): Promise<{ deleted: boolean }> {
+    // Audit row goes in first so we have a record even if the cascade
+    // wipes the org and its children. organizationId column survives
+    // (audit_log.organization_id has ON DELETE CASCADE — so the audit
+    // row will be deleted too). For now the cascade behaviour is the
+    // truth; if we ever want immutable delete trails, point the FK to
+    // ON DELETE SET NULL and tombstone the org row instead.
+    if (this.audit) {
+      await this.audit.record({
+        actorUserId: input.actorUserId,
+        organizationId: input.organizationId,
+        entityKind: "organization",
+        entityId: input.organizationId,
+        action: "organization.cs_delete",
+        payload: {},
+      });
+    }
+    const removed = await db
+      .delete(schema.organizations)
+      .where(eq(schema.organizations.id, input.organizationId))
+      .returning({ id: schema.organizations.id });
+    return { deleted: removed.length > 0 };
   }
 }

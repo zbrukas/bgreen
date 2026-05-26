@@ -119,7 +119,7 @@ export const requiredTemplateService = new RequiredTemplateService(
 
 export const csHealthService = new CsHealthService();
 
-export const csOrgsService = new CsOrgsService();
+export const csOrgsService = new CsOrgsService(auditService);
 
 export const recordService = new RecordService(
   repositories.records,

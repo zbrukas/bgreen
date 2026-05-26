@@ -1,11 +1,6 @@
 import { PageHeader } from "@bgreen/ui";
 import { Building } from "@carbon/icons-react";
 import {
-  StructuredListBody,
-  StructuredListCell,
-  StructuredListHead,
-  StructuredListRow,
-  StructuredListWrapper,
   Table,
   TableBody,
   TableCell,
@@ -18,6 +13,8 @@ import {
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { fetchCsOrgDetail, fetchMe, type OrgMember } from "@/lib/api-client";
+import { DeleteOrgButton } from "./DeleteOrgButton";
+import { OrgEditor } from "./OrgEditor";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +43,11 @@ export default async function OrgDetailPage({ params }: OrgDetailPageProps) {
   const detail = await fetchCsOrgDetail(id);
   if (!detail) notFound();
 
+  // canCsWrite = admin OR maintainer. Promoter is publish-only and
+  // doesn't get destructive ops on customer data.
+  const canDelete =
+    me.centralServicesRole === "admin" || me.centralServicesRole === "maintainer";
+
   const admins = detail.members.filter((m) => m.role === "org_admin");
 
   return (
@@ -59,44 +61,16 @@ export default async function OrgDetailPage({ params }: OrgDetailPageProps) {
           { label: detail.organization.name },
         ]}
       />
-      <div className="space-y-8 px-8 py-8">
+      <div className="space-y-10 px-8 py-8">
         <section>
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[--cds-text-secondary]">
+          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-[--cds-text-secondary]">
             Detalhes
           </h2>
-          <StructuredListWrapper aria-label="Detalhes da organização">
-            <StructuredListHead>
-              <StructuredListRow head>
-                <StructuredListCell head>Campo</StructuredListCell>
-                <StructuredListCell head>Valor</StructuredListCell>
-              </StructuredListRow>
-            </StructuredListHead>
-            <StructuredListBody>
-              <Row label="ID" value={detail.organization.id} mono />
-              <Row label="NIF" value={detail.organization.nif} mono />
-              <Row label="CAE" value={detail.organization.caeCode} mono />
-              <Row label="Forma legal" value={detail.organization.legalForm} />
-              <Row label="Dimensão (auto)" value={detail.organization.selfReportedSize} />
-              <Row label="Código postal" value={detail.organization.postalCode} />
-              <Row label="Morada" value={detail.organization.addressLine} />
-              <Row label="Freguesia" value={detail.organization.freguesia} />
-              <Row label="Concelho" value={detail.organization.concelho} />
-              <Row label="Distrito" value={detail.organization.distrito} />
-              <Row
-                label="Criada"
-                value={new Date(detail.organization.createdAt).toLocaleString("pt-PT")}
-              />
-              <Row
-                label="WorkOS ID"
-                value={detail.organization.workosOrganizationId}
-                mono
-              />
-            </StructuredListBody>
-          </StructuredListWrapper>
+          <OrgEditor organization={detail.organization} />
         </section>
 
         <section>
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[--cds-text-secondary]">
+          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-[--cds-text-secondary]">
             Membros ({detail.members.length})
           </h2>
           {detail.members.length === 0 ? (
@@ -143,38 +117,29 @@ export default async function OrgDetailPage({ params }: OrgDetailPageProps) {
 
         <section className="border-t border-[--cds-border-subtle] pt-6">
           <Link
-            href={`/health`}
+            href="/health"
             className="text-sm text-[--cds-link-primary] underline"
           >
             Ver saúde de Customer Success para esta organização →
           </Link>
         </section>
+
+        {canDelete && (
+          <section className="border-t border-[--cds-border-subtle] pt-6">
+            <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-[--cds-text-secondary]">
+              Zona perigosa
+            </h2>
+            <p className="mb-4 text-sm text-[--cds-text-secondary]">
+              A eliminação remove em cascata registos, workflows, perfis económicos
+              e relatórios desta organização. Ação irreversível.
+            </p>
+            <DeleteOrgButton
+              organizationId={detail.organization.id}
+              organizationName={detail.organization.name}
+            />
+          </section>
+        )}
       </div>
     </>
-  );
-}
-
-function Row({
-  label,
-  value,
-  mono,
-}: {
-  label: string;
-  value: string | null;
-  mono?: boolean;
-}) {
-  return (
-    <StructuredListRow>
-      <StructuredListCell>{label}</StructuredListCell>
-      <StructuredListCell>
-        {value === null ? (
-          <span className="text-[--cds-text-secondary]">—</span>
-        ) : mono ? (
-          <span className="font-mono text-xs">{value}</span>
-        ) : (
-          value
-        )}
-      </StructuredListCell>
-    </StructuredListRow>
   );
 }

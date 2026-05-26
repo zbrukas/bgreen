@@ -548,3 +548,56 @@ export async function fetchCsOrgDetail(id: string): Promise<OrgDetail | null> {
     return null;
   }
 }
+
+export interface UpdateOrgInput {
+  name?: string;
+  nif?: string | null;
+  caeCode?: string | null;
+  legalForm?: string | null;
+  selfReportedSize?: string | null;
+  postalCode?: string | null;
+  addressLine?: string | null;
+  freguesia?: string | null;
+  concelho?: string | null;
+  distrito?: string | null;
+  logoUrl?: string | null;
+  brandPrimaryColor?: string | null;
+}
+
+export async function updateCsOrg(
+  id: string,
+  patch: UpdateOrgInput,
+): Promise<{ ok: true; org: OrgDetail["organization"] } | { ok: false; error: string }> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return { ok: false, error: "not_signed_in" };
+    const res = await api.cs.orgs[":id"].$patch(
+      { param: { id }, json: patch as Record<string, unknown> },
+      { headers },
+    );
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({}))) as { error?: string };
+      return { ok: false, error: body.error ?? "request_failed" };
+    }
+    return { ok: true, org: (await res.json()) as OrgDetail["organization"] };
+  } catch {
+    return { ok: false, error: "network_error" };
+  }
+}
+
+export async function deleteCsOrg(
+  id: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return { ok: false, error: "not_signed_in" };
+    const res = await api.cs.orgs[":id"].$delete({ param: { id } }, { headers });
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({}))) as { error?: string };
+      return { ok: false, error: body.error ?? "request_failed" };
+    }
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "network_error" };
+  }
+}
