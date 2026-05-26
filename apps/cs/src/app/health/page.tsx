@@ -16,11 +16,11 @@ export default async function HealthPage() {
   return (
     <>
       <PageHeader
-        title="Saúde das organizações"
-        description="Sinal composto de Customer Success — cobertura, engagement, login, ativação e tendência de score."
+        title="Indicadores das organizações"
+        description="KPIs compostos de Customer Success — cobertura, engagement, login, ativação e tendência de score."
         icon={ChartLineSmooth}
       />
-      <div className="space-y-8 px-8 py-8">
+      <div className="mx-auto max-w-7xl space-y-8 px-8 py-10">
         {entries.length === 0 ? (
           <EmptyState
             title="Sem organizações para mostrar"

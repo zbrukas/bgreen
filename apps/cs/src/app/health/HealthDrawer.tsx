@@ -48,7 +48,7 @@ export function HealthDrawer({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Detalhe de saúde"
+      aria-label="Detalhe de indicadores"
       className="fixed inset-y-0 right-0 z-50 flex w-full max-w-2xl flex-col overflow-y-auto border-l border-[--cds-border-subtle] bg-white shadow-xl"
     >
       <div className="flex items-center justify-between border-b border-[--cds-border-subtle] px-6 py-4">
@@ -127,7 +127,7 @@ function SignalsList({ row }: { row: CsHealthRow }) {
     ],
   ];
   return (
-    <StructuredListWrapper aria-label="Sinais de saúde">
+    <StructuredListWrapper aria-label="Indicadores detalhados">
       <StructuredListHead>
         <StructuredListRow head>
           <StructuredListCell head>Sinal</StructuredListCell>

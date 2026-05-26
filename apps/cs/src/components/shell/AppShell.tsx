@@ -60,7 +60,7 @@ const NAV: NavItem[] = [
   },
   {
     href: "/health",
-    label: "Saúde",
+    label: "Indicadores",
     icon: ChartLineSmooth,
     match: (p) => p.startsWith("/health"),
   },

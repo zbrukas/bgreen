@@ -64,7 +64,7 @@ export function HealthTable({ entries, tierLabel, tierTag, onRowClick }: HealthT
         getTableContainerProps,
       }) => (
         <TableContainer {...getTableContainerProps()}>
-          <Table {...getTableProps()} aria-label="Saúde das organizações">
+          <Table {...getTableProps()} aria-label="Indicadores das organizações">
             <TableHead>
               <TableRow>
                 {headers.map((header) => (

@@ -9,6 +9,7 @@ import {
   TableHeader,
   TableRow,
   Tag,
+  Tile,
 } from "@carbon/react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -61,16 +62,16 @@ export default async function OrgDetailPage({ params }: OrgDetailPageProps) {
           { label: detail.organization.name },
         ]}
       />
-      <div className="space-y-10 px-8 py-8">
-        <section>
-          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-[--cds-text-secondary]">
+      <div className="mx-auto max-w-7xl space-y-8 px-8 py-10">
+        <Tile className="!p-6">
+          <h2 className="mb-5 text-sm font-semibold uppercase tracking-wide text-[--cds-text-secondary]">
             Detalhes
           </h2>
           <OrgEditor organization={detail.organization} />
-        </section>
+        </Tile>
 
-        <section>
-          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-[--cds-text-secondary]">
+        <Tile className="!p-6">
+          <h2 className="mb-5 text-sm font-semibold uppercase tracking-wide text-[--cds-text-secondary]">
             Membros ({detail.members.length})
           </h2>
           {detail.members.length === 0 ? (
@@ -78,7 +79,7 @@ export default async function OrgDetailPage({ params }: OrgDetailPageProps) {
               Esta organização ainda não tem membros.
             </p>
           ) : (
-            <TableContainer>
+            <TableContainer className="overflow-hidden rounded border border-[--cds-border-subtle] bg-white">
               <Table aria-label="Membros">
                 <TableHead>
                   <TableRow>
@@ -113,20 +114,20 @@ export default async function OrgDetailPage({ params }: OrgDetailPageProps) {
               </Table>
             </TableContainer>
           )}
-        </section>
+        </Tile>
 
-        <section className="border-t border-[--cds-border-subtle] pt-6">
+        <Tile className="!p-6">
           <Link
             href="/health"
             className="text-sm text-[--cds-link-primary] underline"
           >
-            Ver saúde de Customer Success para esta organização →
+            Ver indicadores de Customer Success para esta organização →
           </Link>
-        </section>
+        </Tile>
 
         {canDelete && (
-          <section className="border-t border-[--cds-border-subtle] pt-6">
-            <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-[--cds-text-secondary]">
+          <Tile className="!p-6 border border-[--cds-support-error]/30">
+            <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-[--cds-text-error]">
               Zona perigosa
             </h2>
             <p className="mb-4 text-sm text-[--cds-text-secondary]">
@@ -137,7 +138,7 @@ export default async function OrgDetailPage({ params }: OrgDetailPageProps) {
               organizationId={detail.organization.id}
               organizationName={detail.organization.name}
             />
-          </section>
+          </Tile>
         )}
       </div>
     </>
