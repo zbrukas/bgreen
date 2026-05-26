@@ -107,15 +107,15 @@ export default async function RecordsListPage() {
                 ? {
                     label: `Submeter ${publishedTemplates[0].name}`,
                     href: `/records/new?template=${publishedTemplates[0].id}`,
-                    icon: Add,
                   }
                 : undefined
             }
+            primaryIcon={Add}
             secondaryAction={{
               label: "Ver modelos",
               href: "/templates",
-              icon: ArrowRight,
             }}
+            secondaryIcon={ArrowRight}
           />
         ) : (
           <RecordsListView

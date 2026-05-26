@@ -7,14 +7,20 @@ interface EmptyStateAction {
   label: string;
   href?: string;
   onClick?: () => void;
-  icon?: CarbonIconType;
 }
 
 interface EmptyStateProps {
   title: string;
   description: string;
   primaryAction?: EmptyStateAction;
+  // Icons travel as separate top-level props (not nested inside the action
+  // object) so Next's client-reference machinery recognises the Carbon icon
+  // and can serialise the prop across a server→client component boundary.
+  // Stuffing an icon into a plain object hides the client reference and
+  // produces the runtime "Only plain objects can be passed" error.
+  primaryIcon?: CarbonIconType;
   secondaryAction?: EmptyStateAction;
+  secondaryIcon?: CarbonIconType;
 }
 
 // Inline-SVG illustration kept local: no extra deps, scales cleanly, and
@@ -34,7 +40,14 @@ function EmptyStateIllustration() {
   );
 }
 
-export function EmptyState({ title, description, primaryAction, secondaryAction }: EmptyStateProps) {
+export function EmptyState({
+  title,
+  description,
+  primaryAction,
+  primaryIcon,
+  secondaryAction,
+  secondaryIcon,
+}: EmptyStateProps) {
   return (
     <Tile>
       <div className="flex flex-col items-center gap-4 py-8 text-center">
@@ -50,7 +63,7 @@ export function EmptyState({ title, description, primaryAction, secondaryAction 
                 kind="secondary"
                 href={secondaryAction.href}
                 onClick={secondaryAction.onClick}
-                renderIcon={secondaryAction.icon}
+                renderIcon={secondaryIcon}
               >
                 {secondaryAction.label}
               </Button>
@@ -60,7 +73,7 @@ export function EmptyState({ title, description, primaryAction, secondaryAction 
                 kind="primary"
                 href={primaryAction.href}
                 onClick={primaryAction.onClick}
-                renderIcon={primaryAction.icon}
+                renderIcon={primaryIcon}
               >
                 {primaryAction.label}
               </Button>

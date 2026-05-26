@@ -50,7 +50,8 @@ export default async function CsTemplatesListPage() {
           <EmptyState
             title="Sem modelos no catálogo"
             description="Crie o primeiro modelo para começar a recolher dados ESG."
-            primaryAction={{ label: "Novo modelo", href: "/templates/new", icon: Add }}
+            primaryAction={{ label: "Novo modelo", href: "/templates/new" }}
+            primaryIcon={Add}
           />
         ) : (
           <TemplatesTable rows={rows} />

@@ -32,7 +32,8 @@ export default async function CsInboxPage() {
           <EmptyState
             title="Sem submissões pendentes"
             description="Quando organizações submeterem registos, aparecerão aqui."
-            primaryAction={{ label: "Ver modelos", href: "/templates", icon: Document }}
+            primaryAction={{ label: "Ver modelos", href: "/templates" }}
+            primaryIcon={Document}
           />
         ) : (
           <InboxTable rows={rows} />

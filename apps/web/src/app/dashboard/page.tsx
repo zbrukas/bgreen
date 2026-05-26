@@ -56,8 +56,10 @@ export default async function DashboardPage() {
           <EmptyState
             title="Comece por aqui"
             description="Submeta um registo ESG ou carregue um IES para começar a ver indicadores e tendências."
-            primaryAction={{ label: "Novo registo", href: "/records/new", icon: Document }}
-            secondaryAction={{ label: "Carregar IES", href: "/economic-profile/ies/new", icon: Upload }}
+            primaryAction={{ label: "Novo registo", href: "/records/new" }}
+            primaryIcon={Document}
+            secondaryAction={{ label: "Carregar IES", href: "/economic-profile/ies/new" }}
+            secondaryIcon={Upload}
           />
         ) : null}
 

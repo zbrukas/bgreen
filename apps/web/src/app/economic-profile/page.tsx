@@ -33,12 +33,13 @@ export default async function EconomicProfilePage() {
           <EmptyState
             title="Sem dados económicos ainda"
             description="Carregue o seu IES para desbloquear recomendações e comparações setoriais."
-            primaryAction={{ label: "Carregar IES", href: "/economic-profile/ies/new", icon: Upload }}
+            primaryAction={{ label: "Carregar IES", href: "/economic-profile/ies/new" }}
+            primaryIcon={Upload}
             secondaryAction={{
               label: "Entrada manual",
               href: "/economic-profile/manual",
-              icon: DocumentBlank,
             }}
+            secondaryIcon={DocumentBlank}
           />
         ) : (
           <ProfileTable profiles={profiles} />
