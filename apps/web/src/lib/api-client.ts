@@ -12,6 +12,7 @@ import type {
 import { withAuth } from "@workos-inc/authkit-nextjs";
 import { hc } from "hono/client";
 import { getActiveOrgId } from "./active-org";
+import { buildAuthHeaders } from "./auth-headers";
 
 const apiBaseUrl = process.env.API_URL ?? "http://localhost:8787";
 
@@ -21,15 +22,17 @@ const apiBaseUrl = process.env.API_URL ?? "http://localhost:8787";
 // write portably from outside the package.
 export const api: ReturnType<typeof hc<AppType>> = hc<AppType>(apiBaseUrl);
 
-async function authedHeaders(): Promise<Record<string, string>> {
+async function authedHeaders(
+  options: { includeActiveOrganization?: boolean } = {},
+): Promise<Record<string, string>> {
   const auth = await withAuth();
   if (!auth.user || !auth.accessToken) return {};
-  const headers: Record<string, string> = {
-    Authorization: `Bearer ${auth.accessToken}`,
-  };
   const orgId = await getActiveOrgId();
-  if (orgId) headers["X-Organization-Id"] = orgId;
-  return headers;
+  return buildAuthHeaders({
+    accessToken: auth.accessToken,
+    activeOrganizationId: orgId,
+    includeActiveOrganization: options.includeActiveOrganization,
+  });
 }
 
 export async function fetchHealth(): Promise<{ status: string; service: string } | null> {
@@ -58,7 +61,11 @@ export async function fetchMe(): Promise<MeResponse | null> {
   try {
     const headers = await authedHeaders();
     if (!headers.Authorization) return null;
-    const res = await api.identity.me.$get(undefined, { headers });
+    let res = await api.identity.me.$get(undefined, { headers });
+    if (res.status === 403 && headers["X-Organization-Id"]) {
+      const fallbackHeaders = await authedHeaders({ includeActiveOrganization: false });
+      res = await api.identity.me.$get(undefined, { headers: fallbackHeaders });
+    }
     if (!res.ok) return null;
     const data = await res.json();
     return {
@@ -85,10 +92,7 @@ export async function postLoginEvent(organizationId: string): Promise<void> {
   try {
     const headers = await authedHeaders();
     if (!headers.Authorization) return;
-    await api.identity["login-event"].$post(
-      { json: { organizationId } },
-      { headers },
-    );
+    await api.identity["login-event"].$post({ json: { organizationId } }, { headers });
   } catch {
     // intentional — see comment above.
   }
@@ -96,7 +100,10 @@ export async function postLoginEvent(organizationId: string): Promise<void> {
 
 export async function fetchMyOrganizations(): Promise<Array<{ id: string; name: string }>> {
   try {
-    const headers = await authedHeaders();
+    // Do not send X-Organization-Id here. The purpose of this endpoint is
+    // to recover the valid org list, including when the active-org cookie
+    // is stale after switching accounts or deleting an org.
+    const headers = await authedHeaders({ includeActiveOrganization: false });
     if (!headers.Authorization) return [];
     const res = await api.organizations.$get(undefined, { headers });
     if (!res.ok) return [];
