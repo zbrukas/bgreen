@@ -327,21 +327,46 @@ export async function addCsUserAction(
   return { error: null };
 }
 
-export async function updateCsUserRoleAction(formData: FormData): Promise<void> {
+// useActionState-shaped state for the role-update and delete forms in
+// UsersTable. The `ok: null` initial value lets the form render with no
+// banner before any submission. Errors are translated to pt-PT here so
+// the table component can render them verbatim.
+export type CsUserActionState =
+  | { ok: null }
+  | { ok: true }
+  | { ok: false; error: string };
+
+export const initialCsUserActionState: CsUserActionState = { ok: null };
+
+export async function updateCsUserRoleAction(
+  _prev: CsUserActionState,
+  formData: FormData,
+): Promise<CsUserActionState> {
   const id = formData.get("id");
   const roleRaw = formData.get("role");
-  if (typeof id !== "string" || id === "") return;
+  if (typeof id !== "string" || id === "") {
+    return { ok: false, error: "ID inválido." };
+  }
   const roleParsed = CentralServicesRoleSchema.safeParse(roleRaw);
-  if (!roleParsed.success) return;
-  await updateCsUserRole({ id, role: roleParsed.data });
+  if (!roleParsed.success) return { ok: false, error: "Papel inválido." };
+  const result = await updateCsUserRole({ id, role: roleParsed.data });
+  if (!result.ok) return { ok: false, error: translateCsUserError(result.error) };
   revalidatePath("/users");
+  return { ok: true };
 }
 
-export async function deleteCsUserAction(formData: FormData): Promise<void> {
+export async function deleteCsUserAction(
+  _prev: CsUserActionState,
+  formData: FormData,
+): Promise<CsUserActionState> {
   const id = formData.get("id");
-  if (typeof id !== "string" || id === "") return;
-  await deleteCsUser(id);
+  if (typeof id !== "string" || id === "") {
+    return { ok: false, error: "ID inválido." };
+  }
+  const result = await deleteCsUser(id);
+  if (!result.ok) return { ok: false, error: translateCsUserError(result.error) };
   revalidatePath("/users");
+  return { ok: true };
 }
 
 // Re-export so the page can narrow when displaying labels.

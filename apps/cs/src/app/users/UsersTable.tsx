@@ -1,6 +1,11 @@
 "use client";
 
-import { deleteCsUserAction, updateCsUserRoleAction } from "@/app/actions";
+import {
+  type CsUserActionState,
+  deleteCsUserAction,
+  initialCsUserActionState,
+  updateCsUserRoleAction,
+} from "@/app/actions";
 import { TrashCan } from "@carbon/icons-react";
 import {
   Button,
@@ -15,6 +20,7 @@ import {
   TableRow,
   Tag,
 } from "@carbon/react";
+import { useActionState } from "react";
 
 const roleLabel: Record<string, string> = {
   admin: "Admin",
@@ -77,24 +83,7 @@ export function UsersTable({
                 </TableCell>
                 <TableCell>
                   {isAdmin ? (
-                    <form action={updateCsUserRoleAction} className="inline-flex items-end gap-2">
-                      <input type="hidden" name="id" value={u.id} />
-                      <Select
-                        id={`role-${u.id}`}
-                        name="role"
-                        labelText=""
-                        hideLabel
-                        size="sm"
-                        defaultValue={u.centralServicesRole ?? "maintainer"}
-                      >
-                        <SelectItem value="admin" text="Admin" />
-                        <SelectItem value="maintainer" text="Maintainer" />
-                        <SelectItem value="promoter" text="Promoter" />
-                      </Select>
-                      <Button type="submit" kind="tertiary" size="sm">
-                        Guardar
-                      </Button>
-                    </form>
+                    <RoleEditor id={u.id} currentRole={u.centralServicesRole ?? "maintainer"} />
                   ) : (
                     <Tag type={roleTag[u.centralServicesRole ?? ""] ?? "cool-gray"}>
                       {roleLabel[u.centralServicesRole ?? ""] ?? u.centralServicesRole ?? "—"}
@@ -112,14 +101,7 @@ export function UsersTable({
                   {u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString("pt-PT") : "—"}
                 </TableCell>
                 <TableCell className="text-right">
-                  {isAdmin && !isSelf && (
-                    <form action={deleteCsUserAction}>
-                      <input type="hidden" name="id" value={u.id} />
-                      <Button type="submit" kind="ghost" size="sm" renderIcon={TrashCan}>
-                        Remover
-                      </Button>
-                    </form>
-                  )}
+                  {isAdmin && !isSelf && <DeleteButton id={u.id} />}
                   {isSelf && <span className="text-xs text-neutral-500">(você)</span>}
                 </TableCell>
               </TableRow>
@@ -128,5 +110,82 @@ export function UsersTable({
         </TableBody>
       </Table>
     </TableContainer>
+  );
+}
+
+// One useActionState instance per row so errors stay local to the form
+// that caused them (last_admin, network_error, etc). Initial state has
+// ok=null so no banner shows before the first submit.
+function RoleEditor({ id, currentRole }: { id: string; currentRole: string }) {
+  const [state, formAction, isPending] = useActionState(
+    updateCsUserRoleAction,
+    initialCsUserActionState,
+  );
+  return (
+    <form action={formAction}>
+      <div className="inline-flex items-end gap-2">
+        <input type="hidden" name="id" value={id} />
+        <Select
+          id={`role-${id}`}
+          name="role"
+          labelText=""
+          hideLabel
+          size="sm"
+          defaultValue={currentRole}
+        >
+          <SelectItem value="admin" text="Admin" />
+          <SelectItem value="maintainer" text="Maintainer" />
+          <SelectItem value="promoter" text="Promoter" />
+        </Select>
+        <Button type="submit" kind="tertiary" size="sm" disabled={isPending}>
+          {isPending ? "A guardar…" : "Guardar"}
+        </Button>
+      </div>
+      <FormFeedback state={state} successCopy="Guardado." />
+    </form>
+  );
+}
+
+function DeleteButton({ id }: { id: string }) {
+  const [state, formAction, isPending] = useActionState(
+    deleteCsUserAction,
+    initialCsUserActionState,
+  );
+  return (
+    <form action={formAction}>
+      <input type="hidden" name="id" value={id} />
+      <Button
+        type="submit"
+        kind="ghost"
+        size="sm"
+        renderIcon={TrashCan}
+        disabled={isPending}
+      >
+        {isPending ? "A remover…" : "Remover"}
+      </Button>
+      <FormFeedback state={state} successCopy="Removido." />
+    </form>
+  );
+}
+
+function FormFeedback({
+  state,
+  successCopy,
+}: {
+  state: CsUserActionState;
+  successCopy: string;
+}) {
+  if (state.ok === null) return null;
+  if (state.ok === false) {
+    return (
+      <p className="mt-1 text-xs text-[var(--cds-text-error)]" role="alert">
+        {state.error}
+      </p>
+    );
+  }
+  return (
+    <p className="mt-1 text-xs text-[var(--cds-support-success)]" role="status">
+      {successCopy}
+    </p>
   );
 }
