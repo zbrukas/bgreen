@@ -327,7 +327,7 @@ function SideNavToggleButton({
       aria-expanded={expanded}
       title={label}
       onClick={onToggle}
-      className="cds--header__action cds--header__menu-trigger cds--header__menu-toggle cds--header__menu-toggle__hidden"
+      className="cds--header__action cds--header__menu-trigger cds--header__menu-toggle"
     >
       {expanded ? <SidePanelClose size={20} /> : <SidePanelOpen size={20} />}
     </button>
