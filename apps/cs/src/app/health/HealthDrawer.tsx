@@ -12,7 +12,7 @@ import {
   Tag,
 } from "@carbon/react";
 import { useEffect, useState } from "react";
-import type { CsHealthDetail } from "@/lib/api-client";
+import type { CsHealthDetail } from "@/lib/cs-health-types";
 import { getHealthDetail } from "./actions";
 
 interface HealthDrawerProps {

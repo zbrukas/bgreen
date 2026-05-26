@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { CsCohortActivationResult } from "@/lib/api-client";
+import type { CsCohortActivationResult } from "@/lib/cs-health-types";
 import { getCohortActivation } from "./actions";
 
 function monthOffset(d: Date, offset: number): string {

@@ -2,8 +2,6 @@ import type { AppType } from "@bgreen/api/rpc";
 import type {
   Record as BgRecord,
   CentralServicesRole,
-  CsHealthRow,
-  CsHealthTier,
   FormSchema,
   RecordTemplate,
   Topic,
@@ -414,36 +412,24 @@ export async function deleteCsUser(
 }
 
 // ---- V12.3 — CS health dashboard ------------------------------------
+// Types live in cs-health-types.ts (pure-types module) so client
+// components can import them without dragging this server-only file
+// (uses next/headers cookies()) into the client bundle. Re-export from
+// here as a convenience for server-side callers that already import
+// from api-client.
+import type {
+  CsCohortActivationResult,
+  CsHealthDetail,
+  CsHealthListEntry,
+  CsHealthListFilter,
+} from "./cs-health-types";
 
-export interface CsHealthListEntry {
-  row: CsHealthRow;
-  healthScore: number;
-  healthTier: CsHealthTier;
-}
-
-export interface CsHealthDetail {
-  row: CsHealthRow;
-  healthScore: number;
-  healthTier: CsHealthTier;
-  snapshots: Array<{ snapshotDate: string; metrics: CsHealthRow }>;
-}
-
-export interface CsCohortActivationResult {
-  cohortMonth: string;
-  totalOrgs: number;
-  activatedIn30d: number;
-  percentActivated: number;
-}
-
-export interface CsHealthListFilter {
-  tier?: CsHealthTier;
-  hasStagnantWork?: boolean;
-  sortBy?:
-    | "tier"
-    | "daysSinceLastLogin"
-    | "stagnantWorkflowsCount"
-    | "oldestStagnantWorkflowDays";
-}
+export type {
+  CsCohortActivationResult,
+  CsHealthDetail,
+  CsHealthListEntry,
+  CsHealthListFilter,
+} from "./cs-health-types";
 
 export async function fetchCsHealth(
   filter: CsHealthListFilter = {},
@@ -492,6 +478,72 @@ export async function fetchCsCohortActivation(
     );
     if (!res.ok) return null;
     return (await res.json()) as CsCohortActivationResult;
+  } catch {
+    return null;
+  }
+}
+
+// ---- V12.3 follow-up — CS orgs CRUD ---------------------------------
+
+export interface OrgListEntry {
+  organization: {
+    id: string;
+    name: string;
+    nif: string | null;
+    caeCode: string | null;
+    selfReportedSize: string | null;
+    createdAt: string;
+    updatedAt: string;
+  };
+  memberCount: number;
+  adminCount: number;
+}
+
+export interface OrgMember {
+  userId: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  role: "org_admin" | "org_user_write" | "org_user_read";
+  topicScope: string[];
+  centralServicesRole: CentralServicesRole | null;
+  createdAt: string;
+}
+
+export interface OrgDetail {
+  organization: OrgListEntry["organization"] & {
+    workosOrganizationId: string | null;
+    legalForm: string | null;
+    postalCode: string | null;
+    addressLine: string | null;
+    freguesia: string | null;
+    concelho: string | null;
+    distrito: string | null;
+    logoUrl: string | null;
+    brandPrimaryColor: string | null;
+  };
+  members: OrgMember[];
+}
+
+export async function fetchCsOrgs(): Promise<OrgListEntry[]> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return [];
+    const res = await api.cs.orgs.$get(undefined, { headers });
+    if (!res.ok) return [];
+    return (await res.json()) as OrgListEntry[];
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchCsOrgDetail(id: string): Promise<OrgDetail | null> {
+  try {
+    const headers = await authedHeaders();
+    if (!headers.Authorization) return null;
+    const res = await api.cs.orgs[":id"].$get({ param: { id } }, { headers });
+    if (!res.ok) return null;
+    return (await res.json()) as OrgDetail;
   } catch {
     return null;
   }

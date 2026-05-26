@@ -12,7 +12,7 @@ import {
   TableRow,
   Tag,
 } from "@carbon/react";
-import type { CsHealthListEntry } from "@/lib/api-client";
+import type { CsHealthListEntry } from "@/lib/cs-health-types";
 
 interface HealthTableProps {
   entries: CsHealthListEntry[];

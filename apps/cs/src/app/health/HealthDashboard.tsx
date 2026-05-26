@@ -3,7 +3,7 @@
 import type { CsHealthTier } from "@bgreen/types";
 import { Tag } from "@carbon/react";
 import { useMemo, useState } from "react";
-import type { CsHealthListEntry } from "@/lib/api-client";
+import type { CsHealthListEntry } from "@/lib/cs-health-types";
 import { CohortChart } from "./CohortChart";
 import { HealthDrawer } from "./HealthDrawer";
 import { HealthFilters, type HealthFilterState } from "./HealthFilters";
