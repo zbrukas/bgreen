@@ -11,6 +11,7 @@ import {
 import { AuditService, DrizzleAuditRepository } from "./modules/audit/module.js";
 import {
   CsHealthService,
+  CsOrgsService,
   DrizzleRequiredTemplateRepository,
   RequiredTemplateService,
 } from "./modules/cs-admin/module.js";
@@ -117,6 +118,8 @@ export const requiredTemplateService = new RequiredTemplateService(
 );
 
 export const csHealthService = new CsHealthService();
+
+export const csOrgsService = new CsOrgsService();
 
 export const recordService = new RecordService(
   repositories.records,

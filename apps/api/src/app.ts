@@ -9,6 +9,7 @@ import {
   createCsSnapshotFunction,
   csAdminRoutes,
   csHealthRoutes,
+  csOrgsRoutes,
 } from "./modules/cs-admin/module.js";
 import { csAuthRoutes } from "./modules/cs-auth/module.js";
 import { csRoutes } from "./modules/cs/api/routes.js";
@@ -101,6 +102,7 @@ const authedRoutes = new Hono<AppEnv>()
   // the more specific /cs/required-templates segment for csAdmin.
   .route("/cs", csAdminRoutes)
   .route("/cs", csHealthRoutes)
+  .route("/cs", csOrgsRoutes)
   .route("/cs", csRoutes);
 
 export const app = new Hono().use("*", logger()).route("/", publicRoutes).route("/", authedRoutes);
