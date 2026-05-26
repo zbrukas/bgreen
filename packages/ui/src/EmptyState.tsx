@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, ButtonSet, Tile } from "@carbon/react";
+import { Button, ButtonSet } from "@carbon/react";
 import type { ReactNode } from "react";
 
 interface EmptyStateAction {
@@ -25,19 +25,19 @@ interface EmptyStateProps {
   secondaryIcon?: ReactNode;
 }
 
-// Inline-SVG illustration kept local: no extra deps, scales cleanly, and
-// reads as a generic "no data" cue across dashboard / inbox / records /
-// profile contexts. Switch per-page if a more specific visual is needed.
+// Bigger, airier inline-SVG illustration. The whole component renders
+// transparent (no Tile/card wrapper) so it sits naturally on the page
+// background instead of looking like a darker grey block.
 function EmptyStateIllustration() {
   return (
-    <svg width={120} height={96} viewBox="0 0 120 96" role="img" aria-label="">
-      <rect x="20" y="16" width="80" height="64" fill="#f4f4f4" stroke="#c6c6c6" />
-      <rect x="28" y="24" width="40" height="6" fill="#c6c6c6" />
-      <rect x="28" y="36" width="64" height="4" fill="#e0e0e0" />
-      <rect x="28" y="44" width="50" height="4" fill="#e0e0e0" />
-      <rect x="28" y="52" width="60" height="4" fill="#e0e0e0" />
-      <circle cx="60" cy="68" r="6" fill="#63b995" opacity="0.25" />
-      <circle cx="60" cy="68" r="3" fill="#63b995" />
+    <svg width={160} height={128} viewBox="0 0 160 128" role="img" aria-label="">
+      <rect x="28" y="20" width="104" height="88" rx="2" fill="#ffffff" stroke="#c6c6c6" />
+      <rect x="40" y="32" width="56" height="6" rx="1" fill="#c6c6c6" />
+      <rect x="40" y="48" width="80" height="4" rx="1" fill="#e0e0e0" />
+      <rect x="40" y="58" width="64" height="4" rx="1" fill="#e0e0e0" />
+      <rect x="40" y="68" width="72" height="4" rx="1" fill="#e0e0e0" />
+      <circle cx="80" cy="92" r="9" fill="#63b995" opacity="0.18" />
+      <circle cx="80" cy="92" r="4" fill="#63b995" />
     </svg>
   );
 }
@@ -51,14 +51,26 @@ export function EmptyState({
   secondaryIcon,
 }: EmptyStateProps) {
   return (
-    <Tile>
-      <div className="flex flex-col items-center gap-4 py-8 text-center">
-        <EmptyStateIllustration />
-        <div className="max-w-md">
-          <h3 style={{ fontSize: "1.25rem", fontWeight: 400, margin: 0 }}>{title}</h3>
-          <p className="mt-1 text-sm text-neutral-700">{description}</p>
-        </div>
-        {(primaryAction || secondaryAction) && (
+    <div className="flex flex-col items-center gap-6 px-6 py-20 text-center">
+      <EmptyStateIllustration />
+      <div className="max-w-md">
+        <h3
+          style={{
+            fontSize: "1.5rem",
+            fontWeight: 400,
+            lineHeight: 1.33,
+            letterSpacing: "0.16px",
+            margin: 0,
+          }}
+        >
+          {title}
+        </h3>
+        <p className="mt-2 text-sm text-neutral-700" style={{ lineHeight: 1.5 }}>
+          {description}
+        </p>
+      </div>
+      {(primaryAction || secondaryAction) && (
+        <div className="mt-2">
           <ButtonSet>
             {secondaryAction && (
               <Button
@@ -85,8 +97,8 @@ export function EmptyState({
               </Button>
             )}
           </ButtonSet>
-        )}
-      </div>
-    </Tile>
+        </div>
+      )}
+    </div>
   );
 }

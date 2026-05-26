@@ -11,8 +11,14 @@ interface PageHeaderProps {
   actions?: ReactNode;
 }
 
-// Shared page chrome used by both apps/web and apps/cs. Sits inside the
-// per-app AppShell main content area.
+// Shared page chrome. Sits inside the per-app AppShell main content area.
+//
+// Layout decisions:
+// - items-center on the outer flex so the actions block vertically centres
+//   against the (taller) title+description block. With items-start the
+//   actions look detached at the very top.
+// - Generous top + bottom padding (pt-10 / pb-8) so the section feels like
+//   a real page header rather than a thin strip glued to the content.
 export function PageHeader({
   title,
   description,
@@ -21,9 +27,9 @@ export function PageHeader({
   actions,
 }: PageHeaderProps) {
   return (
-    <div className="border-b border-neutral-200 px-8 pb-6 pt-8">
+    <div className="border-b border-neutral-200 px-8 pb-8 pt-10">
       {breadcrumbs && breadcrumbs.length > 0 && (
-        <Breadcrumb className="mb-2">
+        <Breadcrumb className="mb-3">
           {breadcrumbs.map((b, i) => {
             const isLast = i === breadcrumbs.length - 1;
             if (b.href && !isLast) {
@@ -41,21 +47,29 @@ export function PageHeader({
           })}
         </Breadcrumb>
       )}
-      <div className="flex items-start justify-between gap-6">
-        <div className="flex items-start gap-3">
+      <div className="flex items-center justify-between gap-6">
+        <div className="flex items-start gap-4">
           {Icon && (
             <div className="mt-1 text-[var(--cds-icon-primary)]">
-              <Icon size={24} />
+              <Icon size={28} />
             </div>
           )}
           <div>
-            <h1 style={{ fontSize: "1.75rem", fontWeight: 400, lineHeight: 1.28, margin: 0 }}>
+            <h1
+              style={{
+                fontSize: "1.75rem",
+                fontWeight: 400,
+                lineHeight: 1.28,
+                letterSpacing: "0.16px",
+                margin: 0,
+              }}
+            >
               {title}
             </h1>
             {description && (
               <p
-                className="mt-1 max-w-2xl text-neutral-700"
-                style={{ fontSize: "0.875rem", lineHeight: 1.43 }}
+                className="mt-2 max-w-2xl text-neutral-700"
+                style={{ fontSize: "0.875rem", lineHeight: 1.5 }}
               >
                 {description}
               </p>
