@@ -13,4 +13,4 @@ Bounded context: HTML+CSS → PDF rendering, isolated for scaling. Receives data
 ## Constraints
 - Only reachable from `apps/api` (internal network or auth header on private route).
 - Stateless — no DB access.
-- Gotenberg lives in compose / a sidecar Fly app; this service is the HTTP shim.
+- Gotenberg lives in compose locally and as a private production service; this service is the HTTP shim.

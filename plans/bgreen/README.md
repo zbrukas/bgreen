@@ -2,22 +2,27 @@
 
 Parent PRD: [`../bgreen-greenfield-rewrite.md`](../bgreen-greenfield-rewrite.md)
 
-Twelve vertical slices. Each independently deployable. Each loadable as a single AI context. Verticals run sequentially — later verticals assume earlier ones live.
+This folder now tracks only plans that still need an acceptance audit or closeout. Completed verticals live under [`../archived/bgreen/`](../archived/bgreen/).
 
 | # | Plan | Theme | Status |
 |---|---|---|---|
-| 1 | [01-foundation.md](01-foundation.md) | Repo scaffold, CI, deploy targets, dev loop | Not started |
-| 2 | [02-identity-organizations.md](02-identity-organizations.md) | WorkOS AuthKit, multi-tenancy | Not started |
-| 3 | [03-pt-data-onboarding.md](03-pt-data-onboarding.md) | NIF, VIES, CAE seeds, signup wizard | Not started |
-| 4 | [04-form-templates-records.md](04-form-templates-records.md) | RecordTemplate / FormSchema + Records submission | Not started |
-| 5 | [05-workflows-audit-fga.md](05-workflows-audit-fga.md) | XState workflows, AuditLog, ~~WorkOS FGA~~ row-based authz | Shipped (FGA reversed in V5.8) |
-| 6 | [06-ai-foundation-ies.md](06-ai-foundation-ies.md) | AnthropicAiClient, Inngest, S3, IES extraction | Not started |
-| 7 | [07-economic-profile-benchmarks.md](07-economic-profile-benchmarks.md) | EconomicProfile, sector benchmarks, size classification | Not started |
-| 8 | [08-scoring-dashboards.md](08-scoring-dashboards.md) | ESG scoring engine + record scores + dashboard | Not started |
-| 9 | [09-recommendations.md](09-recommendations.md) | AI recommendations with feedback loop | Shipped |
-| 10 | [10-framework-coverage.md](10-framework-coverage.md) | ESRS / GHG / GRI gap analysis | Shipped |
-| 11 | [11-pdf-reports.md](11-pdf-reports.md) | apps/pdf, Gotenberg, AI commentary, S3 archive | Shipped |
-| 12 | [12-customer-success-telemetry.md](12-customer-success-telemetry.md) | Internal CS KPIs: required-template coverage, health-score view, workflow stagnation, daily snapshots | Shipped |
+| 1 | [01-foundation.md](01-foundation.md) | Repo scaffold, CI, proprietary-server deploy target, dev loop | Needs closeout |
+| 2 | [02-identity-organizations.md](02-identity-organizations.md) | WorkOS AuthKit, multi-tenancy | Needs acceptance audit |
+| 3 | [03-pt-data-onboarding.md](03-pt-data-onboarding.md) | NIF, VIES, CAE seeds, signup wizard | Needs acceptance audit |
+| 4 | [04-form-templates-records.md](04-form-templates-records.md) | RecordTemplate / FormSchema + Records submission | Needs acceptance audit |
+
+## Archived Verticals
+
+| # | Plan | Theme | Status |
+|---|---|---|---|
+| 5 | [../archived/bgreen/05-workflows-audit-fga.md](../archived/bgreen/05-workflows-audit-fga.md) | XState workflows, AuditLog, row-based authz after WorkOS FGA reversal | Shipped / archived |
+| 6 | [../archived/bgreen/06-ai-foundation-ies.md](../archived/bgreen/06-ai-foundation-ies.md) | AnthropicAiClient, Inngest, S3, IES extraction | Shipped / archived |
+| 7 | [../archived/bgreen/07-economic-profile-benchmarks.md](../archived/bgreen/07-economic-profile-benchmarks.md) | EconomicProfile, sector benchmarks, size classification | Shipped / archived |
+| 8 | [../archived/bgreen/08-scoring-dashboards.md](../archived/bgreen/08-scoring-dashboards.md) | ESG scoring engine + record scores + dashboard | Shipped / archived |
+| 9 | [../archived/bgreen/09-recommendations.md](../archived/bgreen/09-recommendations.md) | AI recommendations with feedback loop | Shipped / archived |
+| 10 | [../archived/bgreen/10-framework-coverage.md](../archived/bgreen/10-framework-coverage.md) | ESRS / GHG / GRI gap analysis | Shipped / archived |
+| 11 | [../archived/bgreen/11-pdf-reports.md](../archived/bgreen/11-pdf-reports.md) | apps/pdf, Gotenberg, AI commentary, S3 archive | Shipped / archived |
+| 12 | [../archived/bgreen/12-customer-success-telemetry.md](../archived/bgreen/12-customer-success-telemetry.md) | Internal CS KPIs and health snapshots | Complete / archived |
 
 ## Conventions per plan
 
@@ -29,6 +34,6 @@ Twelve vertical slices. Each independently deployable. Each loadable as a single
 
 ## How to use
 
-Open one plan at a time. Load it (and the parent PRD if you need a constraint refresher) into AI context. Ship the vertical. Tick acceptance criteria. Move to the next.
+Open one active plan at a time. Load it and the parent PRD if you need a constraint refresher. For V1-V4, treat the next task as an acceptance audit: verify the current code, update checkboxes, and archive each plan only after the evidence is written down.
 
 Do not let later verticals' concerns bleed into earlier ones — that is exactly the trap the bg1 codebase fell into.

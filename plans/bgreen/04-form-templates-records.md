@@ -38,7 +38,7 @@ Org admins can define `RecordTemplate`s (e.g., "Monthly Energy Consumption") wit
 
 - XState-driven workflows → V5 (replaces the flat status field).
 - AuditLog → V5.
-- FGA — review action gated by simple role check (`admin`) for now; FGA in V5.
+- Relationship-based FGA — review action is gated by role checks. V5 later kept row-based authorization.
 - Real-time collaboration on the template editor → not in v1.
 - Aggregator semantics beyond table existence → deferred.
 - `S3Uploader` as a properly typed deep module → V6.
@@ -71,4 +71,4 @@ End of vertical: org admin creates "Monthly Energy Consumption" template → pub
 
 ## Notes for the next vertical (V5)
 
-V5 replaces the flat `record.status` field with XState-driven workflows, adds the AuditLog, and turns on WorkOS FGA. Records should be the first entity wired into both — keep the status field but plan to migrate it to `WorkflowInstance.current_state`.
+V5 replaces the flat `record.status` field with XState-driven workflows, adds the AuditLog, and formalizes row-based authorization. Records should be the first entity wired into both — keep the status field but plan to migrate it to `WorkflowInstance.current_state`.

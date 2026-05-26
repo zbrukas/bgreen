@@ -73,7 +73,7 @@ export function buildPostHogTelemetry(): PostHogTelemetry {
     host: process.env.POSTHOG_HOST,
   });
   // Best-effort flush on graceful shutdown. We register on SIGTERM
-  // (Fly + Vercel + Docker send this) and SIGINT (Ctrl-C in dev).
+  // (process supervisors + Docker send this) and SIGINT (Ctrl-C in dev).
   const onExit = (): void => {
     void telemetry.shutdown();
   };

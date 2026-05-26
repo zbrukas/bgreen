@@ -46,7 +46,7 @@ Workflows are modeled via **XState** state-machine graphs, defined in TypeScript
 
 AI is **Claude Sonnet 4.x via the official `@anthropic-ai/sdk`**, with strict tool-use JSON contracts. The features specified in PRD #19 (IES PDF extraction, sector benchmarks, recommendations with feedback loop) are ported to TypeScript in this rewrite — same product behavior, new implementation surface.
 
-Authentication is **WorkOS AuthKit** (replaces Auth0); fine-grained authorization is **WorkOS FGA**; audit logging stays in-house in a Postgres `audit_log` table for regulatory paper-trail integrity.
+Authentication is **WorkOS AuthKit** (replaces Auth0). Authorization is row-based in Postgres (`organization_memberships` and central-services roles) after the WorkOS FGA reversal captured in the archived V5 plan. Audit logging stays in-house in a Postgres `audit_log` table for regulatory paper-trail integrity.
 
 From the developer's perspective:
 - "I open a feature folder, the whole vertical slice is right there: schema, route, service, test. No grep across packages."
@@ -70,7 +70,7 @@ From the user's perspective (carried over from PRD #19):
 5. As a developer, I want `drizzle-kit generate` to produce reviewable SQL migrations, so I never commit a migration I haven't read.
 6. As a developer, I want a `CLAUDE.md` per module describing its bounded context, so an AI agent loads only the relevant brief.
 7. As a developer, I want a single `Justfile` (or `package.json` scripts) with the same command names on macOS and Windows, so cross-platform parity isn't a config exercise.
-8. As a developer, I want Vercel preview deploys per PR for `apps/web` and Fly preview machines for `apps/api`, so reviewers click a link instead of running locally.
+8. As a developer, I want a documented proprietary-server deployment path with a staging URL, so reviewers can test without relying on Vercel/Fly preview infrastructure.
 9. As a developer, I want Inngest's local dev server bundled into `pnpm dev`, so I can step through job pipelines without deploying.
 10. As a developer, I want to swap Anthropic-direct for Bedrock EU later by changing one env var and one adapter file, so the GDPR posture is reversible.
 
@@ -79,7 +79,7 @@ From the user's perspective (carried over from PRD #19):
 11. As a new user, I want to sign in via WorkOS AuthKit (social + email magic link), so I don't manage a password.
 12. As an organization admin, I want to invite colleagues to my organization and assign them roles, so my team can collaborate on ESG data entry.
 13. As a user belonging to multiple organizations, I want to switch organizations from the header, so my session context is unambiguous.
-14. As a user, I want my role-based and FGA-based permissions to determine what UI I see and what actions I can perform, so the system prevents me from acting outside my scope.
+14. As a user, I want my role-based permissions to determine what UI I see and what actions I can perform, so the system prevents me from acting outside my scope.
 15. As a regulator-facing operator, I want every authenticated action persisted to an in-house Postgres `audit_log` (not the auth vendor's log), so regulatory paper trail integrity doesn't depend on an external service.
 
 ### Organization onboarding (ports Phase 3)
@@ -212,7 +212,7 @@ From the user's perspective (carried over from PRD #19):
 | PDF service | Gotenberg (Docker image) + thin Hono wrapper to compose HTML and call Gotenberg |
 | Database | Postgres 16 + Drizzle ORM |
 | Auth | WorkOS AuthKit (replaces Auth0) |
-| Fine-grained authorization | WorkOS FGA (relationship-based, Zanzibar-style) |
+| Authorization | Row-based checks in Postgres (`organization_memberships`, central-services role columns) |
 | Audit log | In-house Postgres `audit_log` table (NOT WorkOS) |
 | AI client | `@anthropic-ai/sdk` direct (Claude Sonnet 4.x) |
 | AI transport | Anthropic direct + signed DPA (Bedrock EU reserved for first enterprise ask) |
@@ -222,8 +222,8 @@ From the user's perspective (carried over from PRD #19):
 | Email | SMTP via nodemailer + ETA templates (any SMTP relay: SES, Mailgun, Postmark, …) |
 | Observability | PostHog (errors + logs + product analytics, single vendor) |
 | Workflows | XState (state-machine graphs in TS, current state persisted as JSONB) |
-| Hosting | Vercel (web) + Fly.io EU (api + pdf) + Neon Postgres EU |
-| Local orchestration | Docker Compose for Gotenberg + Postgres; `pnpm dev` for app processes |
+| Hosting | Proprietary server for web/cs/api/pdf; managed or self-hosted Postgres selected per environment |
+| Local orchestration | Docker Compose for Gotenberg + Postgres + MinIO + Mailpit; `pnpm dev` for app processes + Inngest dev |
 | Tests | Vitest unit-only in v1 (Playwright E2E deferred) |
 | Lint/format | Biome (single tool replaces ESLint + Prettier) |
 | Cross-platform | `.gitattributes` + `.editorconfig` enforce LF defaults; scripts mirrored in bash and PowerShell where needed |
@@ -285,7 +285,7 @@ These are the modules where TDD pays off and tests are non-negotiable:
 
 ### AI plumbing
 
-- All AI calls originate from `apps/api`. API key server-side only, set via Fly secrets.
+- All AI calls originate from `apps/api`. API key server-side only, set via the proprietary server's runtime secret mechanism.
 - `AnthropicAiClient` wraps the SDK with: prompt caching for system + tool definitions, retry with backoff, per-tool input/output types, and a pt-PT system-prompt prefix.
 - Tool definitions: `classifyDocument`, `extractEconomicProfile`, `classifyOrganizationSize`, `generateRecommendations`, `generateReportCommentary`, `checkFrameworkCoverage`. Each defined once via zod + registered via `AnthropicAiClient.registerTool(...)`.
 - Long-running flows (IES extraction = 15–30s) run inside Inngest step functions: classify → extract → validate → persist → notify. Each step independently retryable.
@@ -300,7 +300,7 @@ These are the modules where TDD pays off and tests are non-negotiable:
 ### Permissions
 
 - WorkOS AuthKit handles login + session. JWT validated by Hono middleware on every API request.
-- WorkOS FGA stores relationships: `user:alice belongs_to organization:acme as reviewer`. Authorization checks query FGA: "can user:alice review record:42?" Cached per request.
+- Authorization checks read local rows: organization users are gated by `organization_memberships.role`; central-services staff are gated by `users.user_type` and `users.central_services_role`.
 - Org-scope enforced via Drizzle query helper on every aggregate query.
 - No field-level write permissions in v1 (overkill; revisit only if a specific customer ask).
 
@@ -386,11 +386,11 @@ Explicitly **not** in v1 of `bgreen`:
 
 v1 ships in vertical-slice phases. Each phase ends with a working deploy:
 
-1. **Foundation** — repo scaffold (Turborepo + pnpm + Biome + tsconfig), `apps/web` + `apps/api` skeleton, Drizzle schema baseline, Vercel + Fly + Neon wired up, CI green.
+1. **Foundation** — repo scaffold (Turborepo + pnpm + Biome + tsconfig), `apps/web` + `apps/cs` + `apps/api` + `apps/pdf` skeleton, Drizzle schema baseline, proprietary-server deployment documented, CI green.
 2. **Identity + Organizations** — WorkOS AuthKit integrated, sign-in working, `Organization` + `OrganizationMembership` aggregates, org switcher.
 3. **PT reference data + onboarding** — `packages/pt-data` seeds, NIF validator, VIES client, CAE picker, signup wizard (Phase 3 port).
 4. **Deep modules + FormTemplates** — `FormSchemaInterpreter`, `WorkflowEngine`, basic template editor, Records submission, default workflow shape.
-5. **Audit + FGA** — `AuditLog` writes on entity changes, WorkOS FGA relationships seeded, authorization middleware live.
+5. **Audit + authorization** — `AuditLog` writes on entity changes, row-based authorization helpers live.
 6. **AI groundwork** — `AnthropicAiClient`, Inngest setup, S3 upload pipeline, `IesExtractionService` end-to-end (per PRD #19).
 7. **EconomicProfile + SectorBenchmark** — schemas, IES extraction UI, size classification flow (per PRD #19).
 8. **Scoring + dashboards** — FormSchema gains scoring metadata (per-option scores, field weights, template-level buckets), `ScoringEngine` computes per-record score on submit, `/dashboard` surfaces trend + tier + peer-rank. Feeds V9 and V11.
@@ -402,7 +402,7 @@ Each phase independently deployable. Phases 1–5 are infrastructure; phases 6�
 
 ### Hard blockers (carried from PRD #19, still apply)
 
-1. **Anthropic API account + production key**, est. €100–€500/month at low dev volume. Server-side via Fly secret.
+1. **Anthropic API account + production key**, est. €100–€500/month at low dev volume. Server-side via runtime secret.
 2. **Anthropic DPA signed** (PRD #19 hard blocker, still applies).
 3. **Privacy policy + click-through consent** drafted by legal/PM in pt-PT.
 
@@ -446,7 +446,7 @@ Each phase independently deployable. Phases 1–5 are infrastructure; phases 6�
 
 The biggest v1 risks:
 - **IES extraction accuracy** on real-world contabilista-generated PDFs (carried from PRD #19). Mitigated by doc-classification pre-check, deterministic cross-validation, per-field confidence UI, and manual-entry fallback. An eval suite is the v1.5 insurance policy.
-- **WorkOS FGA learning curve.** Relationship-based authorization is unfamiliar to most TS developers. Mitigated by keeping the FGA model narrow in v1 (org-scope + role only; no nested relationships) and growing only on customer demand.
+- **Authorization growth.** Row-based checks are intentionally simple. If customers require delegation or relationship traversal beyond role-on-org / role-on-CS, introduce a `PermissionService` port and evaluate a self-hosted FGA-style service.
 - **Three-service operational overhead** (web + api + pdf). Mitigated by Inngest absorbing async coordination, Gotenberg being a stateless Docker container, and each service having an independently runnable `pnpm dev` mode.
 
 ### Decision provenance

@@ -4,7 +4,8 @@ ESG data collection, AI-powered recommendations, and regulator-ready PDFs for Po
 
 Planning lives here:
 - **Master PRD:** [`plans/bgreen-greenfield-rewrite.md`](plans/bgreen-greenfield-rewrite.md)
-- **Vertical plans (V1–V10):** [`plans/bgreen/`](plans/bgreen/)
+- **Active vertical plans:** [`plans/bgreen/`](plans/bgreen/)
+- **Archived verticals:** [`plans/archived/bgreen/`](plans/archived/bgreen/)
 
 ## Stack
 
@@ -12,7 +13,7 @@ Planning lives here:
 - Next.js 15 (App Router) for `apps/web`
 - Hono on Node 22 for `apps/api` and `apps/pdf`
 - Postgres 16 + Drizzle ORM
-- WorkOS AuthKit + FGA *(from V2)*
+- WorkOS AuthKit with row-based authorization
 - Claude Sonnet 4.x via `@anthropic-ai/sdk` *(from V6)*
 - Inngest for background jobs
 - Gotenberg for PDF rendering *(from V10)*
@@ -24,7 +25,7 @@ Planning lives here:
 
 - Node.js 22 LTS (see `.nvmrc`)
 - pnpm 9.15+ (`corepack enable && corepack prepare pnpm@9.15.4 --activate`)
-- Docker Desktop (for local Postgres + Gotenberg)
+- Docker Desktop (for local Postgres, MinIO, Mailpit, and Gotenberg)
 
 ## Local development
 
@@ -32,7 +33,7 @@ Planning lives here:
 # 1. Install dependencies
 pnpm install
 
-# 2. Bring up Postgres + Gotenberg
+# 2. Bring up Postgres + MinIO + Mailpit + Gotenberg
 docker compose up -d
 
 # 3. Apply migrations to local Postgres
@@ -56,6 +57,8 @@ Services:
 | Command | What it does |
 |---|---|
 | `pnpm dev` | Run all apps + Inngest dev server |
+| `pnpm dev:apps` | Run only the local app processes |
+| `pnpm dev:inngest` | Run only the Inngest dev server |
 | `pnpm build` | Build all apps + packages |
 | `pnpm typecheck` | TypeScript checks across the monorepo |
 | `pnpm test` | Vitest unit tests |
@@ -75,7 +78,7 @@ packages/
   db/          Drizzle schema + migrations
   types/       Shared zod schemas
   ai/          AnthropicAiClient + tool registry
-  auth/        WorkOS helpers + FGA wrapper
+  auth/        WorkOS helpers + JWT verification
   pt-data/     PT reference data (CAE, freguesias, …)
   form-engine/ FormSchemaInterpreter
   emails/      ETA templates + nodemailer transport
@@ -85,4 +88,4 @@ Each app and package carries its own `CLAUDE.md` describing its bounded context.
 
 ## Status
 
-V1 (Foundation) — local scaffold. CI, Vercel, Fly, Neon, WorkOS not yet provisioned. See vertical plans for what comes next.
+V1 (Foundation) — local scaffold mostly exists. WorkOS is provisioned. Hosting has shifted to a proprietary server, so Vercel/Fly/Neon preview work is obsolete. Remaining foundation closeout: CI, Biome cleanup, proprietary deployment docs/secrets, and production Inngest configuration.

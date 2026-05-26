@@ -1,4 +1,4 @@
-# packages/auth — WorkOS helpers + FGA wrapper
+# packages/auth — WorkOS helpers + JWT verification
 
 Bounded context: identity (V2) + fine-grained authorization (V5).
 
@@ -7,7 +7,7 @@ Bounded context: identity (V2) + fine-grained authorization (V5).
 - JWT verification middleware for Hono.
 
 ## Owns (from V5 onward)
-- `can(actor, action, resource)` helper backed by WorkOS FGA.
+- Authorization checks live in `apps/api/src/auth-helpers.ts` and read local DB rows. Do not add WorkOS FGA back here.
 - Per-request cache.
 
 ## Does NOT own

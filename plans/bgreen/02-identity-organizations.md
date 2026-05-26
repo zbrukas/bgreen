@@ -33,11 +33,11 @@ Real users can sign in via WorkOS AuthKit. Once signed in, they belong to one or
 - User / Organization / OrganizationMembership aggregates.
 - Tenant scope enforcement in Drizzle.
 - Org switcher UI.
-- Basic role enum (`admin`, `member`) — FGA comes later in V5.
+- Basic role enum (`admin`, `member`). WorkOS FGA was later reversed; row-based authorization remains the current path.
 
 ## Out of scope
 
-- WorkOS FGA fine-grained relationships → V5.
+- Fine-grained relationship authorization → out of current scope; V5 shipped row-based authorization instead.
 - AuditLog → V5.
 - NIF / CAE / VIES → V3.
 - Field-level write permissions → not in v1 at all.
@@ -63,7 +63,7 @@ Real users can sign in via WorkOS AuthKit. Once signed in, they belong to one or
 
 ## Deployable artifact
 
-End of vertical: visit Vercel preview URL → sign in via WorkOS → create an organization → invite a teammate → switch between orgs in the header. Database has populated `users`, `organizations`, `organization_memberships`. All API calls require and respect auth.
+End of vertical: visit the deployed/staging URL → sign in via WorkOS → create an organization → invite a teammate → switch between orgs in the header. Database has populated `users`, `organizations`, `organization_memberships`. All API calls require and respect auth.
 
 ## Notes for the next vertical (V3)
 

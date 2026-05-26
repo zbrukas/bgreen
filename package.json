@@ -6,7 +6,8 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "pnpm -r --parallel --filter \"./apps/*\" dev",
+    "dev": "concurrently -n apps,inngest -c blue,magenta \"pnpm dev:apps\" \"pnpm dev:inngest\"",
+    "dev:apps": "pnpm -r --parallel --filter \"./apps/*\" dev",
     "dev:inngest": "inngest-cli dev -u http://localhost:8787/api/inngest",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
