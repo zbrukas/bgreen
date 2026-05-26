@@ -309,9 +309,10 @@ function SideNavLinkClient({
 
 // Replaces Carbon's HeaderMenuButton (which swaps Menu ≡ ↔ Close X)
 // with side-panel iconography that conveys "this docked rail collapses
-// sideways" instead of "this dismisses". Uses the same
-// .cds--header__action / .cds--header__menu-trigger classes so it sits
-// in the header chrome identically.
+// sideways" instead of "this dismisses". HeaderGlobalAction is the
+// Carbon-blessed icon-only header button (same component the avatar /
+// org-switcher use on the right side); placing it on the left works
+// because Carbon's header layout is just sequential children.
 function SideNavToggleButton({
   expanded,
   onToggle,
@@ -321,16 +322,14 @@ function SideNavToggleButton({
 }) {
   const label = expanded ? "Fechar navegação" : "Abrir navegação";
   return (
-    <button
-      type="button"
+    <HeaderGlobalAction
       aria-label={label}
-      aria-expanded={expanded}
-      title={label}
+      tooltipAlignment="start"
+      isActive={expanded}
       onClick={onToggle}
-      className="cds--header__action cds--header__menu-trigger cds--header__menu-toggle"
     >
       {expanded ? <SidePanelClose size={20} /> : <SidePanelOpen size={20} />}
-    </button>
+    </HeaderGlobalAction>
   );
 }
 
