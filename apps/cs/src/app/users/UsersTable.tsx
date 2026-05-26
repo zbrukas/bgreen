@@ -1,11 +1,7 @@
 "use client";
 
-import {
-  type CsUserActionState,
-  deleteCsUserAction,
-  initialCsUserActionState,
-  updateCsUserRoleAction,
-} from "@/app/actions";
+import { deleteCsUserAction, updateCsUserRoleAction } from "@/app/actions";
+import { type CsUserActionState, initialCsUserActionState } from "./users-action-state";
 import { TrashCan } from "@carbon/icons-react";
 import {
   Button,

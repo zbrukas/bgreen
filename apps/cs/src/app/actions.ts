@@ -327,16 +327,12 @@ export async function addCsUserAction(
   return { error: null };
 }
 
-// useActionState-shaped state for the role-update and delete forms in
-// UsersTable. The `ok: null` initial value lets the form render with no
-// banner before any submission. Errors are translated to pt-PT here so
-// the table component can render them verbatim.
-export type CsUserActionState =
-  | { ok: null }
-  | { ok: true }
-  | { ok: false; error: string };
-
-export const initialCsUserActionState: CsUserActionState = { ok: null };
+// CsUserActionState + initialCsUserActionState live in
+// users/users-action-state.ts. A "use server" file can only export
+// async functions, so const exports here would trip Next's
+// invalid-use-server-value check. Type-only imports are erased and
+// therefore safe.
+import type { CsUserActionState } from "./users/users-action-state";
 
 export async function updateCsUserRoleAction(
   _prev: CsUserActionState,
