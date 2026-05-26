@@ -20,7 +20,7 @@ export default async function HealthPage() {
         description="Sinal composto de Customer Success — cobertura, engagement, login, ativação e tendência de score."
         icon={ChartLineSmooth}
       />
-      <div className="space-y-6 px-8 py-6">
+      <div className="space-y-8 px-8 py-8">
         {entries.length === 0 ? (
           <EmptyState
             title="Sem organizações para mostrar"

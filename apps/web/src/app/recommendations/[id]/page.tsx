@@ -31,7 +31,7 @@ export default async function RecommendationsRunPage({
           { label: id.slice(0, 8) },
         ]}
       />
-      <div className="mx-auto max-w-3xl px-8 py-6">
+      <div className="mx-auto max-w-3xl px-8 py-10">
         <RecommendationsRunView generationId={id} currentUserId={me.id} />
       </div>
     </>

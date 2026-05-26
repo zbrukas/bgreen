@@ -52,7 +52,7 @@ export default async function MappingsPage() {
           { label: "Mapeamentos" },
         ]}
       />
-      <div className="space-y-6 px-8 py-6">
+      <div className="space-y-8 px-8 py-8">
         {!isCs ? (
           <InlineNotification
             kind="warning"

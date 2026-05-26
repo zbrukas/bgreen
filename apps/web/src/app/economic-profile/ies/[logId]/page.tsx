@@ -30,7 +30,7 @@ export default async function IesExtractionPage({
           { label: "Extração" },
         ]}
       />
-      <div className="mx-auto max-w-3xl px-8 py-6">
+      <div className="mx-auto max-w-3xl px-8 py-10">
         <ExtractionStatusView logId={logId} />
       </div>
     </>

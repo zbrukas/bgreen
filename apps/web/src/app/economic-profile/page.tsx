@@ -28,7 +28,7 @@ export default async function EconomicProfilePage() {
         icon={Building}
         actions={<ProfileActions />}
       />
-      <div className="space-y-6 px-8 py-6">
+      <div className="space-y-8 px-8 py-8">
         {profiles.length === 0 ? (
           <EmptyState
             title="Sem dados económicos ainda"

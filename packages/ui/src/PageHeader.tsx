@@ -17,8 +17,11 @@ interface PageHeaderProps {
 // - items-center on the outer flex so the actions block vertically centres
 //   against the (taller) title+description block. With items-start the
 //   actions look detached at the very top.
-// - Generous top + bottom padding (pt-10 / pb-8) so the section feels like
+// - Generous top + bottom padding (pt-10 / pb-10) so the section feels like
 //   a real page header rather than a thin strip glued to the content.
+//   Paired with the per-page content wrapper's py-8 the total gap between
+//   header text and the first content block reads ~80px — distinct, not
+//   collapsed.
 export function PageHeader({
   title,
   description,
@@ -27,7 +30,7 @@ export function PageHeader({
   actions,
 }: PageHeaderProps) {
   return (
-    <div className="border-b border-neutral-200 px-8 pb-8 pt-10">
+    <div className="border-b border-neutral-200 px-8 pb-10 pt-10">
       {breadcrumbs && breadcrumbs.length > 0 && (
         <Breadcrumb className="mb-3">
           {breadcrumbs.map((b, i) => {

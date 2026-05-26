@@ -45,7 +45,7 @@ export default async function BrandingSettingsPage({
           { label: "Identidade visual" },
         ]}
       />
-      <div className="mx-auto max-w-2xl space-y-6 px-8 py-6">
+      <div className="mx-auto max-w-2xl space-y-8 px-8 py-8">
         <InlineNotification
           kind="info"
           title="Só afecta relatórios futuros"

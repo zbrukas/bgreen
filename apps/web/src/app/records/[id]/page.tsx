@@ -103,7 +103,7 @@ export default async function RecordDetailPage({ params }: PageProps) {
           </Tag>
         }
       />
-      <div className="space-y-6 px-8 py-6">
+      <div className="space-y-8 px-8 py-8">
         {record.reviewComment && reviewKind && (
           <InlineNotification
             kind={reviewKind}

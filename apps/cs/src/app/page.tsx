@@ -38,7 +38,7 @@ export default async function Home() {
         description="Aqui mantemos os modelos, gerimos as organizações e revemos submissões."
         icon={Dashboard}
       />
-      <div className="space-y-6 px-8 py-6">
+      <div className="space-y-8 px-8 py-8">
         <section>
           <h2
             className="mb-3"

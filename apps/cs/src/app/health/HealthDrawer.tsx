@@ -76,7 +76,7 @@ export function HealthDrawer({
           onClick={onClose}
         />
       </div>
-      <div className="space-y-6 px-6 py-6">
+      <div className="space-y-8 px-8 py-8">
         {loading && <p className="text-sm text-[--cds-text-secondary]">A carregar…</p>}
         {detail && (
           <>

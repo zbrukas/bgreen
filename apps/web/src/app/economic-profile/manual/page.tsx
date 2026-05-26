@@ -25,7 +25,7 @@ export default async function ManualEntryPage() {
           { label: "Manual" },
         ]}
       />
-      <div className="mx-auto max-w-2xl px-8 py-6">
+      <div className="mx-auto max-w-2xl px-8 py-10">
         <ManualEntryForm />
       </div>
     </>

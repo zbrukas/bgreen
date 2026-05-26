@@ -35,7 +35,7 @@ export default async function TrendPage() {
           { label: "Tendências" },
         ]}
       />
-      <div className="space-y-6 px-8 py-6">
+      <div className="space-y-8 px-8 py-8">
         <Tile>
           <div className="flex items-baseline justify-between gap-2">
             <h2 style={{ fontSize: "1rem", fontWeight: 600, lineHeight: 1.375, margin: 0 }}>

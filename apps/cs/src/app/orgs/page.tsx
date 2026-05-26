@@ -29,7 +29,7 @@ export default async function OrgsPage() {
         description="Todas as organizações geridas. Clique para ver membros."
         icon={Building}
       />
-      <div className="space-y-6 px-8 py-6">
+      <div className="space-y-8 px-8 py-8">
         {orgs.length === 0 ? (
           <EmptyState
             title="Sem organizações"

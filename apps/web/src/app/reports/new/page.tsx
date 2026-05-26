@@ -28,7 +28,7 @@ export default async function GenerateReportPage() {
         icon={Add}
         breadcrumbs={[{ label: "Relatórios", href: "/reports" }, { label: "Novo" }]}
       />
-      <div className="mx-auto max-w-2xl px-8 py-6">
+      <div className="mx-auto max-w-2xl px-8 py-10">
         <GenerateForm />
       </div>
     </>

@@ -18,7 +18,7 @@ export default async function NewOrganizationPage() {
         icon={Building}
         breadcrumbs={[{ label: "Início", href: "/" }, { label: "Nova organização" }]}
       />
-      <div className="mx-auto max-w-3xl px-8 py-6">
+      <div className="mx-auto max-w-3xl px-8 py-10">
         <CreateOrganizationForm />
       </div>
     </>

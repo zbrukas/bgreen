@@ -21,7 +21,7 @@ export default async function CsDomainsPage() {
         description="Domínios cujos sign-ups são automaticamente classificados como utilizadores Central Services."
         icon={Globe}
       />
-      <div className="space-y-6 px-8 py-6">
+      <div className="space-y-8 px-8 py-8">
         {canEdit && <AddDomainForm />}
         <DomainsTable
           domains={domains.map((d) => ({

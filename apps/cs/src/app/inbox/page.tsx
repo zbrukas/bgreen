@@ -27,7 +27,7 @@ export default async function CsInboxPage() {
         description="Registos submetidos pelas organizações a aguardar decisão."
         icon={NotificationIcon}
       />
-      <div className="space-y-6 px-8 py-6">
+      <div className="space-y-8 px-8 py-8">
         {rows.length === 0 ? (
           <EmptyState
             title="Sem submissões pendentes"

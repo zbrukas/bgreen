@@ -31,7 +31,7 @@ export default async function ReportRunPage({
           { label: id.slice(0, 8) },
         ]}
       />
-      <div className="mx-auto max-w-3xl px-8 py-6">
+      <div className="mx-auto max-w-3xl px-8 py-10">
         <ReportRunView reportId={id} />
       </div>
     </>

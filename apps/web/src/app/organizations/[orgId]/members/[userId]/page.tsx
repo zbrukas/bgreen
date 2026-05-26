@@ -46,7 +46,7 @@ export default async function MemberDetailPage({ params }: PageProps) {
           { label: member.user?.email ?? userId.slice(0, 8) },
         ]}
       />
-      <div className="mx-auto max-w-2xl px-8 py-6">
+      <div className="mx-auto max-w-2xl px-8 py-10">
         <MemberEditForm
           organizationId={orgId}
           userId={userId}

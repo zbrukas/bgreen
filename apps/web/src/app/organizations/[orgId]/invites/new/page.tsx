@@ -41,7 +41,7 @@ export default async function NewInvitePage({ params }: PageProps) {
           { label: "Convidar" },
         ]}
       />
-      <div className="mx-auto max-w-3xl px-8 py-6">
+      <div className="mx-auto max-w-3xl px-8 py-10">
         <InviteMemberForm organizationId={orgId} topics={topics} />
       </div>
     </>

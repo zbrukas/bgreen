@@ -89,7 +89,7 @@ export default async function TemplateDetailPage({ params }: PageProps) {
           )
         }
       />
-      <div className="space-y-6 px-8 py-6">
+      <div className="space-y-8 px-8 py-8">
         <Tile>
           <div className="flex flex-wrap items-baseline gap-3 text-sm">
             <span className="text-neutral-600">Estado:</span>

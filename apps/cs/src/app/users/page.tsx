@@ -22,7 +22,7 @@ export default async function CsUsersPage() {
         description="Convide colegas para a consola e defina o papel. Cada novo utilizador define a sua palavra-passe ao iniciar sessão pela primeira vez."
         icon={UserMultiple}
       />
-      <div className="space-y-6 px-8 py-6">
+      <div className="space-y-8 px-8 py-8">
         {!isAdmin && (
           <InlineNotification
             kind="warning"

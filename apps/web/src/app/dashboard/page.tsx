@@ -51,7 +51,7 @@ export default async function DashboardPage() {
         description="Resumo dos seus indicadores ESG e desempenho frente a pares do setor."
         icon={Dashboard}
       />
-      <div className="space-y-6 px-8 py-6">
+      <div className="space-y-8 px-8 py-8">
         {!hasContent ? (
           <EmptyState
             title="Comece por aqui"

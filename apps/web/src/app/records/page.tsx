@@ -68,7 +68,7 @@ export default async function RecordsListPage() {
         }
         icon={Document}
       />
-      <div className="space-y-8 px-8 py-6">
+      <div className="space-y-8 px-8 py-8">
         {publishedTemplates.length > 0 && (
           <section>
             <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">

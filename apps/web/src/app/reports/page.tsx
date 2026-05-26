@@ -36,7 +36,7 @@ export default async function ReportsPage() {
         icon={DocumentPdf}
         actions={isAdmin ? <ReportsHeaderActions /> : undefined}
       />
-      <div className="space-y-6 px-8 py-6">
+      <div className="space-y-8 px-8 py-8">
         <AiBanner />
         <HistoryTable reports={reports} />
       </div>

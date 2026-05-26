@@ -59,7 +59,7 @@ export default async function OrgDetailPage({ params }: OrgDetailPageProps) {
           { label: detail.organization.name },
         ]}
       />
-      <div className="space-y-8 px-8 py-6">
+      <div className="space-y-8 px-8 py-8">
         <section>
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[--cds-text-secondary]">
             Detalhes

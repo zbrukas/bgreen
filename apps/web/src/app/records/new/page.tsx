@@ -89,7 +89,7 @@ export default async function NewRecordPage({ searchParams }: PageProps) {
         icon={Document}
         breadcrumbs={[{ label: "Registos", href: "/records" }, { label: tpl.name }]}
       />
-      <div className="space-y-6 px-8 py-6">
+      <div className="space-y-8 px-8 py-8">
         {prefillCount > 0 && (
           <InlineNotification
             kind="info"
