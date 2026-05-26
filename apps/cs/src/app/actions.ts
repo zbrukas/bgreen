@@ -300,6 +300,8 @@ function translateCsUserError(code: string): string {
       return "Não pode rebaixar-se a si próprio.";
     case "cannot_delete_self":
       return "Não pode remover a sua própria conta.";
+    case "last_admin":
+      return "É necessário pelo menos um administrador CS — promova outro utilizador primeiro.";
     case "central_services_admin_required":
       return "Apenas administradores CS podem fazer isto.";
     case "not_found":

@@ -1,7 +1,7 @@
 import { db, schema } from "@bgreen/db";
 import { CentralServicesRoleSchema } from "@bgreen/types";
 import { zValidator } from "@hono/zod-validator";
-import { and, eq, isNotNull } from "drizzle-orm";
+import { and, count, eq, isNotNull, ne } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
 import { canCsRelation, canCsWrite } from "../../../auth-helpers.js";
@@ -171,9 +171,45 @@ export const csRoutes = new Hono<AppEnv>()
     if (denied) return denied;
     const targetId = c.req.param("id");
     const input = c.req.valid("json");
-    if (c.var.user.id === targetId && input.role !== "admin") {
-      return c.json({ error: "cannot_demote_self" }, 400);
+
+    // Invariant: CS must always have at least one admin. The transition
+    // that can violate it is "demote an admin" (admin → maintainer /
+    // promoter). If the target row is currently admin and the new role
+    // isn't, count remaining admins after the change; if that would
+    // drop to zero, reject. gateCsAdmin already guarantees the caller
+    // is an admin, so the only common path is self-demotion as the
+    // sole admin — but the rule applies symmetrically to demoting
+    // someone else too, in case the role model ever changes.
+    if (input.role !== "admin") {
+      const [target] = await db
+        .select({
+          id: schema.users.id,
+          userType: schema.users.userType,
+          centralServicesRole: schema.users.centralServicesRole,
+        })
+        .from(schema.users)
+        .where(eq(schema.users.id, targetId))
+        .limit(1);
+      if (!target || target.userType !== "central_services") {
+        return c.json({ error: "not_found" }, 404);
+      }
+      if (target.centralServicesRole === "admin") {
+        const [remaining] = await db
+          .select({ value: count() })
+          .from(schema.users)
+          .where(
+            and(
+              eq(schema.users.userType, "central_services"),
+              eq(schema.users.centralServicesRole, "admin"),
+              ne(schema.users.id, targetId),
+            ),
+          );
+        if ((remaining?.value ?? 0) === 0) {
+          return c.json({ error: "last_admin" }, 400);
+        }
+      }
     }
+
     const [updated] = await db
       .update(schema.users)
       .set({ centralServicesRole: input.role, updatedAt: new Date() })
@@ -189,6 +225,38 @@ export const csRoutes = new Hono<AppEnv>()
     if (c.var.user.id === targetId) {
       return c.json({ error: "cannot_delete_self" }, 400);
     }
+
+    // Same "at least one admin" invariant as the PATCH path. Self-delete
+    // is already blocked above (an admin can't lock themselves out), but
+    // deleting another admin needs to leave ≥1 admin behind.
+    const [target] = await db
+      .select({
+        id: schema.users.id,
+        userType: schema.users.userType,
+        centralServicesRole: schema.users.centralServicesRole,
+      })
+      .from(schema.users)
+      .where(eq(schema.users.id, targetId))
+      .limit(1);
+    if (!target || target.userType !== "central_services") {
+      return c.json({ error: "not_found" }, 404);
+    }
+    if (target.centralServicesRole === "admin") {
+      const [remaining] = await db
+        .select({ value: count() })
+        .from(schema.users)
+        .where(
+          and(
+            eq(schema.users.userType, "central_services"),
+            eq(schema.users.centralServicesRole, "admin"),
+            ne(schema.users.id, targetId),
+          ),
+        );
+      if ((remaining?.value ?? 0) === 0) {
+        return c.json({ error: "last_admin" }, 400);
+      }
+    }
+
     const [deleted] = await db
       .delete(schema.users)
       .where(and(eq(schema.users.id, targetId), eq(schema.users.userType, "central_services")))
