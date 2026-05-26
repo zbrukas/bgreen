@@ -7,6 +7,8 @@ import {
   Globe,
   Logout,
   Notification as NotificationIcon,
+  SidePanelClose,
+  SidePanelOpen,
   Tag as TagIcon,
   UserAvatar,
   UserMultiple,
@@ -15,7 +17,6 @@ import {
   Header,
   HeaderGlobalAction,
   HeaderGlobalBar,
-  HeaderMenuButton,
   HeaderName,
   HeaderPanel,
   SideNav,
@@ -112,11 +113,9 @@ export function AppShell({ user, role, signOutAction, children }: AppShellProps)
     <Theme theme="white" data-carbon-theme="white">
       <Header aria-label="bGreen Central Services">
         <SkipToContent />
-        <HeaderMenuButton
-          aria-label={isSideNavExpanded ? "Fechar navegação" : "Abrir navegação"}
-          onClick={() => setSideNavExpanded((x) => !x)}
-          isActive={isSideNavExpanded}
-          isCollapsible
+        <SideNavToggleButton
+          expanded={isSideNavExpanded}
+          onToggle={() => setSideNavExpanded((x) => !x)}
         />
         <HeaderName as={Link} href="/" prefix="bGreen">
           Central Services
@@ -216,5 +215,32 @@ function SideNavLinkClient({
     >
       {label}
     </SideNavLink>
+  );
+}
+
+// Replaces Carbon's HeaderMenuButton (which swaps Menu ≡ ↔ Close X)
+// with side-panel iconography that conveys "this docked rail collapses
+// sideways" instead of "this dismisses". Uses the same
+// .cds--header__action / .cds--header__menu-trigger classes so it sits
+// in the header chrome identically.
+function SideNavToggleButton({
+  expanded,
+  onToggle,
+}: {
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const label = expanded ? "Fechar navegação" : "Abrir navegação";
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      aria-expanded={expanded}
+      title={label}
+      onClick={onToggle}
+      className="cds--header__action cds--header__menu-trigger cds--header__menu-toggle cds--header__menu-toggle__hidden"
+    >
+      {expanded ? <SidePanelClose size={20} /> : <SidePanelOpen size={20} />}
+    </button>
   );
 }
