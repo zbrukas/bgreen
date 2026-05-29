@@ -1,6 +1,6 @@
 import type { OrganizationSize } from "@bgreen/types";
-import type { AuditService } from "../../audit/module.js";
-import { buildEntityDiff } from "../../audit/module.js";
+import type { AuditService } from "../../audit/application/audit-service.js";
+import { buildEntityDiff } from "../../audit/domain/audit-writer.js";
 import type { LegalForm } from "../domain/legal-form.js";
 import type { MembershipRole, OrganizationMembership } from "../domain/organization-membership.js";
 import type { Organization } from "../domain/organization.js";
