@@ -184,8 +184,21 @@ class InMemoryTemplateRepo {
 
 class InMemoryRecordRepo {
   readonly records: ESGRecord[] = [];
+  // Wide records carrying `values`, keyed for findLatestSubmitted.
+  readonly submitted: ESGRecord[] = [];
   listForOrganization(orgId: string) {
     return Promise.resolve(this.records.filter((r) => r.organizationId === orgId));
+  }
+  findLatestSubmitted(orgId: string, templateId: string) {
+    const matches = this.submitted
+      .filter(
+        (r) =>
+          r.organizationId === orgId &&
+          r.templateId === templateId &&
+          r.submittedAt !== null,
+      )
+      .sort((a, b) => (a.submittedAt ?? "").localeCompare(b.submittedAt ?? ""));
+    return Promise.resolve(matches[matches.length - 1] ?? null);
   }
 }
 
@@ -370,6 +383,7 @@ function buildService(opts: { ai: AiClient }) {
     orgs,
     profiles,
     records,
+    templates,
     audit,
     pdf,
     s3,
@@ -644,6 +658,120 @@ describe("ReportService.downloadUrl", () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error).toBe("not_found");
+  });
+});
+
+describe("ReportService.runGeneration — carbon-footprint", () => {
+  it("extracts emissions from the latest submitted record into the deck payload", async () => {
+    const ai = fakeAi(ok(happyCommentary()));
+    const ctx = buildService({ ai });
+    seedOrg(ctx.orgs, { brandPrimaryColor: "#16707a", caeCode: "08111" });
+
+    const templateId = "tpl-ghg";
+    // A template whose schema carries the recognised emission field ids.
+    const template: RecordTemplate = {
+      id: templateId,
+      name: "Ambiente (ESRS E1)",
+      description: null,
+      formSchema: {
+        version: 1,
+        rows: [
+          {
+            id: "emissoes",
+            fields: [
+              { id: "scope1_tco2e", kind: "number", label: "Âmbito 1" },
+              { id: "scope2_loc", kind: "number", label: "Âmbito 2 (loc)" },
+              { id: "scope2_mkt", kind: "number", label: "Âmbito 2 (mkt)" },
+              {
+                id: "scope3_categorias",
+                kind: "repeating",
+                label: "Âmbito 3",
+                rowLabel: "Categoria",
+                fields: [
+                  {
+                    id: "categoria",
+                    kind: "select",
+                    label: "Categoria",
+                    options: [
+                      { value: "c1", label: "1 — Bens e serviços adquiridos" },
+                      { value: "c4", label: "4 — Transporte a montante" },
+                    ],
+                  },
+                  { id: "emissoes_tco2e", kind: "number", label: "tCO2e" },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      status: "published",
+      workflowDefinitionId: "single-step-submit",
+      topicTagId: null,
+      isSubTemplate: false,
+      composedSubTemplateIds: [],
+      createdByUserId: "cs-admin",
+      createdAt: "2025-01-01T00:00:00.000Z",
+      updatedAt: "2025-01-01T00:00:00.000Z",
+    };
+    ctx.templates.templates.set(templateId, template);
+
+    const baseRecord: ESGRecord = {
+      id: "rec-1",
+      organizationId: "org-1",
+      templateId,
+      status: "submitted",
+      values: {
+        scope1_tco2e: 1000,
+        scope2_loc: 500,
+        scope2_mkt: 0,
+        scope3_categorias: [
+          { categoria: "c1", emissoes_tco2e: 120 },
+          { categoria: "c4", emissoes_tco2e: 80 },
+        ],
+      },
+      reviewComment: null,
+      submittedAt: "2025-06-01T00:00:00.000Z",
+      submittedByUserId: "user-1",
+      reviewedAt: null,
+      reviewedByUserId: null,
+      score: null,
+      scorePercent: null,
+      scoreTier: null,
+      scoreBreakdown: null,
+      createdAt: "2025-06-01T00:00:00.000Z",
+      updatedAt: "2025-06-01T00:00:00.000Z",
+    };
+    // Summary list (period filter) + wide record (findLatestSubmitted).
+    ctx.records.records.push(baseRecord);
+    ctx.records.submitted.push(baseRecord);
+
+    const started = await ctx.service.start({
+      organizationId: "org-1",
+      userId: "user-1",
+      template: "carbon-footprint",
+      periodStart: "2025-01-01",
+      periodEnd: "2025-12-31",
+    });
+    if (!started.ok) throw new Error("start failed");
+
+    const outcome = await ctx.service.runGeneration(started.report.id);
+    expect(outcome.status).toBe("ready");
+
+    expect(ctx.pdf.calls).toHaveLength(1);
+    const call = ctx.pdf.calls[0];
+    expect(call?.template).toBe("carbon-footprint");
+    const data = call?.data as {
+      totalTco2e: number;
+      scopes: Array<{ scope: string; tco2e: number }>;
+      sources: Array<{ scope: string; source: string; tco2e: number }>;
+    };
+    // 1000 (s1) + 500 (s2 loc) + 200 (s3 = 120 + 80).
+    expect(data.totalTco2e).toBe(1700);
+    expect(data.scopes.map((s) => s.scope)).toEqual(["1", "2", "3"]);
+    expect(data.sources.length).toBeGreaterThanOrEqual(3);
+    // Scope 3 category codes resolved to their select labels.
+    expect(data.sources.map((s) => s.source)).toContain("1 — Bens e serviços adquiridos");
+    expect(call?.branding.primaryColor).toBe("#16707a");
   });
 });
 

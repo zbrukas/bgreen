@@ -6,20 +6,23 @@
 
 import { renderToStaticMarkup } from "react-dom/server";
 import type { ZodTypeAny } from "zod";
+import { CarbonFootprintTemplate } from "./carbon-footprint.js";
 import { CustomTemplate } from "./custom.js";
 import { EsrsE1Template } from "./esrs-e1.js";
 import { GhgInventoryTemplate } from "./ghg-inventory.js";
-import { TEMPLATE_CSS } from "./styles.js";
+import { type PageOrientation, buildTemplateCss } from "./styles.js";
 import {
+  type CarbonFootprintData,
   type CustomData,
   type EsrsE1Data,
   type GhgInventoryData,
+  carbonFootprintDataSchema,
   customDataSchema,
   esrsE1DataSchema,
   ghgInventoryDataSchema,
 } from "./types.js";
 
-export type TemplateId = "ghg-inventory" | "esrs-e1" | "custom";
+export type TemplateId = "ghg-inventory" | "esrs-e1" | "custom" | "carbon-footprint";
 
 interface BrandingForRender {
   organizationName: string;
@@ -34,6 +37,10 @@ interface TemplateRegistryEntry<TSchema extends ZodTypeAny, TData> {
   schema: TSchema;
   documentTitle: (data: TData, branding: BrandingForRender) => string;
   render: (data: TData, branding: BrandingForRender) => string;
+  // Page orientation for the document's @page rule. Defaults to
+  // portrait; the deck-style carbon-footprint template opts into
+  // landscape.
+  orientation?: PageOrientation;
 }
 
 const ghgEntry: TemplateRegistryEntry<typeof ghgInventoryDataSchema, GhgInventoryData> = {
@@ -78,18 +85,38 @@ const customEntry: TemplateRegistryEntry<typeof customDataSchema, CustomData> = 
     ),
 };
 
+const carbonFootprintEntry: TemplateRegistryEntry<
+  typeof carbonFootprintDataSchema,
+  CarbonFootprintData
+> = {
+  schema: carbonFootprintDataSchema,
+  documentTitle: (data, b) => `${data.title} — ${b.organizationName}`,
+  orientation: "landscape",
+  render: (data, branding) =>
+    renderToStaticMarkup(
+      <CarbonFootprintTemplate
+        data={data}
+        brandingName={branding.organizationName}
+        brandPrimaryColor={branding.primaryColor}
+        logoUrl={branding.logoUrl}
+      />,
+    ),
+};
+
 // The registry is the integration boundary. Discriminating callers
 // look up by TemplateId; unknown ids return null so the route layer
 // can return 404 cleanly (HttpPdfRenderer maps to template_not_found).
 type AnyEntry =
   | TemplateRegistryEntry<typeof ghgInventoryDataSchema, GhgInventoryData>
   | TemplateRegistryEntry<typeof esrsE1DataSchema, EsrsE1Data>
-  | TemplateRegistryEntry<typeof customDataSchema, CustomData>;
+  | TemplateRegistryEntry<typeof customDataSchema, CustomData>
+  | TemplateRegistryEntry<typeof carbonFootprintDataSchema, CarbonFootprintData>;
 
 const REGISTRY: Record<TemplateId, AnyEntry> = {
   "ghg-inventory": ghgEntry,
   "esrs-e1": esrsEntry,
   custom: customEntry,
+  "carbon-footprint": carbonFootprintEntry,
 };
 
 export type RenderTemplateResult =
@@ -124,22 +151,23 @@ export function renderTemplate(input: {
     input.branding,
   );
 
-  const html = wrapDocument(title, markup);
+  const html = wrapDocument(title, markup, entry.orientation ?? "portrait");
   return { ok: true, html };
 }
 
-function wrapDocument(title: string, body: string): string {
+function wrapDocument(title: string, body: string, orientation: PageOrientation): string {
   // Self-contained HTML document so Gotenberg renders with the same
   // visual output regardless of remote-asset availability. Logo
   // images still load remotely (when an https URL is present in the
-  // payload); the CSS is inlined.
+  // payload); the CSS is inlined. The @page rule (portrait vs the
+  // landscape deck) is chosen per-template.
   return [
     "<!doctype html>",
     "<html lang=\"pt-PT\">",
     "<head>",
     "<meta charset=\"utf-8\" />",
     `<title>${escapeHtml(title)}</title>`,
-    `<style>${TEMPLATE_CSS}</style>`,
+    `<style>${buildTemplateCss({ orientation })}</style>`,
     "</head>",
     "<body>",
     body,

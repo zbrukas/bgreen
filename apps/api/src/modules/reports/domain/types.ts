@@ -4,7 +4,12 @@
 // React templates in apps/pdf and the migration's free-text column
 // agree without duplicating an enum.
 
-export const REPORT_TEMPLATE_IDS = ["ghg-inventory", "esrs-e1", "custom"] as const;
+export const REPORT_TEMPLATE_IDS = [
+  "ghg-inventory",
+  "esrs-e1",
+  "custom",
+  "carbon-footprint",
+] as const;
 
 export type ReportTemplateId = (typeof REPORT_TEMPLATE_IDS)[number];
 

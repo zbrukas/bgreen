@@ -7,7 +7,7 @@
 // can apply them at render time; both nullable, defaults applied at
 // the template level.
 
-export type ReportTemplate = "ghg-inventory" | "esrs-e1" | "custom";
+export type ReportTemplate = "ghg-inventory" | "esrs-e1" | "custom" | "carbon-footprint";
 
 export interface BrandSnapshot {
   organizationId: string;

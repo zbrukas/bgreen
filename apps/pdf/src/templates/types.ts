@@ -127,3 +127,92 @@ export const customDataSchema = baseDataSchema.extend({
 });
 
 export type CustomData = z.infer<typeof customDataSchema>;
+
+// ── Carbon Footprint (deck) ─────────────────────────────────────────
+//
+// Rich, landscape "deck"-style report (donut + bar/area charts, KPI
+// cards, multi-level tables). This schema is the wire contract the
+// apps/pdf visual layer renders against; apps/api fills it in Phase 2
+// (today report-data-builder stubs emissions, so this is fixture-driven
+// for now).
+
+const cfScope = z.enum(["1", "2", "3"]);
+
+// One emission scope total (drives the scope-split donut + KPIs).
+const cfScopeTotalSchema = z.object({
+  scope: cfScope,
+  label: z.string().min(1).max(80),
+  tco2e: z.number().finite().min(0),
+});
+
+// One emission source line (drives the results table + per-scope donut).
+const cfSourceRowSchema = z.object({
+  scope: cfScope,
+  // Grouping within the scope, e.g. "Combustão estacionária".
+  category: z.string().min(1).max(120),
+  // The concrete source, e.g. "Fornos e caldeiras GN".
+  source: z.string().min(1).max(120),
+  tco2e: z.number().finite(),
+});
+
+// A headline figure shown as a KPI card.
+const cfKpiSchema = z.object({
+  label: z.string().min(1).max(80),
+  value: z.number().finite(),
+  unit: z.string().max(24).optional(),
+  decimals: z.number().int().min(0).max(4).optional(),
+  // Period-over-period change, percent. Positive = up.
+  deltaPct: z.number().finite().nullable().optional(),
+});
+
+// An intensity metric (per revenue / per product / per FTE …).
+const cfIntensitySchema = z.object({
+  label: z.string().min(1).max(80),
+  value: z.number().finite(),
+  unit: z.string().min(1).max(40),
+  decimals: z.number().int().min(0).max(4).optional(),
+});
+
+// Optional multi-period trend (area/stacked-bar over years).
+const cfTrendSchema = z.object({
+  periods: z.array(z.string().min(1).max(20)).min(2).max(12),
+  series: z
+    .array(
+      z.object({
+        key: z.string().min(1).max(40),
+        label: z.string().min(1).max(80),
+        // Aligned positionally with `periods`.
+        values: z.array(z.number().finite().min(0)),
+      }),
+    )
+    .min(1)
+    .max(6),
+  unit: z.string().max(24).optional(),
+  // "stacked-bar" | "stacked-area" | "line".
+  style: z.enum(["stacked-bar", "stacked-area", "line"]).default("stacked-bar"),
+});
+
+// One emission-factor row for the methodology table.
+const cfFactorRowSchema = z.object({
+  source: z.string().min(1).max(120),
+  // Kept as a string — factors carry their own precision/locale.
+  factor: z.string().min(1).max(40),
+  unit: z.string().min(1).max(40),
+  reference: z.string().max(120).optional(),
+});
+
+export const carbonFootprintDataSchema = baseDataSchema.extend({
+  title: z.string().min(1).max(120).default("Pegada de Carbono"),
+  subtitle: z.string().max(120).optional(),
+  unitLabel: z.string().max(24).default("tCO₂e"),
+  totalTco2e: z.number().finite().min(0),
+  scopes: z.array(cfScopeTotalSchema).min(1).max(3),
+  sources: z.array(cfSourceRowSchema).min(1).max(60),
+  kpis: z.array(cfKpiSchema).max(6).default([]),
+  intensity: z.array(cfIntensitySchema).max(4).default([]),
+  trend: cfTrendSchema.nullable().default(null),
+  factors: z.array(cfFactorRowSchema).max(30).default([]),
+  methodologyNotes: z.array(z.string().min(1).max(400)).max(12).default([]),
+});
+
+export type CarbonFootprintData = z.infer<typeof carbonFootprintDataSchema>;

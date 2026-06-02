@@ -483,6 +483,65 @@ function composePdfPayload(
     };
   }
 
+  if (snapshot.template === "carbon-footprint") {
+    const cf = snapshot.carbonFootprint;
+    const scope1 = snapshot.emissions?.scope1Total ?? 0;
+    const scope2 = snapshot.emissions?.scope2LocationTotal ?? 0;
+    const scope3 = snapshot.emissions?.scope3Total ?? 0;
+
+    // Schema requires >= 1 scope and >= 1 source; synthesise minimal
+    // entries from the totals when no detailed snapshot is available so
+    // the report still renders (showing the figures we do have).
+    const scopes =
+      cf && cf.scopes.length > 0
+        ? cf.scopes
+        : [{ scope: "1" as const, label: "Emissões diretas", tco2e: scope1 }];
+    const sources =
+      cf && cf.sources.length > 0
+        ? cf.sources
+        : scopes.map((s) => ({
+            scope: s.scope,
+            category: s.label,
+            source: "Total",
+            tco2e: s.tco2e,
+          }));
+    const total = cf?.totalTco2e ?? scope1 + scope2 + scope3;
+
+    const kpis = scopes.map((s) => ({
+      label: `Âmbito ${s.scope}`,
+      value: s.tco2e,
+      unit: "tCO₂e",
+    }));
+
+    const intensity: Array<{ label: string; value: number; unit: string; decimals?: number }> = [];
+    const turnover = snapshot.profile.turnover;
+    if (turnover && turnover > 0) {
+      intensity.push({
+        label: "Intensidade por volume de negócios",
+        value: total / (turnover / 1_000_000),
+        unit: "tCO₂e / M€",
+        decimals: 2,
+      });
+    }
+
+    return {
+      period,
+      commentary,
+      footer,
+      title: "Pegada de Carbono",
+      subtitle: carbonFootprintSubtitle(scopes.map((s) => s.scope)),
+      unitLabel: "tCO₂e",
+      totalTco2e: total,
+      scopes,
+      sources,
+      kpis,
+      intensity,
+      trend: null,
+      factors: [],
+      methodologyNotes: [],
+    };
+  }
+
   // Custom — surface record counts as the rows.
   return {
     period,
@@ -517,5 +576,17 @@ function fallbackEsrsRow() {
 function reportTitleFor(snapshot: ReportDataSnapshot): string {
   if (snapshot.template === "ghg-inventory") return "Inventário GEE";
   if (snapshot.template === "esrs-e1") return "ESRS E1 — Divulgação Climática";
+  if (snapshot.template === "carbon-footprint") return "Pegada de Carbono";
   return snapshot.customTitle ?? "Relatório personalizado";
+}
+
+// "Inventário GEE — Âmbitos 1 e 2" style subtitle from the scopes present.
+function carbonFootprintSubtitle(scopes: Array<"1" | "2" | "3">): string {
+  const unique = [...new Set(scopes)].sort();
+  if (unique.length === 0) return "Inventário de emissões GEE";
+  const joined =
+    unique.length === 1
+      ? unique[0]
+      : `${unique.slice(0, -1).join(", ")} e ${unique[unique.length - 1]}`;
+  return `Inventário de emissões GEE — Âmbito${unique.length > 1 ? "s" : ""} ${joined} (GHG Protocol)`;
 }

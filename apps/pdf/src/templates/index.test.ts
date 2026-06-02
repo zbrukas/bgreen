@@ -4,7 +4,9 @@
 // as a typed error (not an exception).
 
 import { describe, expect, it } from "vitest";
+import { carbonFootprintFixture } from "./__fixtures__/carbon-footprint.fixture.js";
 import { renderTemplate } from "./index.js";
+import { brandTheme } from "./shared/brand.js";
 import type {
   CustomData,
   EsrsE1Data,
@@ -161,6 +163,72 @@ describe("renderTemplate — custom", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.html).toContain("#ff00aa");
+  });
+});
+
+describe("renderTemplate — carbon-footprint (deck)", () => {
+  it("renders the deck with charts, KPIs, and a landscape page", () => {
+    const result = renderTemplate({
+      template: "carbon-footprint",
+      data: carbonFootprintFixture,
+      branding: {
+        organizationName: "Grupo Parapedra",
+        logoUrl: null,
+        primaryColor: "#16707a",
+      },
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    // Landscape page box — the deck opts into landscape; this must NOT
+    // leak into the portrait templates (asserted below).
+    expect(result.html).toContain("size: A4 landscape");
+
+    // SVG charts are present. Scope-split donut has one <path> per
+    // non-zero scope (2 scopes in the fixture), plus the dominant-scope
+    // donut, plus bar-chart rects — so at least the donut slices exist.
+    expect(result.html).toContain("<svg");
+    const donutSlices = result.html.match(/class="[^"]*chart-donut[^"]*"/g) ?? [];
+    expect(donutSlices.length).toBeGreaterThanOrEqual(1);
+
+    // Center total (pt-PT formatted) + a KPI label + the brand series color.
+    expect(result.html).toContain("23.176"); // total, pt-PT thousands
+    expect(result.html).toContain("Sumário Executivo");
+    expect(result.html).toContain("Metodologia");
+    const theme = brandTheme("#16707a");
+    expect(result.html).toContain(theme.primary);
+    // A results-table source flows through.
+    expect(result.html).toContain("Fornos e caldeiras GN");
+  });
+
+  it("rejects a payload missing the required total", () => {
+    const { totalTco2e, ...rest } = carbonFootprintFixture;
+    void totalTco2e;
+    const result = renderTemplate({
+      template: "carbon-footprint",
+      data: rest,
+      branding: { organizationName: "X", logoUrl: null, primaryColor: null },
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error).toBe("invalid_payload");
+  });
+});
+
+describe("page orientation regression", () => {
+  it("portrait templates keep A4 portrait and never emit landscape", () => {
+    const data: CustomData = {
+      period: basePeriod,
+      commentary: null,
+      footer: baseFooter,
+      title: "X",
+      rows: [{ label: "a", value: "b" }],
+    };
+    const result = renderTemplate({ template: "custom", data, ...baseEnvelope });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.html).toContain("size: A4");
+    expect(result.html).not.toContain("landscape");
   });
 });
 

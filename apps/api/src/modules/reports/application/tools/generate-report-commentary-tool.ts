@@ -15,7 +15,7 @@
 import { defineAiTool } from "@bgreen/ai";
 import { z } from "zod";
 
-const frameworkSchema = z.enum(["ghg-inventory", "esrs-e1", "custom"]);
+const frameworkSchema = z.enum(["ghg-inventory", "esrs-e1", "custom", "carbon-footprint"]);
 
 const profileSnapshotSchema = z.object({
   organizationName: z.string().min(1).max(200),

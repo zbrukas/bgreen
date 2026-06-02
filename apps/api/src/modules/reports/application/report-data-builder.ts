@@ -38,6 +38,12 @@ import {
 import { isInsufficientData } from "../../sector-benchmark/domain/types.js";
 import type { SectorBenchmarkLookup } from "../../sector-benchmark/application/sector-benchmark-lookup.js";
 import type { ReportTemplateId } from "../domain/types.js";
+import {
+  type EmissionsExtract,
+  type EmissionsSourceRow,
+  extractEmissions,
+  templateHasEmissions,
+} from "./emissions-extractor.js";
 
 // What a Custom report needs but no other inputs provide: a free
 // title chosen at generation time. Optional everywhere else.
@@ -47,6 +53,15 @@ export interface BuildReportDataInput {
   periodStart: string;
   periodEnd: string;
   customTitle?: string;
+}
+
+// Rich carbon-footprint detail derived from the org's latest submitted
+// emissions record. Feeds the landscape "deck" report (scope-split
+// donut, KPI cards, sources table).
+export interface CarbonFootprintSnapshot {
+  totalTco2e: number;
+  scopes: Array<{ scope: "1" | "2" | "3"; label: string; tco2e: number }>;
+  sources: EmissionsSourceRow[];
 }
 
 // Canonical snapshot used for both the AI input and the tamper hash.
@@ -78,6 +93,10 @@ export interface ReportDataSnapshot {
     scope2MarketTotal: number | null;
     scope3Total: number | null;
   } | null;
+  // Rich carbon-footprint detail, populated only for the
+  // "carbon-footprint" template (extracted from the org's latest
+  // submitted emissions record). Null for every other template.
+  carbonFootprint: CarbonFootprintSnapshot | null;
   coverage: CoverageMatrix | null;
   recordCountsByTemplate: Array<{
     templateName: string;
@@ -122,14 +141,30 @@ export class ReportDataBuilder {
     // varies template-by-template). Instead we surface aggregate
     // counts + leave emissions=null when the template isn't GHG/ESRS.
     // V11.4 + downstream verticals will plug real-emissions math in.
-    const emissions = needsEmissions(input.template)
+    // GHG / ESRS still surface zero-stub totals (their detailed
+    // emissions math lands in a later vertical). The carbon-footprint
+    // template, however, extracts real totals + sources from the org's
+    // latest submitted emissions record.
+    let emissions = needsEmissions(input.template)
       ? {
           scope1Total: 0,
           scope2LocationTotal: 0,
-          scope2MarketTotal: null,
-          scope3Total: null,
+          scope2MarketTotal: null as number | null,
+          scope3Total: null as number | null,
         }
       : null;
+
+    let carbonFootprint: CarbonFootprintSnapshot | null = null;
+    if (input.template === "carbon-footprint") {
+      const extract = await this.extractEmissions(input.organizationId, periodRecords);
+      emissions = {
+        scope1Total: extract?.scope1Total ?? 0,
+        scope2LocationTotal: extract?.scope2LocationTotal ?? 0,
+        scope2MarketTotal: extract?.scope2MarketTotal ?? null,
+        scope3Total: extract?.scope3Total ?? null,
+      };
+      carbonFootprint = toCarbonFootprintSnapshot(extract);
+    }
 
     const coverage =
       input.template === "esrs-e1"
@@ -161,10 +196,40 @@ export class ReportDataBuilder {
         peerMedianEbitdaMargin: peer?.medianEbitdaMargin ?? null,
       },
       emissions,
+      carbonFootprint,
       coverage,
       recordCountsByTemplate,
       customTitle: input.customTitle ?? null,
     };
+  }
+
+  // Find the org's most recently submitted emissions record (across
+  // any template whose schema carries the recognised emission fields)
+  // and extract its scope totals + sources. Returns null when the org
+  // has no such record in the period.
+  private async extractEmissions(
+    organizationId: string,
+    periodRecords: ESGRecord[],
+  ): Promise<EmissionsExtract | null> {
+    const latestByTemplate = new Map<string, string>();
+    for (const r of periodRecords) {
+      if (r.status === "draft") continue;
+      const at = r.submittedAt ?? r.updatedAt;
+      const existing = latestByTemplate.get(r.templateId);
+      if (!existing || at > existing) latestByTemplate.set(r.templateId, at);
+    }
+
+    let best: { extract: EmissionsExtract; at: string } | null = null;
+    for (const [templateId, at] of latestByTemplate) {
+      const template = await this.templates.findById(templateId);
+      if (!template || !templateHasEmissions(template.formSchema)) continue;
+      const record = await this.records.findLatestSubmitted(organizationId, templateId);
+      if (!record) continue;
+      const extract = extractEmissions(record.values, template.formSchema);
+      if (!extract) continue;
+      if (!best || at > best.at) best = { extract, at };
+    }
+    return best?.extract ?? null;
   }
 
   private async lookupPeer(profile: OrganizationEconomicProfile) {
@@ -231,6 +296,31 @@ export class ReportDataBuilder {
 
 function needsEmissions(template: ReportTemplateId): boolean {
   return template === "ghg-inventory" || template === "esrs-e1";
+}
+
+// Shape the extracted emissions into the carbon-footprint snapshot
+// (scope-split + total + sources). Null when nothing was extracted.
+function toCarbonFootprintSnapshot(
+  extract: EmissionsExtract | null,
+): CarbonFootprintSnapshot | null {
+  if (!extract) return null;
+  const scopes: CarbonFootprintSnapshot["scopes"] = [];
+  if (extract.scope1Total > 0) {
+    scopes.push({ scope: "1", label: "Emissões diretas", tco2e: extract.scope1Total });
+  }
+  if (extract.scope2LocationTotal > 0) {
+    scopes.push({
+      scope: "2",
+      label: "Energia adquirida (localização)",
+      tco2e: extract.scope2LocationTotal,
+    });
+  }
+  if (extract.scope3Total && extract.scope3Total > 0) {
+    scopes.push({ scope: "3", label: "Cadeia de valor", tco2e: extract.scope3Total });
+  }
+  const totalTco2e =
+    extract.scope1Total + extract.scope2LocationTotal + (extract.scope3Total ?? 0);
+  return { totalTco2e, scopes, sources: extract.sources };
 }
 
 function isWithinPeriod(

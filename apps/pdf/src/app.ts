@@ -25,7 +25,7 @@ import { renderTemplate } from "./templates/index.js";
 
 const renderBodySchema = z
   .object({
-    template: z.enum(["ghg-inventory", "esrs-e1", "custom"]),
+    template: z.enum(["ghg-inventory", "esrs-e1", "custom", "carbon-footprint"]),
     // Per-template data is validated inside renderTemplate against
     // the matching zod schema — we keep this loose at the envelope
     // layer so a typo in template doesn't fail with a confusing
